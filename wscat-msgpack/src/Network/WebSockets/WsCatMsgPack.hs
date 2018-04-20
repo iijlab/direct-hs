@@ -24,6 +24,7 @@ import           System.IO
                    , hSetBuffering
                    , BufferMode(NoBuffering)
                    )
+import qualified Wuss as Wss
 
 
 main :: IO ()
@@ -34,7 +35,7 @@ main = do
   (host, path) <- parseArgs =<< getArgs
   putStrLn "Enter values:"
 
-  Ws.runClient host 443 path loop
+  Wss.runSecureClient host 443 path loop
   where
     loop conn = do
       eof <- isEOF
