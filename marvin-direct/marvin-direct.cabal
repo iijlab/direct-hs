@@ -2,8 +2,8 @@ name:                marvin-direct
 version:             0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/igrep/marvin-direct#readme
-license:             Apahche-2.0
+homepage:            https://github.com/iij-ii/marvin-direct#readme
+license:             Apache-2.0
 license-file:        LICENSE
 author:              Yuji Yamamoto
 maintainer:          yuji-yamamoto@iij.ad.jp
@@ -19,6 +19,26 @@ library
   build-depends:       base >= 4.7 && < 5
   default-language:    Haskell2010
 
+executable get-direct-access-token
+  main-is: get-direct-access-token.hs
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , aeson
+    , bytestring
+    , data-msgpack
+    , envy
+    , mwc-random
+    , network
+    , text
+    , uri
+    , uuid
+    , websockets
+    , wuss
+  default-language: Haskell2010
+
 source-repository head
   type:     git
-  location: https://github.com/igrep/marvin-direct
+  location: https://github.com/iij-ii/marvin-direct
