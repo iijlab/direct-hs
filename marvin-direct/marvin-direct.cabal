@@ -33,7 +33,7 @@ executable get-direct-access-token
     , mwc-random
     , network
     , text
-    , uri
+    , network-uri
     , uuid
     , websockets
     , wuss

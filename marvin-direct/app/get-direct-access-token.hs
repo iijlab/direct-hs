@@ -2,36 +2,29 @@
 {-# LANGUAGE TypeApplications #-}
 
 import           Control.Applicative ((<|>))
-import           Control.Exception (try, SomeException, finally, bracket)
-import           Control.Monad (replicateM)
+import           Control.Exception (finally, bracket)
 import           Control.Monad.IO.Class (liftIO)
-import qualified Data.ByteString.Lazy as BS
-import           Data.Char (intToDigit)
 import           Data.Maybe (fromMaybe)
-import           Data.List (intercalate)
 import qualified Data.MessagePack as MsgPack
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.UUID as Uuid
-import           GHC.Generics (Generic)
 import           Network (withSocketsDo, PortNumber)
 import qualified Network.WebSockets as Ws
-import           System.Environment (getArgs)
 import           System.Envy (FromEnv, fromEnv, env, decodeEnv)
 import           System.Exit (die)
 import           System.IO
-                   ( isEOF
-                   , stderr
+                   ( stderr
                    , stdout
                    , stdin
-                   , hPutStrLn
                    , hSetBuffering
                    , hGetEcho
                    , hSetEcho
                    , BufferMode(NoBuffering)
                    )
 import qualified System.Random.MWC as Random
-import           Text.URI (parseURI, URI(..))
+import           Text.Read (readMaybe)
+import           Network.URI (parseURI, URI(..), URIAuth(..))
 import qualified Wuss as Wss
 
 
@@ -69,7 +62,8 @@ main = do
   hSetBuffering stderr NoBuffering
 
   e <- dieWhenLeft decodeEnv
-  (_scheme, host, path, port) <- parseWsUrl $ directEndpointUrl e
+  uri@(_scheme, host, path, port) <- parseWsUrl $ directEndpointUrl e
+  putStrLn $ "Parsed URL:" ++ show uri
 
   withSocketsDo
     $ Wss.runSecureClient host port path
@@ -104,15 +98,21 @@ main = do
 parseWsUrl :: String -> IO (String, String, String, PortNumber)
 parseWsUrl raw = do
   uri <- dieWhenNothing ("Invalid URL given: " ++ show raw) $ parseURI raw
-  host <- dieWhenEmpty ("No host specified: " ++ show raw) $ uriRegName uri
-  path <- dieWhenEmpty' ("No path specified: " ++ show raw) $ uriPath uri
-  let scheme = fromMaybe "wss" $ uriScheme uri
-      defaultPort = if scheme == "wss" then 443 else 80
+  auth <- dieWhenNothing ("No authroity specified: " ++ show raw) $ uriAuthority uri
+  host <- dieWhenEmpty ("No host specified: " ++ show raw) $ uriRegName auth
+  let path = uriPath uri
+      defaultScheme = "wss:"
+      scheme' = uriScheme uri
+      scheme = if null scheme' then defaultScheme else scheme'
+      defaultPort = if scheme == defaultScheme then 443 else 80
   return
     ( scheme
     , host
-    , path ++ fromMaybe "" (uriQuery uri)
-    , fromIntegral $ fromMaybe defaultPort $ uriPort uri
+    , path ++ uriQuery uri
+    , fromMaybe defaultPort
+        $ readMaybe
+        $ drop 1 {- drop the first colon -}
+        $ uriPort auth
     )
 
 
@@ -121,13 +121,8 @@ dieWhenNothing _ (Just other) = return other
 dieWhenNothing emsg Nothing = exitError emsg
 
 
-dieWhenEmpty :: String -> Maybe String -> IO String
-dieWhenEmpty emsg mbs =
-  dieWhenEmpty' emsg =<< dieWhenNothing emsg mbs
-
-
-dieWhenEmpty' :: String -> String -> IO String
-dieWhenEmpty' emsg s =
+dieWhenEmpty :: String -> String -> IO String
+dieWhenEmpty emsg s =
   if null s
     then exitError emsg
     else return s
