@@ -18,18 +18,26 @@ module Web.Direct
 
   , PersistedInfo(..)
   , serializePersistedInfo
+  , deserializePersistedInfo
 
   , EndpointUrl(..)
   , parseWsUrl
 
   , Exception(..)
 
+  , TalkId
+
   , login
+  , createMessage
+
+  -- * Public only for testing
+  , DirectInt64(..)
   ) where
 
 
 import qualified Control.Error as Err
 import qualified Control.Exception as E
+import           Control.Monad (forM)
 import qualified Data.Aeson as Json
 import           Data.Aeson
                   ( FromJSON
@@ -38,10 +46,13 @@ import           Data.Aeson
                   )
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Char as Char
+import           Data.Int (Int32)
 import qualified Data.IORef as IOR
 import           Data.Maybe (fromMaybe)
 import qualified Data.MessagePack as MsgPack
+import           Data.MessagePack (MessagePack)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import           Data.Typeable (Typeable)
 import qualified Data.UUID as Uuid
 import           Data.Word (Word64)
@@ -57,24 +68,24 @@ import qualified Wuss as Wss
 
 data AnonymousClient =
   AnonymousClient
-    { anonymousClientConnection :: Ws.Connection
-    , anonymousClientSessionState :: SessionState
+    { anonymousClientConnection :: !Ws.Connection
+    , anonymousClientSessionState :: !SessionState
     }
 
 
 data Client =
   Client
-    { clientPersistedInfo :: PersistedInfo
-    , _clientConnection :: Ws.Connection
-    , _clientSessionState :: SessionState
+    { clientPersistedInfo :: !PersistedInfo
+    , clientConnection :: !Ws.Connection
+    , clientSessionState :: !SessionState
     }
 
 data EndpointUrl =
   EndpointUrl
-    { endpointUrlIsSecure :: Bool
-    , endpointUrlHost :: String
-    , endpointUrlPath :: String
-    , endpointUrlPort :: PortNumber
+    { endpointUrlIsSecure :: !Bool
+    , endpointUrlHost :: !String
+    , endpointUrlPath :: !String
+    , endpointUrlPort :: !PortNumber
     } deriving (Eq, Show)
 
 newtype SessionState = SessionState (IOR.IORef RequestId)
@@ -83,19 +94,9 @@ type RequestId = Word64
 
 data PersistedInfo =
   PersistedInfo
-    { persistedInfoDirectAccessToken :: T.Text
-    , persistedInfoIdfv :: T.Text
+    { persistedInfoDirectAccessToken :: !T.Text
+    , persistedInfoIdfv :: !T.Text
     } deriving (Eq, Show, Generic)
-
-deriveJsonOptions :: Json.Options
-deriveJsonOptions =
-  Json.defaultOptions
-    { fieldLabelModifier = firstLower . drop (length @[] "PersistedInfo")
-    }
-
-firstLower :: String -> String
-firstLower (x:xs) = Char.toLower x : xs
-firstLower _ = error "firstLower: Assertion failed: empty string"
 
 instance FromJSON PersistedInfo where
   parseJSON = Json.genericParseJSON deriveJsonOptions
@@ -104,17 +105,62 @@ instance ToJSON PersistedInfo where
   toJSON = Json.genericToJSON deriveJsonOptions
   toEncoding = Json.genericToEncoding deriveJsonOptions
 
-serializePersistedInfo :: Client -> B.ByteString
-serializePersistedInfo = Json.encode . clientPersistedInfo
+serializePersistedInfo :: PersistedInfo -> B.ByteString
+serializePersistedInfo = Json.encode
+
+deserializePersistedInfo :: B.ByteString -> Either String PersistedInfo
+deserializePersistedInfo = Json.eitherDecode
 
 
 data Exception =
   InvalidEmailOrPassword
-    | InvalidWsUrl String
-    | UnexpectedReponse MsgPack.Object
+    | InvalidWsUrl !String
+    | UnexpectedReponse !MsgPack.Object
     deriving (Eq, Show, Typeable)
 
 instance E.Exception Exception
+
+
+type TalkId = DirectInt64
+
+
+-- | Based on Haxe's Int64
+--   https://api.haxe.org/haxe/Int64.html
+data DirectInt64 =
+  DirectInt64
+    { directInt64High :: !Int32
+    , directInt64Low :: !Int32
+    } deriving (Eq, Show, Generic)
+
+instance FromJSON DirectInt64 where
+  parseJSON = Json.genericParseJSON deriveJsonOptions
+
+instance ToJSON DirectInt64 where
+  toJSON = Json.genericToJSON deriveJsonOptions
+  toEncoding = Json.genericToEncoding deriveJsonOptions
+
+instance MessagePack DirectInt64 where
+  toObject i64 = MsgPack.ObjectMap
+    [ (MsgPack.ObjectStr "high", MsgPack.ObjectInt $ fromIntegral $ directInt64High i64)
+    , (MsgPack.ObjectStr "low", MsgPack.ObjectInt $ fromIntegral $ directInt64Low i64)
+    ]
+  fromObject (MsgPack.ObjectMap [(MsgPack.ObjectStr "high", MsgPack.ObjectInt high), (MsgPack.ObjectStr "low", MsgPack.ObjectInt low)]) =
+    return $ DirectInt64 (fromIntegral high) (fromIntegral low)
+  fromObject (MsgPack.ObjectMap [(MsgPack.ObjectStr "low", MsgPack.ObjectInt low), (MsgPack.ObjectStr "high", MsgPack.ObjectInt high)]) =
+    return $ DirectInt64 (fromIntegral high) (fromIntegral low)
+  fromObject other =
+    fail $ "Unexpected payload: " ++ show other
+
+
+deriveJsonOptions :: Json.Options
+deriveJsonOptions =
+  Json.defaultOptions
+    { fieldLabelModifier = firstLower . drop (length @[] "PersistedInfo")
+    }
+
+firstLower :: String -> String
+firstLower (x : xs) = Char.toLower x : xs
+firstLower _ = error "firstLower: Assertion failed: empty string"
 
 
 withAnonymousClient :: EndpointUrl -> (AnonymousClient -> IO a) -> IO a
@@ -122,7 +168,9 @@ withAnonymousClient ep = withSomeClient ep AnonymousClient
 
 
 withClient :: EndpointUrl -> PersistedInfo -> (Client -> IO a) -> IO a
-withClient ep pInfo = withSomeClient ep (Client pInfo)
+withClient ep pInfo action = withSomeClient ep (Client pInfo) $ \c -> do
+  createSession c
+  action c
 
 
 withSomeClient
@@ -145,6 +193,40 @@ initSessionState :: IO SessionState
 initSessionState = SessionState <$> IOR.newIORef 0
 
 
+createMessage :: Client -> TalkId -> TL.Text -> IO ()
+createMessage c tid content = do
+  let messageType = MsgPack.ObjectWord 1
+  -- NOTE:
+  --  direct-js internally splits the message by 1024 characters.
+  --  So this library follows the behavior.
+  res <- forM (TL.chunksOf 1024 content) $ \chunk ->
+    rethrowingException $ callRpc
+      (clientConnection c)
+      (clientSessionState c)
+      "create_message"
+      [ MsgPack.toObject tid
+      , messageType
+      , MsgPack.ObjectStr $ TL.toStrict chunk
+      ]
+  -- TODO: Define type for the response, then delete the debug message
+  putStrLn $ "Successfully sent a message. ResponseRecieved: " ++ show res
+
+
+createSession :: Client -> IO ()
+createSession c = do
+  res <-
+    rethrowingException $ callRpc
+      (clientConnection c)
+      (clientSessionState c)
+      "create_session"
+      [ MsgPack.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo c
+      , MsgPack.ObjectStr apiVersion
+      , MsgPack.ObjectStr agentName
+      ]
+  -- TODO: Where to save login user info
+  putStrLn $ "Successfully created a session. ResponseRecieved: " ++ show res
+
+
 login
   :: AnonymousClient
   -> T.Text -- ^ Login email address for direct.
@@ -153,8 +235,7 @@ login
 login c email pass = do
   idfv <- genIdfv
 
-  let agentName = MsgPack.ObjectStr "bot"
-      magicConstant = MsgPack.ObjectStr ""
+  let magicConstant = MsgPack.ObjectStr ""
   res <-
     callRpc
       (anonymousClientConnection c)
@@ -163,7 +244,7 @@ login c email pass = do
       [ MsgPack.ObjectStr email
       , MsgPack.ObjectStr pass
       , MsgPack.ObjectStr idfv
-      , agentName
+      , MsgPack.ObjectStr agentName
       , magicConstant
       ]
   case extractResult res of
@@ -174,9 +255,17 @@ login c email pass = do
           (anonymousClientSessionState c)
       Right other ->
         return $ Left $ UnexpectedReponse other
-      (Left e) -> return $ Left e
+      Left e -> return $ Left e
   -- Example no error: ObjectArray [ObjectWord 1,ObjectWord 0,ObjectNil,ObjectStr "..."]
   -- Example error:    ObjectArray [ObjectWord 1,ObjectWord 0,ObjectMap [(ObjectStr "code",ObjectWord 401),(ObjectStr "message",ObjectStr "invalid email or password")],ObjectNil]
+
+
+rethrowingException :: IO MsgPack.Object -> IO MsgPack.Object
+rethrowingException action = do
+  res <- action
+  case extractResult res of
+      Right obj -> return obj
+      Left e -> E.throwIO e
 
 
 extractResult :: MsgPack.Object -> Either Exception MsgPack.Object
@@ -202,7 +291,6 @@ extractResult other = Left $ UnexpectedReponse other
 
 
 -- TODO: async request/response handling using Control.Concurrent.Thread
--- TODO: Increment request id after sending
 callRpc :: Ws.Connection -> SessionState -> T.Text -> [MsgPack.Object] -> IO MsgPack.Object
 callRpc conn st funName args = do
   let magicNumber = MsgPack.ObjectWord 0
@@ -263,3 +351,11 @@ parseWsUrl raw = do
     dieWhenEmpty :: String -> String -> Either Exception String
     dieWhenEmpty msg "" = Left $ InvalidWsUrl (msg ++ ": " ++ show raw)
     dieWhenEmpty _ s = return s
+
+
+agentName :: T.Text
+agentName = "bot"
+
+
+apiVersion :: T.Text
+apiVersion = "1.91"
