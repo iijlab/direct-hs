@@ -4,7 +4,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -25,13 +24,12 @@ module Web.Direct
 
   , Exception(..)
 
+  , DirectInt64
   , TalkId
 
   , login
   , createMessage
 
-  -- * Public only for testing
-  , DirectInt64(..)
   ) where
 
 
@@ -46,11 +44,9 @@ import           Data.Aeson
                   )
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Char as Char
-import           Data.Int (Int32)
 import qualified Data.IORef as IOR
 import           Data.Maybe (fromMaybe)
 import qualified Data.MessagePack as MsgPack
-import           Data.MessagePack (MessagePack)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import           Data.Typeable (Typeable)
@@ -60,6 +56,7 @@ import           GHC.Generics (Generic)
 import           Network (withSocketsDo, PortNumber)
 import qualified Network.WebSockets as Ws
 import           Network.URI (parseURI, URI(..), URIAuth(..))
+import qualified Numeric
 import           Safe (atMay)
 import qualified System.Random.MWC as Random
 import           Text.Read (readMaybe)
@@ -121,35 +118,9 @@ data Exception =
 instance E.Exception Exception
 
 
+type DirectInt64 = Word64
+
 type TalkId = DirectInt64
-
-
--- | Based on Haxe's Int64
---   https://api.haxe.org/haxe/Int64.html
-data DirectInt64 =
-  DirectInt64
-    { directInt64High :: !Int32
-    , directInt64Low :: !Int32
-    } deriving (Eq, Show, Generic)
-
-instance FromJSON DirectInt64 where
-  parseJSON = Json.genericParseJSON deriveJsonOptions
-
-instance ToJSON DirectInt64 where
-  toJSON = Json.genericToJSON deriveJsonOptions
-  toEncoding = Json.genericToEncoding deriveJsonOptions
-
-instance MessagePack DirectInt64 where
-  toObject i64 = MsgPack.ObjectMap
-    [ (MsgPack.ObjectStr "high", MsgPack.ObjectInt $ fromIntegral $ directInt64High i64)
-    , (MsgPack.ObjectStr "low", MsgPack.ObjectInt $ fromIntegral $ directInt64Low i64)
-    ]
-  fromObject (MsgPack.ObjectMap [(MsgPack.ObjectStr "high", MsgPack.ObjectInt high), (MsgPack.ObjectStr "low", MsgPack.ObjectInt low)]) =
-    return $ DirectInt64 (fromIntegral high) (fromIntegral low)
-  fromObject (MsgPack.ObjectMap [(MsgPack.ObjectStr "low", MsgPack.ObjectInt low), (MsgPack.ObjectStr "high", MsgPack.ObjectInt high)]) =
-    return $ DirectInt64 (fromIntegral high) (fromIntegral low)
-  fromObject other =
-    fail $ "Unexpected payload: " ++ show other
 
 
 deriveJsonOptions :: Json.Options
@@ -295,12 +266,19 @@ callRpc :: Ws.Connection -> SessionState -> T.Text -> [MsgPack.Object] -> IO Msg
 callRpc conn st funName args = do
   let magicNumber = MsgPack.ObjectWord 0
   requestId <- MsgPack.ObjectWord <$> getNewRequestId st
-  Ws.sendBinaryData conn $ MsgPack.pack
-    [ magicNumber
-    , requestId
-    , MsgPack.ObjectStr funName
-    , MsgPack.ObjectArray args
-    ]
+  putStr "Function name: "
+  print funName
+  putStr "Arguments: "
+  print args
+  putStr "Payload: "
+  let p = MsgPack.pack
+        [ magicNumber
+        , requestId
+        , MsgPack.ObjectStr funName
+        , MsgPack.ObjectArray args
+        ]
+  putStrLn $ unwords $ map (($ "") . Numeric.showHex) $ B.unpack p
+  Ws.sendBinaryData conn p
   MsgPack.unpack =<< Ws.receiveData conn
 
 

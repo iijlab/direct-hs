@@ -5,10 +5,10 @@ import qualified Control.Exception as E
 import           Control.Monad (join)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy as B
-import           Data.List.Split (splitOn)
 import           Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Options.Applicative as Opt
 import qualified System.Directory as Dir
@@ -24,7 +24,6 @@ import           System.IO
                    , hSetEcho
                    , BufferMode(NoBuffering)
                    )
-import           Text.Read (readMaybe)
 
 import qualified Web.Direct as Direct
 
@@ -44,7 +43,7 @@ main = join $ Opt.execParser optionsInfo
         Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
           <> Opt.command "send"
               ( Opt.info
-                  (sendMessage <$> Opt.argument (Opt.maybeReader parseDI64) (Opt.metavar "TALK_ID_HIGH,TALK_ID_LOW"))
+                  (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID_HIGH,TALK_ID_LOW"))
                   (Opt.fullDesc <> Opt.progDesc "Send a message from stdin as the logged-in user.")
               )
 
@@ -105,18 +104,11 @@ login = do
 
 sendMessage :: Direct.DirectInt64 -> IO ()
 sendMessage i64 = do
-  msg <- TL.getContents
+  msg <- TL.stripEnd <$> TL.getContents
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
   url <- throwWhenLeft $ Direct.parseWsUrl surl
   Direct.withClient url pInfo $ \c -> Direct.createMessage c i64 msg
-
-
-parseDI64 :: String -> Maybe Direct.DirectInt64
-parseDI64 s =
-  case splitOn "," s of
-      [sHigh, sLow] -> Direct.DirectInt64 <$> readMaybe sHigh <*> readMaybe sLow
-      _ -> Nothing
 
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
