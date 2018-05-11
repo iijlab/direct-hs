@@ -1,0 +1,3 @@
+[submodule "wuss"]
+	path = wuss
+	url = https://github.com/tfausak/wuss.git
