@@ -29,13 +29,14 @@ module Web.Direct
 
   , login
   , createMessage
+  , listenMessages
 
   ) where
 
 
 import qualified Control.Error as Err
 import qualified Control.Exception as E
-import           Control.Monad (forM)
+import           Control.Monad (forM, forever)
 import qualified Data.Aeson as Json
 import           Data.Aeson
                   ( FromJSON
@@ -162,6 +163,14 @@ withSomeClient (EndpointUrl sec host path port) c action =
 
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> IOR.newIORef 0
+
+
+listenMessages :: Client -> IO ()
+listenMessages c = do
+  putStrLn "listen test"
+  forever $ do
+     obj <- MsgPack.unpack =<< Ws.receiveData (clientConnection c)
+     print (obj :: MsgPack.Object)
 
 
 createMessage :: Client -> TalkId -> TL.Text -> IO ()

@@ -46,6 +46,11 @@ main = join $ Opt.execParser optionsInfo
                   (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
                   (Opt.fullDesc <> Opt.progDesc "Send a message from stdin as the logged-in user.")
               )
+          <> Opt.command "listen"
+              ( Opt.info
+                  (pure listen)
+                  (Opt.fullDesc <> Opt.progDesc "Listen all messages for the logged-in user.")
+              )
 
 
 newtype EndpointUrl = EndpointUrl { getEndpointUrl :: String } deriving Show
@@ -109,6 +114,13 @@ sendMessage i64 = do
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
   url <- throwWhenLeft $ Direct.parseWsUrl surl
   Direct.withClient url pInfo $ \c -> Direct.createMessage c i64 msg
+
+listen :: IO ()
+listen = do
+  pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
+  (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
+  url <- throwWhenLeft $ Direct.parseWsUrl surl
+  Direct.withClient url pInfo $ \c -> Direct.listenMessages c
 
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
