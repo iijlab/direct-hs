@@ -151,7 +151,8 @@ withSomeClient
   -> (client -> IO a)
   -> IO a
 withSomeClient (EndpointUrl sec host path port) c action =
-  withSocketsDo $ runWs $ \conn ->
+  withSocketsDo $ runWs $ \conn -> do
+    Ws.forkPingThread conn 30
     (action . c conn =<< initSessionState)
       `E.finally` Ws.sendClose conn ("Bye!" :: T.Text)
   where
