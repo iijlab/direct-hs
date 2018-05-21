@@ -43,7 +43,7 @@ main = join $ Opt.execParser optionsInfo
         Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
           <> Opt.command "send"
               ( Opt.info
-                  (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID_HIGH,TALK_ID_LOW"))
+                  (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
                   (Opt.fullDesc <> Opt.progDesc "Send a message from stdin as the logged-in user.")
               )
 
