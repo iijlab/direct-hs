@@ -169,6 +169,19 @@ initSessionState = SessionState <$> IOR.newIORef 0
 listenMessages :: Client -> IO ()
 listenMessages c = do
   putStrLn "listen test"
+
+  _ <- rethrowingException $ callRpc
+    (clientConnection c)
+    (clientSessionState c)
+    "reset_notification"
+    []
+
+  _ <- rethrowingException $ callRpc
+    (clientConnection c)
+    (clientSessionState c)
+    "start_notification"
+    []
+
   forever $ do
      obj <- MsgPack.unpack =<< Ws.receiveData (clientConnection c)
      print (obj :: MsgPack.Object)
