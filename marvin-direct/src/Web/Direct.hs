@@ -29,7 +29,7 @@ module Web.Direct
 
   , login
   , createMessage
-  , listenMessages
+  , observeMessages
 
   ) where
 
@@ -166,10 +166,8 @@ initSessionState :: IO SessionState
 initSessionState = SessionState <$> IOR.newIORef 0
 
 
-listenMessages :: Client -> IO ()
-listenMessages c = do
-  putStrLn "listen test"
-
+observeMessages :: Client -> IO ()
+observeMessages c = do
   _ <- rethrowingException $ callRpc
     (clientConnection c)
     (clientSessionState c)

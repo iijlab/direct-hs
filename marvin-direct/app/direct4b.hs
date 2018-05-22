@@ -46,10 +46,10 @@ main = join $ Opt.execParser optionsInfo
                   (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
                   (Opt.fullDesc <> Opt.progDesc "Send a message from stdin as the logged-in user.")
               )
-          <> Opt.command "listen"
+          <> Opt.command "observe"
               ( Opt.info
-                  (pure listen)
-                  (Opt.fullDesc <> Opt.progDesc "Listen all messages for the logged-in user.")
+                  (pure observe)
+                  (Opt.fullDesc <> Opt.progDesc "Observe all messages for the logged-in user.")
               )
 
 
@@ -115,12 +115,12 @@ sendMessage i64 = do
   url <- throwWhenLeft $ Direct.parseWsUrl surl
   Direct.withClient url pInfo $ \c -> Direct.createMessage c i64 msg
 
-listen :: IO ()
-listen = do
+observe :: IO ()
+observe = do
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
   url <- throwWhenLeft $ Direct.parseWsUrl surl
-  Direct.withClient url pInfo $ \c -> Direct.listenMessages c
+  Direct.withClient url pInfo $ \c -> Direct.observeMessages c
 
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
