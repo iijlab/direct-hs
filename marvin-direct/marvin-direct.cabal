@@ -20,12 +20,14 @@ library
       base >= 4.7 && < 5
     , aeson
     , bytestring
+    , containers
     , data-msgpack
     , errors
     , mwc-random
     , network
     , network-uri
     , safe
+    , stm
     , text
     , uuid
     , websockets

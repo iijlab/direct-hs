@@ -34,6 +34,14 @@ module Web.Direct
   ) where
 
 
+import           Control.Concurrent.STM
+                   ( TVar
+                   , TMVar
+                   , newTVarIO
+                   , modifyTVar'
+                   , readTVar
+                   , atomically
+                   )
 import qualified Control.Error as Err
 import qualified Control.Exception as E
 import           Control.Monad (forM, forever)
@@ -45,7 +53,8 @@ import           Data.Aeson
                   )
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Char as Char
-import qualified Data.IORef as IOR
+import           Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
 import           Data.Maybe (fromMaybe)
 import qualified Data.MessagePack as MsgPack
 import qualified Data.Text as T
@@ -86,7 +95,12 @@ data EndpointUrl =
     , endpointUrlPort :: !PortNumber
     } deriving (Eq, Show)
 
-newtype SessionState = SessionState (IOR.IORef RequestId)
+data SessionState =
+  SessionState
+    { lastRequestId :: TVar RequestId
+    , _responseBuffer :: TVar (IntMap (TMVar MsgPack.Object))
+    -- ^ RequestId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
+    }
 
 type RequestId = Word64
 
@@ -163,7 +177,7 @@ withSomeClient (EndpointUrl sec host path port) c action =
 
 
 initSessionState :: IO SessionState
-initSessionState = SessionState <$> IOR.newIORef 0
+initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO IM.empty
 
 
 observeMessages :: Client -> IO ()
@@ -302,10 +316,12 @@ callRpc conn st funName args = do
   Ws.sendBinaryData conn p
   MsgPack.unpack =<< Ws.receiveData conn
 
-
 getNewRequestId :: SessionState -> IO Word64
-getNewRequestId (SessionState ior) =
-  IOR.atomicModifyIORef' ior (\i -> (i + 1, i))
+getNewRequestId ss = atomically $ do
+  let lastRequestIdVar = lastRequestId ss
+  current <- readTVar lastRequestIdVar
+  modifyTVar' lastRequestIdVar (+ 1)
+  return current
 
 
 genIdfv :: IO T.Text
