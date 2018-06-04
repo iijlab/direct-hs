@@ -2,7 +2,7 @@
 
 import           Control.Applicative ((<|>), (<**>))
 import qualified Control.Exception as E
-import           Control.Monad (join)
+import           Control.Monad (join, forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy as B
 import           Data.Monoid ((<>))
@@ -94,10 +94,10 @@ login = do
   hSetBuffering stderr NoBuffering
 
   e <- dieWhenLeft =<< decodeEnv
-  url <- throwWhenLeft $ Direct.parseWsUrl $ directEndpointUrl e
+  url <- dieWhenLeft $ Direct.parseWsUrl $ directEndpointUrl e
   putStrLn $ "Parsed URL:" ++ show url
 
-  Direct.withAnonymousClient url $ \ac -> do
+  Direct.withAnonymousClient url (\_ _ -> return ()) $ \ac -> do
     c <- throwWhenLeft =<<
       Direct.login ac (directEmailAddress e) (directPassword e)
     putStrLn "Successfully logged in."
@@ -112,15 +112,19 @@ sendMessage i64 = do
   msg <- TL.stripEnd <$> TL.getContents
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
-  url <- throwWhenLeft $ Direct.parseWsUrl surl
-  Direct.withClient url pInfo $ \c -> Direct.createMessage c i64 msg
+  url <- dieWhenLeft $ Direct.parseWsUrl surl
+  Direct.withClient url pInfo (\_ _ -> return ()) $ \c -> Direct.createMessage c i64 msg
 
 observe :: IO ()
 observe = do
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
-  url <- throwWhenLeft $ Direct.parseWsUrl surl
-  Direct.withClient url pInfo $ \c -> Direct.observeMessages c
+  url <- dieWhenLeft $ Direct.parseWsUrl surl
+  -- TODO: Handle Ctrl + C
+  Direct.withClient url pInfo showNotification $ \_ -> forever $ return ()
+    where
+      showNotification method params =
+        putStrLn $ "method: " ++ show method ++ ", params: " ++ show params
 
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a

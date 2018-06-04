@@ -16,11 +16,13 @@ cabal-version:       >=1.10
 library
   hs-source-dirs: src
   exposed-modules: Web.Direct
+  other-modules:   Web.Direct.Types
+                 , Network.MessagePack.ClientViaWebSockets
   build-depends:
       base >= 4.7 && < 5
     , aeson
     , bytestring
-    , containers
+    , unordered-containers
     , data-msgpack
     , errors
     , mwc-random
