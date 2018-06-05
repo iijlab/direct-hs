@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Applicative ((<|>), (<**>))
+import           Control.Concurrent (threadDelay)
 import qualified Control.Exception as E
 import           Control.Monad (join, forever)
 import           Control.Monad.IO.Class (liftIO)
@@ -121,7 +122,9 @@ observe = do
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
   url <- dieWhenLeft $ Direct.parseWsUrl surl
   -- TODO: Handle Ctrl + C
-  Direct.withClient url pInfo showNotification $ \_ -> forever $ return ()
+  Direct.withClient url pInfo showNotification $ \_ ->
+    -- `forever $ return ()` doesn't give up control flow to the receiver thread.
+    forever $ threadDelay $ 10 * 1000
     where
       showNotification method params =
         putStrLn $ "method: " ++ show method ++ ", params: " ++ show params
