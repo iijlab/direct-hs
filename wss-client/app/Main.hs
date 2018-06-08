@@ -1,10 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
+
+-- | Sample application of ws-client.
+--   A simple command like wscat.
 
 
 import           Control.Monad (forever, unless)
 import           Control.Concurrent  (forkIO, killThread)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import qualified Data.ByteString.Char8 as B
 import           System.Environment (getArgs)
 import qualified Network.WebSockets.Client as WS
 import qualified Network.WebSockets as WS
@@ -16,13 +20,13 @@ main = do
   WS.withClient url $ \conn -> do
     tid <- forkIO $ forever $ do
       msg <- WS.receiveData conn
-      T.putStrLn msg
+      B.putStrLn msg
 
     let loop = do
-          line <- T.getLine
-          unless (T.null line) $
+          line <- B.getLine
+          unless (B.null line || line == "\r") $
             WS.sendTextData conn line >> loop
 
     loop
-    WS.sendClose conn $ T.pack "Bye!"
+    WS.sendClose conn $ B.pack "Bye!"
     killThread tid
