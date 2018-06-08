@@ -33,7 +33,7 @@ withWsClientFromManager man rawUrl action = do
     E.bracket
       ( do
         let r = do
-              bs <- Http.connectionRead $ httpConn
+              bs <- Http.connectionRead httpConn
               return $
                 if BS.null bs
                   then Nothing
@@ -46,7 +46,7 @@ withWsClientFromManager man rawUrl action = do
         WS.makeStream r w
       )
       WS.close
-      (\stream ->
+      (\stream -> do
         -- TODO: configure WS.ConnectionOptions
         WS.runClientWithStream stream host path WS.defaultConnectionOptions [] $ \conn -> do
           action conn <* WS.sendClose conn (T.pack "Bye")
