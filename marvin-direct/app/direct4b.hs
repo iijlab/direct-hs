@@ -98,7 +98,7 @@ login = do
   url <- dieWhenLeft $ Direct.parseWsUrl $ directEndpointUrl e
   putStrLn $ "Parsed URL:" ++ show url
 
-  Direct.withAnonymousClient url (\_ _ -> return ()) $ \ac -> do
+  Direct.withAnonymousClient url Direct.defaultConfig $ \ac -> do
     c <- throwWhenLeft =<<
       Direct.login ac (directEmailAddress e) (directPassword e)
     putStrLn "Successfully logged in."
@@ -114,7 +114,7 @@ sendMessage i64 = do
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
   url <- dieWhenLeft $ Direct.parseWsUrl surl
-  Direct.withClient url pInfo (\_ _ -> return ()) $ \c -> Direct.createMessage c i64 msg
+  Direct.withClient url pInfo Direct.defaultConfig $ \c -> Direct.createMessage c i64 msg
 
 observe :: IO ()
 observe = do
@@ -122,9 +122,14 @@ observe = do
   (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
   url <- dieWhenLeft $ Direct.parseWsUrl surl
   -- TODO: Handle Ctrl + C
-  Direct.withClient url pInfo showNotification $ \_ ->
-    -- `forever $ return ()` doesn't give up control flow to the receiver thread.
-    forever $ threadDelay $ 10 * 1000
+  Direct.withClient
+    url
+    pInfo
+    (Direct.defaultConfig { Direct.notificationHandler = showNotification })
+    (\_ ->
+      -- `forever $ return ()` doesn't give up control flow to the receiver thread.
+      forever $ threadDelay $ 10 * 1000
+    )
     where
       showNotification method params =
         putStrLn $ "method: " ++ show method ++ ", params: " ++ show params

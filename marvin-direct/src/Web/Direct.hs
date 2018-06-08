@@ -29,6 +29,8 @@ module Web.Direct
   , createMessage
 
   , Rpc.parseWsUrl
+  , Rpc.Config(notificationHandler, requestHandler)
+  , Rpc.defaultConfig
   ) where
 
 
@@ -45,8 +47,17 @@ import           Web.Direct.Types
 import qualified Network.MessagePack.ClientViaWebSockets as Rpc
 
 
+-- defaultConfig :: Rpc.Config
+-- defaultConfig = Rpc.defaultConfig { Rpc.requestHandler = undefined }
+-- type RequestHandler = MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+
+-- defaultRequestHandler :: Rpc.RequestHandler
+-- defaultRequestHandler
+
+
+
 withClient
-  :: Rpc.EndpointUrl -> PersistedInfo -> Rpc.NotificationHandler -> (Client -> IO a) -> IO a
+  :: Rpc.EndpointUrl -> PersistedInfo -> Rpc.Config -> (Client -> IO a) -> IO a
 withClient ep pInfo handler action = withAnonymousClient ep handler $ \aClient -> do
   let client = Client pInfo aClient
   createSession client
@@ -55,7 +66,7 @@ withClient ep pInfo handler action = withAnonymousClient ep handler $ \aClient -
 
 
 withAnonymousClient
-  :: Rpc.EndpointUrl -> Rpc.NotificationHandler -> (AnonymousClient -> IO a) -> IO a
+  :: Rpc.EndpointUrl -> Rpc.Config -> (AnonymousClient -> IO a) -> IO a
 withAnonymousClient = Rpc.withClient
 
 

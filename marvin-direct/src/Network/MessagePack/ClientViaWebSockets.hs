@@ -1,6 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.MessagePack.ClientViaWebSockets where
+module Network.MessagePack.ClientViaWebSockets
+  ( Client
+  , Config(notificationHandler, requestHandler)
+  , NotificationHandler
+  , RequestHandler
+  , EndpointUrl
+  , defaultConfig
+  , withClient
+  , callRpc
+  , getNewMessageId
+  , forkReceiverThread
+  , initSessionState
+  , parseWsUrl
+  ) where
 
 
 import           Control.Concurrent (ThreadId, killThread, forkIO)
@@ -52,15 +65,26 @@ type MessageId = Word64
 
 data EndpointUrl =
   EndpointUrl
-    { endpointUrlIsSecure :: !Bool
-    , endpointUrlHost :: !String
-    , endpointUrlPath :: !String
-    , endpointUrlPort :: !PortNumber
+    { _endpointUrlIsSecure :: !Bool
+    , _endpointUrlHost :: !String
+    , _endpointUrlPath :: !String
+    , _endpointUrlPort :: !PortNumber
     } deriving (Eq, Show)
 
 type MethodName = T.Text
 
+data Config =
+  Config
+   { notificationHandler :: NotificationHandler
+   , requestHandler :: RequestHandler
+   }
+
+defaultConfig :: Config
+defaultConfig = Config (\_ _ -> return ()) (\_ _ _ -> return ())
+
 type NotificationHandler = MethodName -> [MsgPack.Object] -> IO ()
+
+type RequestHandler = MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
 -- https://hackage.haskell.org/package/data-msgpack-types-0.0.1/docs/Data-MessagePack-Types-Class.html
 data Message =
@@ -142,12 +166,12 @@ instance MessagePack Message where
     fail $ "Unexpected object:" ++ show other
 
 
-withClient :: EndpointUrl -> NotificationHandler -> (Client -> IO a) -> IO a
-withClient (EndpointUrl sec host path port) nHand action =
+withClient :: EndpointUrl -> Config -> (Client -> IO a) -> IO a
+withClient (EndpointUrl sec host path port) config action =
   withSocketsDo $ runWs $ \conn -> do
     Ws.forkPingThread conn 30
     ss <- initSessionState
-    tid <- forkReceiverThread conn ss nHand
+    tid <- forkReceiverThread conn ss config
     ( do
       returned <- action $ Client conn ss
       Ws.sendClose conn ("Bye!" :: T.Text)
@@ -194,6 +218,20 @@ callRpc client funName args = do
     return res
 
 
+-- TODO: Receive Either MsgPack.Object MsgPack.Object
+replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
+replyRpc client mid result = do
+  let conn = clientConnection client
+      magicNumber = MsgPack.ObjectWord 1
+      p = MsgPack.pack
+        [ magicNumber
+        , MsgPack.ObjectWord mid
+        , MsgPack.ObjectNil
+        , result
+        ]
+  Ws.sendBinaryData conn p
+
+
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
 getNewMessageId ss = atomically $ do
   let lastMessageIdVar = lastMessageId ss
@@ -207,8 +245,8 @@ getNewMessageId ss = atomically $ do
 
   return (current, tmv)
 
-forkReceiverThread :: Ws.Connection -> SessionState -> NotificationHandler -> IO ThreadId
-forkReceiverThread conn ss nHand = forkIO $
+forkReceiverThread :: Ws.Connection -> SessionState -> Config -> IO ThreadId
+forkReceiverThread conn ss config = forkIO $
   forever $ do
     response <- MsgPack.unpack =<< Ws.receiveData conn
     traceM $ "response: " ++ show response
@@ -226,10 +264,13 @@ forkReceiverThread conn ss nHand = forkIO $
                   putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
         traceM "BEGIN Calling handler"
-        nHand methodName params
+        notificationHandler config methodName params
         traceM "FINISHED Calling handler"
-      RequestMessage _mid _methodName _result ->
-        error "Assertion Failure: client should not receive a request message!"
+      RequestMessage mid methodName params -> do
+        requestHandler config mid methodName params
+
+        -- TODO: move this line to default handler
+        replyRpc (Client conn ss) mid (MsgPack.ObjectBool True)
 
 
 initSessionState :: IO SessionState
