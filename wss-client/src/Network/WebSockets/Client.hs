@@ -48,8 +48,7 @@ withWsClientFromManager man rawUrl action = do
       WS.close
       (\stream -> do
         -- TODO: configure WS.ConnectionOptions
-        WS.runClientWithStream stream host path WS.defaultConnectionOptions [] $ \conn -> do
-          action conn <* WS.sendClose conn (T.pack "Bye")
+        WS.runClientWithStream stream host path WS.defaultConnectionOptions [] action
       )
 
 

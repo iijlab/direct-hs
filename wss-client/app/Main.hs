@@ -24,4 +24,5 @@ main = do
             WS.sendTextData conn line >> loop
 
     loop
+    WS.sendClose conn $ T.pack "Bye!"
     killThread tid
