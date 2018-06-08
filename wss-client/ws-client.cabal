@@ -27,7 +27,7 @@ library
                      , http-client-tls
                      , network-uri
                      , text
-                     , websockets
+                     , websockets >= 0.12.0 && < 0.13
   default-language:    Haskell2010
 
 executable ws-client-sample
