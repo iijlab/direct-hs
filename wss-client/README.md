@@ -14,7 +14,7 @@ With [http-client](https://hackage.haskell.org/package/http-client) and [http-cl
 
 ## Example
 
-An example program is here: [app/Main.hs](app/Main.hs).  
+An example program is here: [app/sample.hs](app/sample.hs).  
 Build the executable by enabling  build-sample flag:
 
 ```bash

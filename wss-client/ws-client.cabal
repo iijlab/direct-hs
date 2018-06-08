@@ -36,7 +36,7 @@ executable ws-client-sample
   else
     buildable:         False
   hs-source-dirs:      app
-  main-is:             Main.hs
+  main-is:             sample.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , ws-client
