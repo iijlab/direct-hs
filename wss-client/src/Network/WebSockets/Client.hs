@@ -1,5 +1,5 @@
 module Network.WebSockets.Client
-  ( withWsClient
+  ( withClient
   ) where
 
 
@@ -15,8 +15,8 @@ import qualified Network.WebSockets.Stream as WS
 import           Network.URI (parseURI, URI(..), URIAuth(..))
 
 
-withWsClient :: String -> (WS.Connection -> IO a) -> IO a
-withWsClient url action = do
+withClient :: String -> (WS.Connection -> IO a) -> IO a
+withClient url action = do
   man <- Http.newManager tlsManagerSettings
   withWsClientFromManager man url action
 
