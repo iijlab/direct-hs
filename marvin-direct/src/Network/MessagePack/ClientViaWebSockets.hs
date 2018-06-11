@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Implementation of [MessagePack RPC](https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md)
+--   via WebSocket.
 module Network.MessagePack.ClientViaWebSockets
   ( Client
   , Config(notificationHandler, requestHandler)
