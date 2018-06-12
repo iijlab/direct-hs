@@ -30,7 +30,8 @@ module Web.Direct
 
   , Rpc.parseWsUrl
   , Rpc.Config(notificationHandler, requestHandler)
-  , Rpc.defaultConfig
+  , defaultConfig
+  , defaultRequestHandler
   ) where
 
 
@@ -47,12 +48,12 @@ import           Web.Direct.Types
 import qualified Network.MessagePack.ClientViaWebSockets as Rpc
 
 
--- defaultConfig :: Rpc.Config
--- defaultConfig = Rpc.defaultConfig { Rpc.requestHandler = undefined }
--- type RequestHandler = MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+defaultConfig :: Rpc.Config
+defaultConfig = Rpc.defaultConfig { Rpc.requestHandler = defaultRequestHandler }
 
--- defaultRequestHandler :: Rpc.RequestHandler
--- defaultRequestHandler
+defaultRequestHandler :: Rpc.RequestHandler
+defaultRequestHandler c mid _methodName _objs =
+  Rpc.replyRpc c mid (MsgPack.ObjectBool True)
 
 
 

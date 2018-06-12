@@ -11,6 +11,7 @@ module Network.MessagePack.ClientViaWebSockets
   , defaultConfig
   , withClient
   , callRpc
+  , replyRpc
   , getNewMessageId
   , forkReceiverThread
   , initSessionState
@@ -82,11 +83,11 @@ data Config =
    }
 
 defaultConfig :: Config
-defaultConfig = Config (\_ _ -> return ()) (\_ _ _ -> return ())
+defaultConfig = Config (\_ _ _ -> return ()) (\_ _ _ _ -> return ())
 
-type NotificationHandler = MethodName -> [MsgPack.Object] -> IO ()
+type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
-type RequestHandler = MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
 -- https://hackage.haskell.org/package/data-msgpack-types-0.0.1/docs/Data-MessagePack-Types-Class.html
 data Message =
@@ -173,9 +174,10 @@ withClient (EndpointUrl sec host path port) config action =
   withSocketsDo $ runWs $ \conn -> do
     Ws.forkPingThread conn 30
     ss <- initSessionState
-    tid <- forkReceiverThread conn ss config
+    let c = Client conn ss
+    tid <- forkReceiverThread c config
     ( do
-      returned <- action $ Client conn ss
+      returned <- action c
       Ws.sendClose conn ("Bye!" :: T.Text)
       return returned
       ) `E.finally` killThread tid
@@ -247,8 +249,10 @@ getNewMessageId ss = atomically $ do
 
   return (current, tmv)
 
-forkReceiverThread :: Ws.Connection -> SessionState -> Config -> IO ThreadId
-forkReceiverThread conn ss config = forkIO $
+forkReceiverThread :: Client -> Config -> IO ThreadId
+forkReceiverThread c config = forkIO $ do
+  let conn = clientConnection c
+      ss = clientSessionState c
   forever $ do
     response <- MsgPack.unpack =<< Ws.receiveData conn
     traceM $ "response: " ++ show response
@@ -266,13 +270,10 @@ forkReceiverThread conn ss config = forkIO $
                   putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
         traceM "BEGIN Calling handler"
-        notificationHandler config methodName params
+        notificationHandler config c methodName params
         traceM "FINISHED Calling handler"
       RequestMessage mid methodName params -> do
-        requestHandler config mid methodName params
-
-        -- TODO: move this line to default handler
-        replyRpc (Client conn ss) mid (MsgPack.ObjectBool True)
+        requestHandler config c mid methodName params
 
 
 initSessionState :: IO SessionState

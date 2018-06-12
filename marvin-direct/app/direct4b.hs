@@ -125,14 +125,21 @@ observe = do
   Direct.withClient
     url
     pInfo
-    (Direct.defaultConfig { Direct.notificationHandler = showNotification })
+    ( Direct.defaultConfig
+      { Direct.notificationHandler = showNotification
+      , Direct.requestHandler = showRequest
+      }
+    )
     (\_ ->
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
       forever $ threadDelay $ 10 * 1000
     )
     where
-      showNotification method params =
-        putStrLn $ "method: " ++ show method ++ ", params: " ++ show params
+      showNotification _c method params =
+        putStrLn $ "Notification method: " ++ show method ++ ", params: " ++ show params
+      showRequest c mid method params = do
+        putStrLn $ "Request method: " ++ show method ++ ", params: " ++ show params
+        Direct.defaultRequestHandler c mid method params
 
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
