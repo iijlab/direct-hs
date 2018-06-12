@@ -6,6 +6,8 @@ import qualified Control.Exception as E
 import           Control.Monad (join, forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy as B
+import           Data.List (intercalate)
+import qualified Data.MessagePack as M
 import           Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -136,9 +138,9 @@ observe = do
     )
     where
       showNotification _c method params =
-        putStrLn $ "Notification method: " ++ show method ++ ", params: " ++ show params
+        putStrLn $ "Notification method: " ++ show method ++ ", params: " ++ showObjs params
       showRequest c mid method params = do
-        putStrLn $ "Request method: " ++ show method ++ ", params: " ++ show params
+        putStrLn $ "Request method: " ++ show method ++ ", params: " ++ showObjs params
         Direct.defaultRequestHandler c mid method params
 
 
@@ -155,3 +157,21 @@ exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
 
 jsonFileName :: FilePath
 jsonFileName = ".direct4b.json"
+
+showObjs :: [M.Object] -> String
+showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
+
+showObj :: M.Object -> String
+showObj (M.ObjectWord  w) = "+" ++ show w
+showObj (M.ObjectInt   n) = show n
+showObj  M.ObjectNil      = "nil"
+showObj (M.ObjectBool  b) = show b
+showObj (M.ObjectStr   s) = "\"" ++ T.unpack s ++ "\""
+showObj (M.ObjectArray v) = "[" ++ intercalate "," (map showObj v) ++ "]"
+showObj (M.ObjectMap   m) = "{" ++ intercalate "," (map showPair m) ++ "}"
+  where
+    showPair (x,y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
+showObj (M.ObjectBin _)    = error "ObjectBin"
+showObj (M.ObjectExt _ _)  = error "ObjectExt"
+showObj (M.ObjectFloat _)  = error "ObjectFloat"
+showObj (M.ObjectDouble _) = error "ObjectDouble"
