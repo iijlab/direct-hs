@@ -1,8 +1,8 @@
-name:                marvin-direct
+name:                direct-hs
 version:             0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/iij-ii/marvin-direct#readme
+homepage:            https://github.com/iij-ii/direct-hs
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Yuji Yamamoto
@@ -46,7 +46,7 @@ executable direct4b
     , bytestring
     , directory
     , filepath
-    , marvin-direct
+    , direct-hs
     , optparse-applicative
     , envy
     , text
@@ -54,4 +54,4 @@ executable direct4b
 
 source-repository head
   type:     git
-  location: https://github.com/iij-ii/marvin-direct
+  location: https://github.com/iij-ii/direct-hs
