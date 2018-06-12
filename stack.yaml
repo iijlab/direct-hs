@@ -37,11 +37,9 @@ resolver: lts-11.4
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - ./marvin-direct
-- ./wscat-msgpack
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps:
-- ./wuss
+extra-deps: []
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
