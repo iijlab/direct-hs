@@ -42,7 +42,7 @@ import           Data.MessagePack (MessagePack)
 import qualified Data.MessagePack as MsgPack
 import qualified Data.Text as T
 import           Data.Word (Word64)
-import           Network (withSocketsDo, PortNumber)
+import           Network.Socket (withSocketsDo, PortNumber)
 import qualified Network.WebSockets as Ws
 import           Network.URI (parseURI, URI(..), URIAuth(..))
 import qualified Numeric
