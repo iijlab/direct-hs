@@ -40,11 +40,7 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- git: https://github.com/igrep/http-client.git
-  commit: 7c9d4c8a4061275764028c4a4fe9d75c5cb18ce9
-  subdirs:
-  - http-client
-  - http-client-tls
+- http-client-0.5.13
 
 # Override default flag values for local packages and extra-deps
 flags:

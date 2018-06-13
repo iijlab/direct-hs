@@ -23,7 +23,7 @@ library
   exposed-modules:     Network.WebSockets.Client
   build-depends:       base >= 4.7 && < 5
                      , bytestring
-                     , http-client >= 0.5.14
+                     , http-client >= 0.5.13
                      , http-client-tls
                      , network-uri
                      , websockets >= 0.12.0 && < 0.13
