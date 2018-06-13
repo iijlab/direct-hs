@@ -114,7 +114,7 @@ withClient (EndpointUrl sec host path port) config action =
 -- TODO: Returns any exception
 callRpc
   :: Client
-  -> T.Text
+  -> MethodName
   -> [MsgPack.Object]
   -> IO (Either MsgPack.Object MsgPack.Object)
 callRpc client funName args = do
@@ -126,12 +126,7 @@ callRpc client funName args = do
   putStr "Arguments: "
   print args
   putStr "Payload: "
-  let p = MsgPack.pack
-        [ magicNumber
-        , MsgPack.ObjectWord requestId
-        , MsgPack.ObjectStr funName
-        , MsgPack.ObjectArray args
-        ]
+  let p = MsgPack.pack $ RequestMessage requestId funName args
   putStrLn $ unwords $ map (($ "") . Numeric.showHex) $ B.unpack p
   clientSend client p
   atomically $ do -- TODO: Split out as a function
@@ -144,13 +139,7 @@ callRpc client funName args = do
 -- TODO: Receive Either MsgPack.Object MsgPack.Object
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
-  let magicNumber = MsgPack.ObjectWord 1
-      p = MsgPack.pack
-        [ magicNumber
-        , MsgPack.ObjectWord mid
-        , MsgPack.ObjectNil
-        , result
-        ]
+  let p = MsgPack.pack $ ResponseMessage mid (Right result)
   clientSend client p
 
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
