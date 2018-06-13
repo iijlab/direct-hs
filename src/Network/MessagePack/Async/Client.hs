@@ -37,7 +37,6 @@ import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.MessagePack as MsgPack
-import           Network.Socket (PortNumber)
 import qualified Numeric
 
 import           Data.MessagePack.RPC
