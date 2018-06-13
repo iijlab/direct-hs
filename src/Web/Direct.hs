@@ -45,7 +45,8 @@ import qualified Data.UUID as Uuid
 import qualified System.Random.MWC as Random
 
 import           Web.Direct.Types
-import qualified Network.MessagePack.ClientViaWebSockets as Rpc
+
+import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 
 
 defaultConfig :: Rpc.Config
