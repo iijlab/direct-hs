@@ -56,7 +56,6 @@ data Client =
   Client
     { clientSend  :: B.ByteString -> IO ()
     , clientRecv  :: IO B.ByteString
-    , clientCLose :: B.ByteString -> IO () -- fixme
     , clientSessionState :: !SessionState
     }
 
