@@ -55,7 +55,9 @@ import           Debug.Trace
 
 data Client =
   Client
-    { clientConnection :: !Ws.Connection
+    { clientSend  :: B.ByteString -> IO ()
+    , clientRecv  :: IO B.ByteString
+    , clientCLose :: B.ByteString -> IO () -- fixme
     , clientSessionState :: !SessionState
     }
 
@@ -92,7 +94,7 @@ withClient (EndpointUrl sec host path port) config action =
   withSocketsDo $ runWs $ \conn -> do
     Ws.forkPingThread conn 30
     ss <- initSessionState
-    let c = Client conn ss
+    let c = Client (Ws.sendBinaryData conn) (Ws.receiveData conn) (Ws.sendClose conn) ss
     tid <- forkReceiverThread c config
     ( do
       returned <- action c
@@ -116,8 +118,7 @@ callRpc
   -> [MsgPack.Object]
   -> IO (Either MsgPack.Object MsgPack.Object)
 callRpc client funName args = do
-  let conn = clientConnection client
-      st = clientSessionState client
+  let st = clientSessionState client
       magicNumber = MsgPack.ObjectWord 0
   (requestId, resBuf) <- getNewMessageId st
   putStr "Function name: "
@@ -132,7 +133,7 @@ callRpc client funName args = do
         , MsgPack.ObjectArray args
         ]
   putStrLn $ unwords $ map (($ "") . Numeric.showHex) $ B.unpack p
-  Ws.sendBinaryData conn p
+  clientSend client p
   atomically $ do -- TODO: Split out as a function
     res <- takeTMVar resBuf
     let responseBufferVar = responseBuffer st
@@ -143,16 +144,14 @@ callRpc client funName args = do
 -- TODO: Receive Either MsgPack.Object MsgPack.Object
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
-  let conn = clientConnection client
-      magicNumber = MsgPack.ObjectWord 1
+  let magicNumber = MsgPack.ObjectWord 1
       p = MsgPack.pack
         [ magicNumber
         , MsgPack.ObjectWord mid
         , MsgPack.ObjectNil
         , result
         ]
-  Ws.sendBinaryData conn p
-
+  clientSend client p
 
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
 getNewMessageId ss = atomically $ do
@@ -169,10 +168,9 @@ getNewMessageId ss = atomically $ do
 
 forkReceiverThread :: Client -> Config -> IO ThreadId
 forkReceiverThread c config = forkIO $ do
-  let conn = clientConnection c
-      ss = clientSessionState c
+  let ss = clientSessionState c
   forever $ do
-    response <- MsgPack.unpack =<< Ws.receiveData conn
+    response <- MsgPack.unpack =<< clientRecv c
     traceM $ "response: " ++ show response
     case response of
       ResponseMessage mid result ->
