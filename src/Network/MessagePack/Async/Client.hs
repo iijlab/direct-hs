@@ -20,7 +20,7 @@ module Network.MessagePack.Async.Client
   , forkReceiverThread
   ) where
 
-import           Control.Concurrent (ThreadId, killThread, forkIO)
+import           Control.Concurrent (ThreadId, forkIO)
 import           Control.Concurrent.STM
                    ( TVar
                    , TMVar
@@ -32,21 +32,13 @@ import           Control.Concurrent.STM
                    , atomically
                    , putTMVar
                    )
-import qualified Control.Error as Err
-import qualified Control.Exception as E
 import           Control.Monad (forever, join)
 import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
-import           Data.Maybe (fromMaybe)
-import           Data.MessagePack (MessagePack)
 import qualified Data.MessagePack as MsgPack
-import qualified Data.Text as T
-import           Data.Word (Word64)
-import           Network.Socket (withSocketsDo, PortNumber)
-import           Network.URI (parseURI, URI(..), URIAuth(..))
+import           Network.Socket (PortNumber)
 import qualified Numeric
-import           Text.Read (readMaybe)
 
 import           Data.MessagePack.RPC
 
@@ -65,14 +57,6 @@ data SessionState =
     , responseBuffer :: TVar (HashMap MessageId (TMVar (Either MsgPack.Object MsgPack.Object)))
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
-
-data EndpointUrl =
-  EndpointUrl
-    { _endpointUrlIsSecure :: !Bool
-    , _endpointUrlHost :: !String
-    , _endpointUrlPath :: !String
-    , _endpointUrlPort :: !PortNumber
-    } deriving (Eq, Show)
 
 data Config =
   Config
@@ -98,7 +82,6 @@ callRpc
   -> IO (Either MsgPack.Object MsgPack.Object)
 callRpc client funName args = do
   let st = clientSessionState client
-      magicNumber = MsgPack.ObjectWord 0
   (requestId, resBuf) <- getNewMessageId st
   putStr "Function name: "
   print funName
