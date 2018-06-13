@@ -7,11 +7,10 @@ module Network.MessagePack.Async.Client.WebSocket (
   , module Network.MessagePack.Async.Client
   ) where
 
-import           Control.Concurrent (ThreadId, killThread, forkIO)
+import           Control.Concurrent (killThread)
 import qualified Control.Error as Err
 import qualified Control.Exception as E
 import           Data.Maybe (fromMaybe)
-import           Data.MessagePack.RPC
 import qualified Data.Text as T
 import           Network.Socket (withSocketsDo, PortNumber)
 import           Network.URI (parseURI, URI(..), URIAuth(..))
