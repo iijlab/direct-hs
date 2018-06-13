@@ -26,7 +26,7 @@ withClient (EndpointUrl sec host path port) config action =
   withSocketsDo $ runWs $ \conn -> do
     Ws.forkPingThread conn 30
     ss <- initSessionState
-    let c = Client (Ws.sendBinaryData conn) (Ws.receiveData conn) (Ws.sendClose conn) ss
+    let c = Client (Ws.sendBinaryData conn) (Ws.receiveData conn) ss
     tid <- forkReceiverThread c config
     ( do
       returned <- action c
