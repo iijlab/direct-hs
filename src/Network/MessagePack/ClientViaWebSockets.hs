@@ -91,7 +91,7 @@ type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> I
 
 -- https://hackage.haskell.org/package/data-msgpack-types-0.0.1/docs/Data-MessagePack-Types-Class.html
 data Message =
-  RequestMessage MessageId MethodName [MsgPack.Object]
+      RequestMessage MessageId MethodName [MsgPack.Object]
     | ResponseMessage MessageId (Either MsgPack.Object MsgPack.Object)
     | NotificationMessage MethodName [MsgPack.Object]
   deriving (Eq, Show)
@@ -112,6 +112,7 @@ instance MessagePack Message where
       , MsgPack.ObjectNil
       , result
       ]
+
   toObject (ResponseMessage mid (Left err)) =
     MsgPack.ObjectArray
       [ MsgPack.ObjectWord 1
