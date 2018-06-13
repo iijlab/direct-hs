@@ -26,11 +26,10 @@ library
                      , http-client >= 0.5.14
                      , http-client-tls
                      , network-uri
-                     , text
                      , websockets >= 0.12.0 && < 0.13
   default-language:    Haskell2010
 
-executable ws-client-sample
+executable wss-client-sample
   if flag(build-sample)
     buildable:         True
   else
@@ -44,7 +43,7 @@ executable ws-client-sample
                      , websockets
   default-language:    Haskell2010
 
-test-suite ws-client-test
+test-suite wss-client-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
