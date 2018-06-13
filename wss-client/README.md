@@ -9,8 +9,6 @@ Thanks to [http-client](https://hackage.haskell.org/package/http-client) and [ht
 - Add APIs to modify config of both http-client and websockets.
 - Test with a mock server.
 
-<!-- Uncomment after uploading on Hackage.
-
 ## Example
 
 An example program is here: [app/sample.hs](app/sample.hs).  
@@ -18,7 +16,8 @@ Build the executable by enabling  build-sample flag:
 
 ```bash
 stack unpack wss-client
-stack install wss-client --flag wss-client:build-sample
+cd wss-client-*
+stack init
+stack build wss-client --flag wss-client:build-sample
+stack exec wss-client-sample
 ```
--->
-
