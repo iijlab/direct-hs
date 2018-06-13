@@ -49,6 +49,8 @@ import qualified Numeric
 import           Text.Read (readMaybe)
 import qualified Wuss as Wss
 
+import           Data.MessagePack.RPC
+
 import           Debug.Trace
 
 data Client =
@@ -64,8 +66,6 @@ data SessionState =
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
 
-type MessageId = Word64
-
 data EndpointUrl =
   EndpointUrl
     { _endpointUrlIsSecure :: !Bool
@@ -73,8 +73,6 @@ data EndpointUrl =
     , _endpointUrlPath :: !String
     , _endpointUrlPort :: !PortNumber
     } deriving (Eq, Show)
-
-type MethodName = T.Text
 
 data Config =
   Config
@@ -88,87 +86,6 @@ defaultConfig = Config (\_ _ _ -> return ()) (\_ _ _ _ -> return ())
 type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
 type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
-
--- https://hackage.haskell.org/package/data-msgpack-types-0.0.1/docs/Data-MessagePack-Types-Class.html
-data Message =
-      RequestMessage MessageId MethodName [MsgPack.Object]
-    | ResponseMessage MessageId (Either MsgPack.Object MsgPack.Object)
-    | NotificationMessage MethodName [MsgPack.Object]
-  deriving (Eq, Show)
-
-instance MessagePack Message where
-  toObject (RequestMessage mid methodName args) =
-    MsgPack.ObjectArray
-      [ MsgPack.ObjectWord 0
-      , MsgPack.ObjectWord mid
-      , MsgPack.ObjectStr methodName
-      , MsgPack.ObjectArray args
-      ]
-
-  toObject (ResponseMessage mid (Right result)) =
-    MsgPack.ObjectArray
-      [ MsgPack.ObjectWord 1
-      , MsgPack.ObjectWord mid
-      , MsgPack.ObjectNil
-      , result
-      ]
-
-  toObject (ResponseMessage mid (Left err)) =
-    MsgPack.ObjectArray
-      [ MsgPack.ObjectWord 1
-      , MsgPack.ObjectWord mid
-      , err
-      , MsgPack.ObjectNil
-      ]
-
-  toObject (NotificationMessage methodName params) =
-    MsgPack.ObjectArray
-      [ MsgPack.ObjectWord 2
-      , MsgPack.ObjectStr methodName
-      , MsgPack.ObjectArray params
-      ]
-
-  fromObject
-    ( MsgPack.ObjectArray
-        [ MsgPack.ObjectWord 0
-        , MsgPack.ObjectWord mid
-        , MsgPack.ObjectStr methodName
-        , MsgPack.ObjectArray args
-        ]
-    ) =
-      return $ RequestMessage mid methodName args
-
-  fromObject
-    ( MsgPack.ObjectArray
-        [ MsgPack.ObjectWord 1
-        , MsgPack.ObjectWord mid
-        , MsgPack.ObjectNil
-        , result
-        ]
-    ) =
-      return $ ResponseMessage mid (Right result)
-  fromObject
-    ( MsgPack.ObjectArray
-        [ MsgPack.ObjectWord 1
-        , MsgPack.ObjectWord mid
-        , err
-        , MsgPack.ObjectNil
-        ]
-    ) =
-      return $ ResponseMessage mid (Left err)
-
-  fromObject
-    ( MsgPack.ObjectArray
-        [ MsgPack.ObjectWord 2
-        , MsgPack.ObjectStr methodName
-        , MsgPack.ObjectArray params
-        ]
-    ) =
-      return $ NotificationMessage methodName params
-
-  fromObject other =
-    fail $ "Unexpected object:" ++ show other
-
 
 withClient :: EndpointUrl -> Config -> (Client -> IO a) -> IO a
 withClient (EndpointUrl sec host path port) config action =
