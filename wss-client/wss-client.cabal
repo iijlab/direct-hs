@@ -40,7 +40,6 @@ executable wss-client-sample
   build-depends:       base
                      , wss-client
                      , bytestring
-                     , websockets
   default-language:    Haskell2010
 
 test-suite wss-client-test

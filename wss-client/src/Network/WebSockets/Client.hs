@@ -1,5 +1,43 @@
+-- | A-little-bit-higher-level WebSocket client library.
+--
+--   Thanks to [http-client](https://hackage.haskell.org/package/http-client) and [http-client-tls](https://hackage.haskell.org/package/http-client-tls), functions in this module support @HTTP_PROXY@ environment variable and TLS.
+--
+--   __NOTE__: Currently, non-TLS connection via an HTTP proxy server
+--             is NOT supported.
+
 module Network.WebSockets.Client
   ( withClient
+
+    -- * Re-export from Network.WebSockets
+  , WS.Connection
+
+    -- ** Sending and receiving messages
+  , WS.receive
+  , WS.receiveDataMessage
+  , WS.receiveData
+  , WS.send
+  , WS.sendDataMessage
+  , WS.sendDataMessages
+  , WS.sendTextData
+  , WS.sendTextDatas
+  , WS.sendBinaryData
+  , WS.sendBinaryDatas
+  , WS.sendClose
+  , WS.sendCloseCode
+  , WS.sendPing
+
+    -- ** WebSocket message types
+  , WS.Message (..)
+  , WS.ControlMessage (..)
+  , WS.DataMessage (..)
+  , WS.WebSocketsData (..)
+
+    -- ** Exceptions
+  , WS.HandshakeException (..)
+  , WS.ConnectionException (..)
+
+    -- ** Utilities
+  , WS.forkPingThread
   ) where
 
 
@@ -13,8 +51,20 @@ import qualified Network.WebSockets as WS
 import qualified Network.WebSockets.Stream as WS
 import           Network.URI (parseURI, URI(..), URIAuth(..))
 
-
-withClient :: String -> (WS.Connection -> IO a) -> IO a
+-- | The main entrypoint to connect by the WebSocket protocol.
+--   This function automatically closes the created connection
+--   after exiting the action.
+--
+--   If @HTTP_PROXY@ environment variable is set,
+--   The connection is automatically made via the HTTP proxy server
+--   specified by the variable.
+--
+--   __NOTE__: Currently, non-TLS connection via an HTTP proxy server
+--             is NOT supported.
+withClient
+  :: String -- ^ Endpoint URL (e.g. wss:\/\/example.com\/path).
+  -> (WS.Connection -> IO a) -- ^ Action using the 'WS.Connection'
+  -> IO a
 withClient url action = do
   man <- Http.newManager tlsManagerSettings
   withWsClientFromManager man url action
