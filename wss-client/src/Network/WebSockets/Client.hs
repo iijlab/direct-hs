@@ -110,7 +110,8 @@ parseWsUrl raw = do
       scheme'  = uriScheme uri
       scheme   = if null scheme' then wss else scheme'
       isSecure = scheme == wss
-  return (isSecure, host, uriPath uri ++ uriQuery uri ++ uriFragment uri)
+      path     = uriPath uri ++ uriQuery uri ++ uriFragment uri
+  return (isSecure, host, if null path then "/" else path)
  where
   noteInvalidUrl :: String -> Maybe a -> IO a
   noteInvalidUrl msg =
