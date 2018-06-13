@@ -48,7 +48,7 @@ extra-deps:
 
 # Override default flag values for local packages and extra-deps
 flags:
-  ws-client:
+  wss-client:
     build-sample: true
 
 # Extra package databases containing global packages
