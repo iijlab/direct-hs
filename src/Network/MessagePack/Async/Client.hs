@@ -97,7 +97,7 @@ callRpc client funName args = do
   let st = clientSessionState client
   (requestId, resBuf) <- getNewMessageId st
   let request = RequestMessage requestId funName args
-  clientLog client "request" request
+  clientLog client "sent" request
   backendSend (clientBackend client) $ MsgPack.pack request
   atomically $ do -- TODO: Split out as a function
     res <- takeTMVar resBuf
@@ -131,7 +131,7 @@ forkReceiverThread client config = forkIO $ do
   let ss = clientSessionState client
   forever $ do
     response <- MsgPack.unpack =<< backendRecv (clientBackend client)
-    clientLog client "response" response
+    clientLog client "received" response
     case response of
       ResponseMessage mid result ->
         join $ atomically $ do
