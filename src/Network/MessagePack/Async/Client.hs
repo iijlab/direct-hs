@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.MessagePack as MsgPack
+import           System.Timeout (timeout)
 
 import           Data.MessagePack.RPC
 
@@ -96,15 +97,22 @@ callRpc client funName args = do
   let ss = clientSessionState client
   requestId <- getNewMessageId ss
   rspVar <- MVar.newEmptyMVar
-  IORef.atomicModifyIORef' (dispatchTable ss) $ \tbl ->
+  let table = dispatchTable ss
+  IORef.atomicModifyIORef' table $ \tbl ->
       (HM.insert requestId rspVar tbl, ())
   let request = RequestMessage requestId funName args
   backendSend (clientBackend client) $ MsgPack.pack request
   clientLog client "sent" request
-  rsp <- MVar.takeMVar rspVar
-  let table = dispatchTable ss
+  putStrLn $ "waiting for " ++ show requestId ++ "..."
+  rrsp <- timeout 3000000 $ MVar.takeMVar rspVar
   IORef.atomicModifyIORef' table $ \tbl -> (HM.delete requestId tbl, ())
-  return rsp
+  case rrsp of
+      Nothing  -> do
+        putStrLn $ "waiting for " ++ show requestId ++ "... failed"
+        return $ Left MsgPack.ObjectNil
+      Just rsp -> do
+        putStrLn $ "waiting for " ++ show requestId ++ "... done"
+        return rsp
 
 -- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> Result -> IO ()
@@ -126,7 +134,7 @@ receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ fore
           tbl <- IORef.readIORef $ dispatchTable ss
           case HM.lookup mid tbl of
               Just rspVar -> MVar.putMVar rspVar result
-              Nothing     -> putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
+              Nothing     -> putStrLn $ "ERROR: No MVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
         notificationHandler config client methodName params
       RequestMessage mid methodName params -> do
