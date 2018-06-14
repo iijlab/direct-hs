@@ -28,7 +28,6 @@ module Web.Direct
   , login
   , createMessage
 
-  , Rpc.parseWsUrl
   , Rpc.Config(..)
   , defaultConfig
   , defaultRequestHandler
@@ -59,7 +58,7 @@ defaultRequestHandler c mid _methodName _objs =
 
 
 withClient
-  :: Rpc.EndpointUrl -> PersistedInfo -> Rpc.Config -> (Client -> IO a) -> IO a
+  :: String -> PersistedInfo -> Rpc.Config -> (Client -> IO a) -> IO a
 withClient ep pInfo handler action = withAnonymousClient ep handler $ \aClient -> do
   let client = Client pInfo aClient
   createSession client
@@ -68,7 +67,7 @@ withClient ep pInfo handler action = withAnonymousClient ep handler $ \aClient -
 
 
 withAnonymousClient
-  :: Rpc.EndpointUrl -> Rpc.Config -> (AnonymousClient -> IO a) -> IO a
+  :: String -> Rpc.Config -> (AnonymousClient -> IO a) -> IO a
 withAnonymousClient = Rpc.withClient
 
 

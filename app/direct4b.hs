@@ -98,7 +98,7 @@ login = do
   hSetBuffering stderr NoBuffering
 
   e <- dieWhenLeft =<< decodeEnv
-  url <- dieWhenLeft $ Direct.parseWsUrl $ directEndpointUrl e
+  let url = directEndpointUrl e
   putStrLn $ "Parsed URL:" ++ show url
 
   Direct.withAnonymousClient url Direct.defaultConfig $ \ac -> do
@@ -115,15 +115,13 @@ sendMessage :: Direct.DirectInt64 -> IO ()
 sendMessage i64 = do
   msg <- TL.stripEnd <$> TL.getContents
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
-  (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
-  url <- dieWhenLeft $ Direct.parseWsUrl surl
+  (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
   Direct.withClient url pInfo Direct.defaultConfig $ \c -> Direct.createMessage c i64 msg
 
 observe :: IO ()
 observe = do
   pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
-  (EndpointUrl surl) <- dieWhenLeft =<< decodeEnv
-  url <- dieWhenLeft $ Direct.parseWsUrl surl
+  (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
   -- TODO: Handle Ctrl + C
   Direct.withClient
     url
