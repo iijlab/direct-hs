@@ -83,8 +83,6 @@ data Backend = Backend {
   , backendClose :: IO ()
   }
 
--- TODO: (DONE): Wait response
--- TODO: (DONE): Thread to write response
 -- TODO: May need to lock connection before sending (Is Ws.Connection threadsafe?)
 -- TODO: Returns any exception
 -- | Calling RPC.
