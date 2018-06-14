@@ -97,8 +97,8 @@ callRpc client funName args = do
   let st = clientSessionState client
   (requestId, resBuf) <- getNewMessageId st
   let request = RequestMessage requestId funName args
-  clientLog client "sent" request
   backendSend (clientBackend client) $ MsgPack.pack request
+  clientLog client "sent" request
   atomically $ do -- TODO: Split out as a function
     res <- takeTMVar resBuf
     let responseBufferVar = responseBuffer st
@@ -111,9 +111,9 @@ callRpc client funName args = do
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
   let response = ResponseMessage mid (Right result)
-  clientLog client "sent" response
   let p = MsgPack.pack response
   backendSend (clientBackend client) p
+  clientLog client "sent" response
 
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
 getNewMessageId ss = atomically $ do
