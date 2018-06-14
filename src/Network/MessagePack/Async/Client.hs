@@ -99,7 +99,8 @@ callRpc client funName args = do
   let request = RequestMessage requestId funName args
   backendSend (clientBackend client) $ MsgPack.pack request
   clientLog client "sent" request
-  atomically $ do -- TODO: Split out as a function
+
+  atomically $ do
     res <- takeTMVar resBuf
     let responseBufferVar = responseBuffer st
     modifyTVar' responseBufferVar $ HM.delete requestId
