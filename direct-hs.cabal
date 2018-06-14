@@ -37,6 +37,7 @@ library
     , uuid
     , websockets
     , wuss
+    , wss-client >= 0.2
   default-language: Haskell2010
 
 executable direct4b
