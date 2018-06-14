@@ -2,25 +2,23 @@
 
 module Network.MessagePack.Async.Client
   (
-    -- * Client
-    Client(..)
     -- * Config
-  , Config(..)
-  , NotificationHandler
+    NotificationHandler
   , RequestHandler
+  , Logger
+  , Config(..)
   , defaultConfig
+    -- * Backend
+  , Backend(..)
+    -- * Client
+  , Client
+  , withClient
     -- * Call and reply
   , callRpc
   , replyRpc
-    -- * Session state
-  , SessionState
-  , initSessionState
-    -- * Misc
-  , getNewMessageId
-  , forkReceiverThread
   ) where
 
-import           Control.Concurrent (ThreadId, forkIO)
+import           Control.Concurrent (ThreadId, forkIO, killThread)
 import           Control.Concurrent.STM
                    ( TVar
                    , TMVar
@@ -32,22 +30,21 @@ import           Control.Concurrent.STM
                    , atomically
                    , putTMVar
                    )
+import qualified Control.Exception as E
 import           Control.Monad (forever, join)
 import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.MessagePack as MsgPack
-import qualified Numeric
 
 import           Data.MessagePack.RPC
 
-import           Debug.Trace
-
+-- | A client data type for MessagePack RPC.
 data Client =
   Client
-    { clientSend  :: B.ByteString -> IO ()
-    , clientRecv  :: IO B.ByteString
-    , clientSessionState :: !SessionState
+    { clientSessionState :: !SessionState
+    , clientBackend      :: !Backend
+    , clientLog          :: String -> Message -> IO ()
     }
 
 data SessionState =
@@ -57,23 +54,40 @@ data SessionState =
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
 
+type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
+
+type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+
+-- | Logger type. The first argument is a tag.
+type Logger = String -> Message -> IO ()
+
 data Config =
   Config
    { notificationHandler :: NotificationHandler
    , requestHandler :: RequestHandler
+   , logger :: Logger
    }
 
+-- | The default configuration. No action at all.
 defaultConfig :: Config
-defaultConfig = Config (\_ _ _ -> return ()) (\_ _ _ _ -> return ())
+defaultConfig = Config {
+    notificationHandler = \_ _ _ -> return ()
+  , requestHandler      = \_ _ _ _ -> return ()
+  , logger              = \_ _ -> return ()
+  }
 
-type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
-
-type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+-- fixme: we should use strict ByteString
+data Backend = Backend {
+    backendSend :: B.ByteString -> IO ()
+  , backendRecv :: IO B.ByteString
+  , backendClose :: IO ()
+  }
 
 -- TODO: (DONE): Wait response
 -- TODO: (DONE): Thread to write response
 -- TODO: May need to lock connection before sending (Is Ws.Connection threadsafe?)
 -- TODO: Returns any exception
+-- | Calling RPC.
 callRpc
   :: Client
   -> MethodName
@@ -82,14 +96,9 @@ callRpc
 callRpc client funName args = do
   let st = clientSessionState client
   (requestId, resBuf) <- getNewMessageId st
-  putStr "Function name: "
-  print funName
-  putStr "Arguments: "
-  print args
-  putStr "Payload: "
-  let p = MsgPack.pack $ RequestMessage requestId funName args
-  putStrLn $ unwords $ map (($ "") . Numeric.showHex) $ B.unpack p
-  clientSend client p
+  let request = RequestMessage requestId funName args
+  backendSend (clientBackend client) $ MsgPack.pack request
+  clientLog client "sent" request
   atomically $ do -- TODO: Split out as a function
     res <- takeTMVar resBuf
     let responseBufferVar = responseBuffer st
@@ -98,10 +107,13 @@ callRpc client funName args = do
 
 
 -- TODO: Receive Either MsgPack.Object MsgPack.Object
+-- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
-  let p = MsgPack.pack $ ResponseMessage mid (Right result)
-  clientSend client p
+  let response = ResponseMessage mid (Right result)
+  let p = MsgPack.pack response
+  backendSend (clientBackend client) p
+  clientLog client "sent" response
 
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
 getNewMessageId ss = atomically $ do
@@ -117,11 +129,11 @@ getNewMessageId ss = atomically $ do
   return (current, tmv)
 
 forkReceiverThread :: Client -> Config -> IO ThreadId
-forkReceiverThread c config = forkIO $ do
-  let ss = clientSessionState c
+forkReceiverThread client config = forkIO $ do
+  let ss = clientSessionState client
   forever $ do
-    response <- MsgPack.unpack =<< clientRecv c
-    traceM $ "response: " ++ show response
+    response <- MsgPack.unpack =<< backendRecv (clientBackend client)
+    clientLog client "received" response
     case response of
       ResponseMessage mid result ->
         join $ atomically $ do
@@ -135,12 +147,22 @@ forkReceiverThread c config = forkIO $ do
                 return $
                   putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
-        traceM "BEGIN Calling handler"
-        notificationHandler config c methodName params
-        traceM "FINISHED Calling handler"
+        notificationHandler config client methodName params
       RequestMessage mid methodName params -> do
-        requestHandler config c mid methodName params
+        requestHandler config client mid methodName params
 
 
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
+
+withClient :: Config -> Backend -> (Client -> IO a) -> IO a
+withClient config backend action = do
+    ss <- initSessionState
+    let client = Client ss backend (logger config)
+    tid <- forkReceiverThread client config
+    takeAction client `E.finally` killThread tid
+  where
+    takeAction client = do
+      returned <- action client
+      backendClose backend
+      return returned

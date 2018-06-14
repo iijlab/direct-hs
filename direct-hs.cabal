@@ -47,6 +47,7 @@ executable direct4b
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , data-msgpack
     , directory
     , filepath
     , direct-hs

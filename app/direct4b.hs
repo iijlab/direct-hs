@@ -6,6 +6,9 @@ import qualified Control.Exception as E
 import           Control.Monad (join, forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy as B
+import           Data.List (intercalate)
+import qualified Data.MessagePack as M
+import qualified Data.MessagePack.RPC as Msg
 import           Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -125,22 +128,11 @@ observe = do
   Direct.withClient
     url
     pInfo
-    ( Direct.defaultConfig
-      { Direct.notificationHandler = showNotification
-      , Direct.requestHandler = showRequest
-      }
-    )
+    Direct.defaultConfig { Direct.logger = printMsg }
     (\_ ->
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
       forever $ threadDelay $ 10 * 1000
     )
-    where
-      showNotification _c method params =
-        putStrLn $ "Notification method: " ++ show method ++ ", params: " ++ show params
-      showRequest c mid method params = do
-        putStrLn $ "Request method: " ++ show method ++ ", params: " ++ show params
-        Direct.defaultRequestHandler c mid method params
-
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
 throwWhenLeft = either E.throwIO return
@@ -155,3 +147,33 @@ exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
 
 jsonFileName :: FilePath
 jsonFileName = ".direct4b.json"
+
+printMsg :: String -> Msg.Message -> IO ()
+printMsg tag msg = do
+    putStr tag
+    putStr " "
+    putStrLn $ showMsg msg
+
+showObjs :: [M.Object] -> String
+showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
+
+showObj :: M.Object -> String
+showObj (M.ObjectWord  w) = "+" ++ show w
+showObj (M.ObjectInt   n) = show n
+showObj  M.ObjectNil      = "nil"
+showObj (M.ObjectBool  b) = show b
+showObj (M.ObjectStr   s) = "\"" ++ T.unpack s ++ "\""
+showObj (M.ObjectArray v) = "[" ++ intercalate "," (map showObj v) ++ "]"
+showObj (M.ObjectMap   m) = "{" ++ intercalate "," (map showPair m) ++ "}"
+  where
+    showPair (x,y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
+showObj (M.ObjectBin _)    = error "ObjectBin"
+showObj (M.ObjectExt _ _)  = error "ObjectExt"
+showObj (M.ObjectFloat _)  = error "ObjectFloat"
+showObj (M.ObjectDouble _) = error "ObjectDouble"
+
+showMsg :: Msg.Message -> String
+showMsg (Msg.RequestMessage _ method objs) = "request " ++ T.unpack method ++ " " ++ showObjs objs
+showMsg (Msg.ResponseMessage _ (Left obj)) = "response error " ++ showObj obj
+showMsg (Msg.ResponseMessage _ (Right obj)) = "response " ++ showObj obj
+showMsg (Msg.NotificationMessage method objs) = "notification " ++ T.unpack method ++ " " ++ showObjs objs
