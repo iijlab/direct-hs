@@ -93,16 +93,18 @@ callRpc
   -> [MsgPack.Object]
   -> IO Result
 callRpc client funName args = do
-  let st = clientSessionState client
-  (requestId, rspVar) <- getNewMessageId st
+  let ss = clientSessionState client
+  requestId <- getNewMessageId ss
+  rspVar <- MVar.newEmptyMVar
+  IORef.atomicModifyIORef' (dispatchTable ss) $ \tbl ->
+      (HM.insert requestId rspVar tbl, ())
   let request = RequestMessage requestId funName args
   backendSend (clientBackend client) $ MsgPack.pack request
   clientLog client "sent" request
   rsp <- MVar.takeMVar rspVar
-  let table = dispatchTable st
+  let table = dispatchTable ss
   IORef.atomicModifyIORef' table $ \tbl -> (HM.delete requestId tbl, ())
   return rsp
-
 
 -- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> Result -> IO ()
@@ -112,13 +114,8 @@ replyRpc client mid result = do
   backendSend (clientBackend client) p
   clientLog client "sent" response
 
-getNewMessageId :: SessionState -> IO (MessageId, MVar Result)
-getNewMessageId ss = do
-  current <- IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur + 1, cur)
-  rspVar <- MVar.newEmptyMVar
-  IORef.atomicModifyIORef' (dispatchTable ss) $ \tbl ->
-      (HM.insert current rspVar tbl, ())
-  return (current, rspVar)
+getNewMessageId :: SessionState -> IO MessageId
+getNewMessageId ss = IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur + 1, cur)
 
 receiverThread :: Client -> Config -> IO ()
 receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ forever $ do
