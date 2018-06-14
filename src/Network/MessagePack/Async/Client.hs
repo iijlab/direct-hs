@@ -21,7 +21,7 @@ module Network.MessagePack.Async.Client
   , Result
   ) where
 
-import           Control.Concurrent (ThreadId, forkIO, killThread)
+import           Control.Concurrent (forkIO, killThread)
 import           Control.Concurrent.STM
                    ( TVar
                    , TMVar
@@ -134,10 +134,8 @@ getNewMessageId ss = atomically $ do
 
   return (current, tmv)
 
-forkReceiverThread :: Client -> Config -> IO ThreadId
-forkReceiverThread client config = forkIO $ do
-  let ss = clientSessionState client
-  forever $ do
+receiverThread :: Client -> Config -> IO ()
+receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ forever $ do
     response <- MsgPack.unpack =<< backendRecv (clientBackend client)
     clientLog client "received" response
     case response of
@@ -156,7 +154,8 @@ forkReceiverThread client config = forkIO $ do
         notificationHandler config client methodName params
       RequestMessage mid methodName params -> do
         requestHandler config client mid methodName params
-
+  where
+    ss = clientSessionState client
 
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
@@ -165,7 +164,7 @@ withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
     ss <- initSessionState
     let client = Client ss backend (logger config)
-    tid <- forkReceiverThread client config
+    tid <- forkIO $ receiverThread client config
     takeAction client `E.finally` killThread tid
   where
     takeAction client = do
