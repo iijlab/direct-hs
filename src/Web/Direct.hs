@@ -53,7 +53,7 @@ defaultConfig = Rpc.defaultConfig { Rpc.requestHandler = defaultRequestHandler }
 
 defaultRequestHandler :: Rpc.RequestHandler
 defaultRequestHandler c mid _methodName _objs =
-  Rpc.replyRpc c mid (MsgPack.ObjectBool True)
+  Rpc.replyRpc c mid $ Right $ MsgPack.ObjectBool True
 
 
 
@@ -142,7 +142,7 @@ rethrowingException action = do
       Left e -> E.throwIO e
 
 
-extractResult :: Either MsgPack.Object MsgPack.Object -> Either Exception MsgPack.Object
+extractResult :: Rpc.Result -> Either Exception MsgPack.Object
 extractResult = fmapL $
   \case
     err@(MsgPack.ObjectMap errorMap) ->
