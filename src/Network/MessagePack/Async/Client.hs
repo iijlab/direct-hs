@@ -22,19 +22,12 @@ module Network.MessagePack.Async.Client
   ) where
 
 import           Control.Concurrent (forkIO, killThread)
-import           Control.Concurrent.STM
-                   ( TVar
-                   , TMVar
-                   , newTVarIO
-                   , newEmptyTMVar
-                   , modifyTVar'
-                   , readTVar
-                   , takeTMVar
-                   , atomically
-                   , putTMVar
-                   )
+import           Control.Concurrent.MVar (MVar)
+import qualified Control.Concurrent.MVar as MVar
+import           Data.IORef (IORef)
+import qualified Data.IORef as IORef
 import qualified Control.Exception as E
-import           Control.Monad (forever, join)
+import           Control.Monad (forever)
 import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
@@ -52,8 +45,8 @@ data Client =
 
 data SessionState =
   SessionState
-    { lastMessageId :: TVar MessageId
-    , dispatchTable :: TVar (HashMap MessageId (TMVar Result))
+    { lastMessageId :: IORef MessageId
+    , dispatchTable :: IORef (HashMap MessageId (MVar Result))
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
 
@@ -101,16 +94,14 @@ callRpc
   -> IO Result
 callRpc client funName args = do
   let st = clientSessionState client
-  (requestId, resBuf) <- getNewMessageId st
+  (requestId, rspVar) <- getNewMessageId st
   let request = RequestMessage requestId funName args
   backendSend (clientBackend client) $ MsgPack.pack request
   clientLog client "sent" request
-
-  atomically $ do
-    res <- takeTMVar resBuf
-    let dispatchTableVar = dispatchTable st
-    modifyTVar' dispatchTableVar $ HM.delete requestId
-    return res
+  rsp <- MVar.takeMVar rspVar
+  let table = dispatchTable st
+  IORef.atomicModifyIORef' table $ \tbl -> (HM.delete requestId tbl, ())
+  return rsp
 
 
 -- | Replying RPC. This should be used in 'RequestHandler'.
@@ -121,35 +112,24 @@ replyRpc client mid result = do
   backendSend (clientBackend client) p
   clientLog client "sent" response
 
-getNewMessageId :: SessionState -> IO (MessageId, TMVar Result)
-getNewMessageId ss = atomically $ do
-  let lastMessageIdVar = lastMessageId ss
-      dispatchTableVar = dispatchTable ss
-
-  current <- readTVar lastMessageIdVar
-  modifyTVar' lastMessageIdVar (+ 1)
-
-  tmv <- newEmptyTMVar
-  modifyTVar' dispatchTableVar $ HM.insert current tmv
-
-  return (current, tmv)
+getNewMessageId :: SessionState -> IO (MessageId, MVar Result)
+getNewMessageId ss = do
+  current <- IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur + 1, cur)
+  rspVar <- MVar.newEmptyMVar
+  IORef.atomicModifyIORef' (dispatchTable ss) $ \tbl ->
+      (HM.insert current rspVar tbl, ())
+  return (current, rspVar)
 
 receiverThread :: Client -> Config -> IO ()
 receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ forever $ do
     response <- MsgPack.unpack =<< backendRecv (clientBackend client)
     clientLog client "received" response
     case response of
-      ResponseMessage mid result ->
-        join $ atomically $ do
-          resBuf <- readTVar $ dispatchTable ss
-          case HM.lookup mid resBuf of
-              Just tv -> do
-                putTMVar tv result
-                return $ return ()
-              Nothing ->
-                -- TODO: Use logging library
-                return $
-                  putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
+      ResponseMessage mid result -> do
+          tbl <- IORef.readIORef $ dispatchTable ss
+          case HM.lookup mid tbl of
+              Just rspVar -> MVar.putMVar rspVar result
+              Nothing     -> putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
         notificationHandler config client methodName params
       RequestMessage mid methodName params -> do
@@ -158,7 +138,7 @@ receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ fore
     ss = clientSessionState client
 
 initSessionState :: IO SessionState
-initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
+initSessionState = SessionState <$> IORef.newIORef 0 <*> IORef.newIORef HM.empty
 
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
