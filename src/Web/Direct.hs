@@ -29,7 +29,7 @@ module Web.Direct
   , createMessage
 
   , Rpc.parseWsUrl
-  , Rpc.Config(notificationHandler, requestHandler)
+  , Rpc.Config(..)
   , defaultConfig
   , defaultRequestHandler
   ) where

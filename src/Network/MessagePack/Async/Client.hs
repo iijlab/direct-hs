@@ -4,6 +4,7 @@ module Network.MessagePack.Async.Client
   (
     -- * Client
     Client(..)
+  , newClient
     -- * Config
   , Config(..)
   , NotificationHandler
@@ -12,9 +13,6 @@ module Network.MessagePack.Async.Client
     -- * Call and reply
   , callRpc
   , replyRpc
-    -- * Session state
-  , SessionState
-  , initSessionState
     -- * Misc
   , getNewMessageId
   , forkReceiverThread
@@ -37,17 +35,15 @@ import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.MessagePack as MsgPack
-import qualified Numeric
 
 import           Data.MessagePack.RPC
-
-import           Debug.Trace
 
 data Client =
   Client
     { clientSend  :: B.ByteString -> IO ()
     , clientRecv  :: IO B.ByteString
     , clientSessionState :: !SessionState
+    , clientLog   :: String -> Message -> IO ()
     }
 
 data SessionState =
@@ -61,10 +57,15 @@ data Config =
   Config
    { notificationHandler :: NotificationHandler
    , requestHandler :: RequestHandler
+   , logger :: String -> Message -> IO ()
    }
 
 defaultConfig :: Config
-defaultConfig = Config (\_ _ _ -> return ()) (\_ _ _ _ -> return ())
+defaultConfig = Config {
+    notificationHandler = \_ _ _ -> return ()
+  , requestHandler      = \_ _ _ _ -> return ()
+  , logger              = \_ _ -> return ()
+  }
 
 type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
@@ -82,14 +83,9 @@ callRpc
 callRpc client funName args = do
   let st = clientSessionState client
   (requestId, resBuf) <- getNewMessageId st
-  putStr "Function name: "
-  print funName
-  putStr "Arguments: "
-  print args
-  putStr "Payload: "
-  let p = MsgPack.pack $ RequestMessage requestId funName args
-  putStrLn $ unwords $ map (($ "") . Numeric.showHex) $ B.unpack p
-  clientSend client p
+  let request = RequestMessage requestId funName args
+  clientLog client "request" request
+  clientSend client $ MsgPack.pack request
   atomically $ do -- TODO: Split out as a function
     res <- takeTMVar resBuf
     let responseBufferVar = responseBuffer st
@@ -121,7 +117,7 @@ forkReceiverThread c config = forkIO $ do
   let ss = clientSessionState c
   forever $ do
     response <- MsgPack.unpack =<< clientRecv c
-    traceM $ "response: " ++ show response
+    clientLog c "response" response
     case response of
       ResponseMessage mid result ->
         join $ atomically $ do
@@ -135,12 +131,15 @@ forkReceiverThread c config = forkIO $ do
                 return $
                   putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
-        traceM "BEGIN Calling handler"
         notificationHandler config c methodName params
-        traceM "FINISHED Calling handler"
       RequestMessage mid methodName params -> do
         requestHandler config c mid methodName params
 
 
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
+
+newClient :: Config -> (B.ByteString -> IO ()) -> IO B.ByteString -> IO Client
+newClient config send recv = do
+    ss <- initSessionState
+    return $ Client send recv ss (logger config)

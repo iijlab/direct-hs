@@ -8,6 +8,7 @@ import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy as B
 import           Data.List (intercalate)
 import qualified Data.MessagePack as M
+import qualified Data.MessagePack.RPC as Msg
 import           Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -130,6 +131,7 @@ observe = do
     ( Direct.defaultConfig
       { Direct.notificationHandler = showNotification
       , Direct.requestHandler = showRequest
+      , Direct.logger = printMsg
       }
     )
     (\_ ->
@@ -158,6 +160,12 @@ exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
 jsonFileName :: FilePath
 jsonFileName = ".direct4b.json"
 
+printMsg :: String -> Msg.Message -> IO ()
+printMsg tag msg = do
+    putStr tag
+    putStr " "
+    putStrLn $ showMsg msg
+
 showObjs :: [M.Object] -> String
 showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
 
@@ -175,3 +183,9 @@ showObj (M.ObjectBin _)    = error "ObjectBin"
 showObj (M.ObjectExt _ _)  = error "ObjectExt"
 showObj (M.ObjectFloat _)  = error "ObjectFloat"
 showObj (M.ObjectDouble _) = error "ObjectDouble"
+
+showMsg :: Msg.Message -> String
+showMsg (Msg.RequestMessage _ method objs) = T.unpack method ++ " " ++ showObjs objs
+showMsg (Msg.ResponseMessage _ (Left obj)) = "error " ++ showObj obj
+showMsg (Msg.ResponseMessage _ (Right obj)) = showObj obj
+showMsg (Msg.NotificationMessage method objs) = T.unpack method ++ " " ++ showObjs objs
