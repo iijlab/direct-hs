@@ -139,12 +139,9 @@ observe = do
       forever $ threadDelay $ 10 * 1000
     )
     where
-      showNotification _c method params =
-        putStrLn $ "Notification method: " ++ show method ++ ", params: " ++ showObjs params
+      showNotification _c _method _params = return ()
       showRequest c mid method params = do
-        putStrLn $ "Request method: " ++ show method ++ ", params: " ++ showObjs params
         Direct.defaultRequestHandler c mid method params
-
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
 throwWhenLeft = either E.throwIO return
@@ -185,7 +182,7 @@ showObj (M.ObjectFloat _)  = error "ObjectFloat"
 showObj (M.ObjectDouble _) = error "ObjectDouble"
 
 showMsg :: Msg.Message -> String
-showMsg (Msg.RequestMessage _ method objs) = T.unpack method ++ " " ++ showObjs objs
-showMsg (Msg.ResponseMessage _ (Left obj)) = "error " ++ showObj obj
-showMsg (Msg.ResponseMessage _ (Right obj)) = showObj obj
-showMsg (Msg.NotificationMessage method objs) = T.unpack method ++ " " ++ showObjs objs
+showMsg (Msg.RequestMessage _ method objs) = "request " ++ T.unpack method ++ " " ++ showObjs objs
+showMsg (Msg.ResponseMessage _ (Left obj)) = "response error " ++ showObj obj
+showMsg (Msg.ResponseMessage _ (Right obj)) = "response " ++ showObj obj
+showMsg (Msg.NotificationMessage method objs) = "notification " ++ T.unpack method ++ " " ++ showObjs objs
