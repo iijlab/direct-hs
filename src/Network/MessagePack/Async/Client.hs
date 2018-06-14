@@ -38,6 +38,7 @@ import qualified Data.MessagePack as MsgPack
 
 import           Data.MessagePack.RPC
 
+-- | A client data type for MessagePack RPC.
 data Client =
   Client
     { clientSend  :: B.ByteString -> IO ()
@@ -57,8 +58,8 @@ type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
 type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
-type Logger = String -- tag
-           -> Message -> IO ()
+-- | Logger type. The first argument is a tag.
+type Logger = String -> Message -> IO ()
 
 data Config =
   Config
@@ -67,6 +68,7 @@ data Config =
    , logger :: Logger
    }
 
+-- | The default configuration. No action at all.
 defaultConfig :: Config
 defaultConfig = Config {
     notificationHandler = \_ _ _ -> return ()
@@ -78,6 +80,7 @@ defaultConfig = Config {
 -- TODO: (DONE): Thread to write response
 -- TODO: May need to lock connection before sending (Is Ws.Connection threadsafe?)
 -- TODO: Returns any exception
+-- | Calling RPC.
 callRpc
   :: Client
   -> MethodName
@@ -97,6 +100,7 @@ callRpc client funName args = do
 
 
 -- TODO: Receive Either MsgPack.Object MsgPack.Object
+-- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
   let p = MsgPack.pack $ ResponseMessage mid (Right result)
@@ -142,6 +146,7 @@ forkReceiverThread c config = forkIO $ do
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
 
+-- | Creating a new client of MessagePack RPC.
 newClient :: Config -> (B.ByteString -> IO ()) -> IO B.ByteString -> IO Client
 newClient config send recv = do
     ss <- initSessionState
