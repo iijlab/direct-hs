@@ -29,14 +29,10 @@ library
     , data-msgpack
     , errors
     , mwc-random
-    , network
-    , network-uri
-    , safe
     , stm
     , text
     , uuid
     , websockets
-    , wuss
     , wss-client >= 0.2
   default-language: Haskell2010
 
