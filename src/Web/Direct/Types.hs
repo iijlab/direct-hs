@@ -17,7 +17,7 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word64)
 import           GHC.Generics (Generic)
 
-import qualified Network.MessagePack.ClientViaWebSockets as Rpc
+import qualified Network.MessagePack.Async.Client as Rpc
 
 
 data Client =
