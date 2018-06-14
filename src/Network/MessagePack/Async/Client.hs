@@ -16,6 +16,9 @@ module Network.MessagePack.Async.Client
     -- * Call and reply
   , callRpc
   , replyRpc
+
+    -- * Other utility type synonym
+  , Result
   ) where
 
 import           Control.Concurrent (ThreadId, forkIO, killThread)
@@ -50,9 +53,14 @@ data Client =
 data SessionState =
   SessionState
     { lastMessageId :: TVar MessageId
-    , responseBuffer :: TVar (HashMap MessageId (TMVar (Either MsgPack.Object MsgPack.Object)))
+    , responseBuffer :: TVar (HashMap MessageId (TMVar Result))
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
+
+-- | Result type of a RPC call.
+--   Described as "error" and "result" of "Response Message"
+--   in [the spec of MessagePack RPC](https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md#response-message).
+type Result = Either MsgPack.Object MsgPack.Object
 
 type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
@@ -90,7 +98,7 @@ callRpc
   :: Client
   -> MethodName
   -> [MsgPack.Object]
-  -> IO (Either MsgPack.Object MsgPack.Object)
+  -> IO Result
 callRpc client funName args = do
   let st = clientSessionState client
   (requestId, resBuf) <- getNewMessageId st
@@ -105,16 +113,15 @@ callRpc client funName args = do
     return res
 
 
--- TODO: Receive Either MsgPack.Object MsgPack.Object
 -- | Replying RPC. This should be used in 'RequestHandler'.
-replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
+replyRpc :: Client -> MessageId -> Result -> IO ()
 replyRpc client mid result = do
-  let response = ResponseMessage mid (Right result)
+  let response = ResponseMessage mid result
   let p = MsgPack.pack response
   backendSend (clientBackend client) p
   clientLog client "sent" response
 
-getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
+getNewMessageId :: SessionState -> IO (MessageId, TMVar Result)
 getNewMessageId ss = atomically $ do
   let lastMessageIdVar = lastMessageId ss
       responseBufferVar = responseBuffer ss
