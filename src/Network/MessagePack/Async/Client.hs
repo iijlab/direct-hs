@@ -127,11 +127,11 @@ getNewMessageId ss = atomically $ do
   return (current, tmv)
 
 forkReceiverThread :: Client -> Config -> IO ThreadId
-forkReceiverThread c config = forkIO $ do
-  let ss = clientSessionState c
+forkReceiverThread client config = forkIO $ do
+  let ss = clientSessionState client
   forever $ do
-    response <- MsgPack.unpack =<< backendRecv (clientBackend c)
-    clientLog c "response" response
+    response <- MsgPack.unpack =<< backendRecv (clientBackend client)
+    clientLog client "response" response
     case response of
       ResponseMessage mid result ->
         join $ atomically $ do
@@ -145,9 +145,9 @@ forkReceiverThread c config = forkIO $ do
                 return $
                   putStrLn $ "ERROR: No TVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> do
-        notificationHandler config c methodName params
+        notificationHandler config client methodName params
       RequestMessage mid methodName params -> do
-        requestHandler config c mid methodName params
+        requestHandler config client mid methodName params
 
 
 initSessionState :: IO SessionState
