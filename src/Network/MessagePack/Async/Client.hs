@@ -110,7 +110,9 @@ callRpc client funName args = do
 -- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
-  let p = MsgPack.pack $ ResponseMessage mid (Right result)
+  let response = ResponseMessage mid (Right result)
+  clientLog client "sent" response
+  let p = MsgPack.pack response
   backendSend (clientBackend client) p
 
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
