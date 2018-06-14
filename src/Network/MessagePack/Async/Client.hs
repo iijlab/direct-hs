@@ -6,9 +6,10 @@ module Network.MessagePack.Async.Client
     Client
   , newClient
     -- * Config
-  , Config(..)
   , NotificationHandler
   , RequestHandler
+  , Logger
+  , Config(..)
   , defaultConfig
     -- * Call and reply
   , callRpc
@@ -52,11 +53,18 @@ data SessionState =
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
 
+type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
+
+type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+
+type Logger = String -- tag
+           -> Message -> IO ()
+
 data Config =
   Config
    { notificationHandler :: NotificationHandler
    , requestHandler :: RequestHandler
-   , logger :: String -> Message -> IO ()
+   , logger :: Logger
    }
 
 defaultConfig :: Config
@@ -65,10 +73,6 @@ defaultConfig = Config {
   , requestHandler      = \_ _ _ _ -> return ()
   , logger              = \_ _ -> return ()
   }
-
-type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
-
-type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
 -- TODO: (DONE): Wait response
 -- TODO: (DONE): Thread to write response
