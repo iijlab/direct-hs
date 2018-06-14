@@ -27,7 +27,7 @@ import qualified Control.Concurrent.MVar as MVar
 import           Data.IORef (IORef)
 import qualified Data.IORef as IORef
 import qualified Control.Exception as E
-import           Control.Monad (forever)
+import           Control.Monad (forever, void)
 import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
@@ -135,9 +135,9 @@ receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ fore
           case HM.lookup mid tbl of
               Just rspVar -> MVar.putMVar rspVar result
               Nothing     -> putStrLn $ "ERROR: No MVar assinged with request ID " ++ show mid ++ "."
-      NotificationMessage methodName params -> do
+      NotificationMessage methodName params -> void . forkIO $
         notificationHandler config client methodName params
-      RequestMessage mid methodName params -> do
+      RequestMessage mid methodName params -> void . forkIO $
         requestHandler config client mid methodName params
   where
     ss = clientSessionState client
