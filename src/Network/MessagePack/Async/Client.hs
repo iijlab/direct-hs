@@ -53,7 +53,7 @@ data Client =
 data SessionState =
   SessionState
     { lastMessageId :: TVar MessageId
-    , responseBuffer :: TVar (HashMap MessageId (TMVar Result))
+    , dispatchTable :: TVar (HashMap MessageId (TMVar Result))
     -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
     }
 
@@ -108,8 +108,8 @@ callRpc client funName args = do
 
   atomically $ do
     res <- takeTMVar resBuf
-    let responseBufferVar = responseBuffer st
-    modifyTVar' responseBufferVar $ HM.delete requestId
+    let dispatchTableVar = dispatchTable st
+    modifyTVar' dispatchTableVar $ HM.delete requestId
     return res
 
 
@@ -124,13 +124,13 @@ replyRpc client mid result = do
 getNewMessageId :: SessionState -> IO (MessageId, TMVar Result)
 getNewMessageId ss = atomically $ do
   let lastMessageIdVar = lastMessageId ss
-      responseBufferVar = responseBuffer ss
+      dispatchTableVar = dispatchTable ss
 
   current <- readTVar lastMessageIdVar
   modifyTVar' lastMessageIdVar (+ 1)
 
   tmv <- newEmptyTMVar
-  modifyTVar' responseBufferVar $ HM.insert current tmv
+  modifyTVar' dispatchTableVar $ HM.insert current tmv
 
   return (current, tmv)
 
@@ -141,7 +141,7 @@ receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ fore
     case response of
       ResponseMessage mid result ->
         join $ atomically $ do
-          resBuf <- readTVar $ responseBuffer ss
+          resBuf <- readTVar $ dispatchTable ss
           case HM.lookup mid resBuf of
               Just tv -> do
                 putTMVar tv result
