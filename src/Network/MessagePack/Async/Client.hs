@@ -3,7 +3,7 @@
 module Network.MessagePack.Async.Client
   (
     -- * Client
-    Client(..)
+    Client
   , newClient
     -- * Config
   , Config(..)
@@ -14,7 +14,6 @@ module Network.MessagePack.Async.Client
   , callRpc
   , replyRpc
     -- * Misc
-  , getNewMessageId
   , forkReceiverThread
   ) where
 
