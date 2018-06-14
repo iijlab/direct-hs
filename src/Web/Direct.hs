@@ -37,7 +37,7 @@ module Web.Direct
 
 import           Control.Error (fmapL)
 import qualified Control.Exception as E
-import           Control.Monad (forM, void)
+import           Control.Monad (forM_, void)
 import qualified Data.MessagePack as MsgPack
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -85,7 +85,7 @@ createMessage c tid content = do
   -- NOTE:
   --  direct-js internally splits the message by 1024 characters.
   --  So this library follows the behavior.
-  res <- forM (TL.chunksOf 1024 content) $ \chunk -> do
+  forM_ (TL.chunksOf 1024 content) $ \chunk -> do
     rethrowingException $ Rpc.callRpc
       (clientRpcClient c)
       "create_message"
@@ -93,23 +93,16 @@ createMessage c tid content = do
       , messageType
       , MsgPack.ObjectStr $ TL.toStrict chunk
       ]
-  -- TODO: Define type for the response, then delete the debug message
-  putStrLn $ "Successfully sent a message. ResponseRecieved: " ++ show res
-
 
 createSession :: Client -> IO ()
-createSession c = do
-  res <-
-    rethrowingException $ Rpc.callRpc
+createSession c =
+  void $ rethrowingException $ Rpc.callRpc
       (clientRpcClient c)
       "create_session"
       [ MsgPack.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo c
       , MsgPack.ObjectStr apiVersion
       , MsgPack.ObjectStr agentName
       ]
-  -- TODO: Where to save login user info
-  putStrLn $ "Successfully created a session. ResponseRecieved: " ++ show res
-
 
 login
   :: Rpc.Client
