@@ -2,15 +2,17 @@
 
 module Network.MessagePack.Async.Client
   (
-    -- * Client
-    Client
-  , newClient
     -- * Config
-  , NotificationHandler
+    NotificationHandler
   , RequestHandler
   , Logger
   , Config(..)
   , defaultConfig
+    -- * Backend
+  , Backend(..)
+    -- * Client
+  , Client
+  , newClient
     -- * Call and reply
   , callRpc
   , replyRpc
@@ -41,10 +43,9 @@ import           Data.MessagePack.RPC
 -- | A client data type for MessagePack RPC.
 data Client =
   Client
-    { clientSend  :: B.ByteString -> IO ()
-    , clientRecv  :: IO B.ByteString
-    , clientSessionState :: !SessionState
-    , clientLog   :: String -> Message -> IO ()
+    { clientSessionState :: !SessionState
+    , clientBackend      :: !Backend
+    , clientLog          :: String -> Message -> IO ()
     }
 
 data SessionState =
@@ -91,7 +92,7 @@ callRpc client funName args = do
   (requestId, resBuf) <- getNewMessageId st
   let request = RequestMessage requestId funName args
   clientLog client "request" request
-  clientSend client $ MsgPack.pack request
+  backendSend (clientBackend client) $ MsgPack.pack request
   atomically $ do -- TODO: Split out as a function
     res <- takeTMVar resBuf
     let responseBufferVar = responseBuffer st
@@ -104,7 +105,7 @@ callRpc client funName args = do
 replyRpc :: Client -> MessageId -> MsgPack.Object -> IO ()
 replyRpc client mid result = do
   let p = MsgPack.pack $ ResponseMessage mid (Right result)
-  clientSend client p
+  backendSend (clientBackend client) p
 
 getNewMessageId :: SessionState -> IO (MessageId, TMVar (Either MsgPack.Object MsgPack.Object))
 getNewMessageId ss = atomically $ do
@@ -123,7 +124,7 @@ forkReceiverThread :: Client -> Config -> IO ThreadId
 forkReceiverThread c config = forkIO $ do
   let ss = clientSessionState c
   forever $ do
-    response <- MsgPack.unpack =<< clientRecv c
+    response <- MsgPack.unpack =<< backendRecv (clientBackend c)
     clientLog c "response" response
     case response of
       ResponseMessage mid result ->
@@ -146,8 +147,14 @@ forkReceiverThread c config = forkIO $ do
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
 
+-- fixme: we should use strict ByteString
+data Backend = Backend {
+    backendSend :: B.ByteString -> IO ()
+  , backendRecv :: IO B.ByteString
+  }
+
 -- | Creating a new client of MessagePack RPC.
-newClient :: Config -> (B.ByteString -> IO ()) -> IO B.ByteString -> IO Client
-newClient config send recv = do
+newClient :: Config -> Backend -> IO Client
+newClient config backend = do
     ss <- initSessionState
-    return $ Client send recv ss (logger config)
+    return $ Client ss backend (logger config)

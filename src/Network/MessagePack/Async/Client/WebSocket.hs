@@ -24,7 +24,8 @@ withClient :: EndpointUrl -> Config -> (Client -> IO a) -> IO a
 withClient (EndpointUrl sec host path port) config action =
   withSocketsDo $ runWs $ \conn -> do
     Ws.forkPingThread conn 30
-    c <- newClient config (Ws.sendBinaryData conn) (Ws.receiveData conn)
+    let backend = Backend (Ws.sendBinaryData conn) (Ws.receiveData conn)
+    c <- newClient config backend
     tid <- forkReceiverThread c config
     ( do
       returned <- action c
