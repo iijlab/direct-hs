@@ -7,9 +7,7 @@ module Network.MessagePack.Async.Client.WebSocket (
   , module Network.MessagePack.Async.Client
   ) where
 
-import           Control.Concurrent (killThread)
 import qualified Control.Error as Err
-import qualified Control.Exception as E
 import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import           Network.Socket (withSocketsDo, PortNumber)
@@ -18,20 +16,15 @@ import qualified Network.WebSockets as Ws
 import           Text.Read (readMaybe)
 import qualified Wuss as Wss
 
-import           Network.MessagePack.Async.Client
+import           Network.MessagePack.Async.Client hiding (withClient)
+import qualified Network.MessagePack.Async.Client as Rpc (withClient)
 
 withClient :: EndpointUrl -> Config -> (Client -> IO a) -> IO a
 withClient (EndpointUrl sec host path port) config action =
   withSocketsDo $ runWs $ \conn -> do
     Ws.forkPingThread conn 30
-    let backend = Backend (Ws.sendBinaryData conn) (Ws.receiveData conn)
-    c <- newClient config backend
-    tid <- forkReceiverThread c config
-    ( do
-      returned <- action c
-      Ws.sendClose conn ("Bye!" :: T.Text)
-      return returned
-      ) `E.finally` killThread tid
+    let backend = Backend (Ws.sendBinaryData conn) (Ws.receiveData conn) (Ws.sendClose conn ("Bye!" :: T.Text))
+    Rpc.withClient config backend action
   where
     runWs =
       if sec

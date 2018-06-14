@@ -12,15 +12,13 @@ module Network.MessagePack.Async.Client
   , Backend(..)
     -- * Client
   , Client
-  , newClient
+  , withClient
     -- * Call and reply
   , callRpc
   , replyRpc
-    -- * Misc
-  , forkReceiverThread
   ) where
 
-import           Control.Concurrent (ThreadId, forkIO)
+import           Control.Concurrent (ThreadId, forkIO, killThread)
 import           Control.Concurrent.STM
                    ( TVar
                    , TMVar
@@ -32,6 +30,7 @@ import           Control.Concurrent.STM
                    , atomically
                    , putTMVar
                    )
+import qualified Control.Exception as E
 import           Control.Monad (forever, join)
 import qualified Data.ByteString.Lazy as B
 import           Data.HashMap.Strict (HashMap)
@@ -75,6 +74,13 @@ defaultConfig = Config {
     notificationHandler = \_ _ _ -> return ()
   , requestHandler      = \_ _ _ _ -> return ()
   , logger              = \_ _ -> return ()
+  }
+
+-- fixme: we should use strict ByteString
+data Backend = Backend {
+    backendSend :: B.ByteString -> IO ()
+  , backendRecv :: IO B.ByteString
+  , backendClose :: IO ()
   }
 
 -- TODO: (DONE): Wait response
@@ -147,14 +153,14 @@ forkReceiverThread c config = forkIO $ do
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> newTVarIO 0 <*> newTVarIO HM.empty
 
--- fixme: we should use strict ByteString
-data Backend = Backend {
-    backendSend :: B.ByteString -> IO ()
-  , backendRecv :: IO B.ByteString
-  }
-
--- | Creating a new client of MessagePack RPC.
-newClient :: Config -> Backend -> IO Client
-newClient config backend = do
+withClient :: Config -> Backend -> (Client -> IO a) -> IO a
+withClient config backend action = do
     ss <- initSessionState
-    return $ Client ss backend (logger config)
+    let client = Client ss backend (logger config)
+    tid <- forkReceiverThread client config
+    takeAction client `E.finally` killThread tid
+  where
+    takeAction client = do
+      returned <- action client
+      backendClose backend
+      return returned
