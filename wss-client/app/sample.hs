@@ -16,7 +16,7 @@ import qualified Network.WebSockets.Client as WS
 main :: IO ()
 main = do
   url <- head <$> getArgs
-  WS.withClient url $ \conn -> do
+  WS.withConnection url $ \conn -> do
     tid <- forkIO $ forever $ do
       msg <- WS.receiveData conn
       B.putStrLn msg

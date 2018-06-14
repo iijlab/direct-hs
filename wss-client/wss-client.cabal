@@ -1,5 +1,5 @@
 name:                wss-client
-version:             0.1.0.1
+version:             0.2.0.0
 synopsis:            A-little-higher-level WebSocket client.
 description:         A-little-higher-level WebSocket client. Based on http-client and http-client-tls.
 homepage:            https://github.com/iij-ii/wss-client

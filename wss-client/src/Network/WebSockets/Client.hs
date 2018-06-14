@@ -6,7 +6,7 @@
 --             is NOT supported.
 
 module Network.WebSockets.Client
-  ( withClient
+  ( withConnection
 
     -- * Re-export from Network.WebSockets
   , WS.Connection
@@ -61,18 +61,18 @@ import           Network.URI (parseURI, URI(..), URIAuth(..))
 --
 --   __NOTE__: Currently, non-TLS connection via an HTTP proxy server
 --             is NOT supported.
-withClient
+withConnection
   :: String -- ^ Endpoint URL (e.g. wss:\/\/example.com\/path).
   -> (WS.Connection -> IO a) -- ^ Action using the 'WS.Connection'
   -> IO a
-withClient url action = do
+withConnection url action = do
   man <- Http.newManager tlsManagerSettings
-  withWsClientFromManager man url action
+  withConnectionFromManager man url action
 
 
-withWsClientFromManager
+withConnectionFromManager
   :: Http.Manager -> String -> (WS.Connection -> IO a) -> IO a
-withWsClientFromManager man rawUrl action = do
+withConnectionFromManager man rawUrl action = do
   (isSecure, host, path) <- parseWsUrl rawUrl
 
   let httpUrl = (if isSecure then "https://" else "http://") ++ host ++ path
