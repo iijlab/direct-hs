@@ -94,27 +94,27 @@ callRpc
   -> [MsgPack.Object]
   -> IO Result
 callRpc client funName args = do
-  let ss = clientSessionState client
-  requestId <- getNewMessageId ss
-  rspVar <- MVar.newEmptyMVar
-  let table = dispatchTable ss
-  IORef.atomicModifyIORef' table $ \tbl ->
-      (HM.insert requestId rspVar tbl, ())
-  let request = RequestMessage requestId funName args
-  backendSend (clientBackend client) $ MsgPack.pack request
-  clientLog client "sent" request
-  putStrLn $ "waiting for " ++ show requestId ++ "..."
-  rrsp <- timeout 3000000 $ MVar.takeMVar rspVar
-  IORef.atomicModifyIORef' table $ \tbl -> (HM.delete requestId tbl, ())
+  rrsp <- E.bracket register unregister sendAndRecv
   case rrsp of
-      Nothing  -> do
-        putStrLn $ "waiting for " ++ show requestId ++ "... failed"
-        return $ Left MsgPack.ObjectNil
-      Just rsp -> do
-        putStrLn $ "waiting for " ++ show requestId ++ "... done"
-        return rsp
+      Nothing  -> return $ Left MsgPack.ObjectNil
+      Just rsp -> return rsp
+ where
+  sendAndRecv (requestId,rspVar) = do
+      let request = RequestMessage requestId funName args
+      backendSend (clientBackend client) $ MsgPack.pack request
+      clientLog client "sent" request
+      timeout 3000000 $ MVar.takeMVar rspVar
+  register = do
+      requestId <- getNewMessageId ss
+      rspVar <- MVar.newEmptyMVar
+      IORef.atomicModifyIORef' (dispatchTable ss) $ \tbl ->
+          (HM.insert requestId rspVar tbl, ())
+      return (requestId,rspVar)
+  unregister (requestId,_) = IORef.atomicModifyIORef' (dispatchTable ss) $ \tbl ->
+      (HM.delete requestId tbl, ())
+  ss = clientSessionState client
 
--- | Replying RPC. This should be used in 'RequestHandler'.
+ -- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> Result -> IO ()
 replyRpc client mid result = do
   let response = ResponseMessage mid result
