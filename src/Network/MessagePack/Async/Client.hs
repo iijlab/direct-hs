@@ -28,7 +28,8 @@ import           Data.IORef (IORef)
 import qualified Data.IORef as IORef
 import qualified Control.Exception as E
 import           Control.Monad (forever, void)
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.MessagePack as MsgPack
@@ -78,7 +79,6 @@ defaultConfig = Config {
   , logger              = \_ _ -> return ()
   }
 
--- fixme: we should use strict ByteString
 data Backend = Backend {
     backendSend :: B.ByteString -> IO ()
   , backendRecv :: IO B.ByteString
@@ -101,7 +101,7 @@ callRpc client funName args = do
  where
   sendAndRecv (requestId,rspVar) = do
       let request = RequestMessage requestId funName args
-      backendSend (clientBackend client) $ MsgPack.pack request
+      backendSend (clientBackend client) $ BL.toStrict $ MsgPack.pack request
       clientLog client "sent" request
       timeout 3000000 $ MVar.takeMVar rspVar
   register = do
@@ -118,7 +118,7 @@ callRpc client funName args = do
 replyRpc :: Client -> MessageId -> Result -> IO ()
 replyRpc client mid result = do
   let response = ResponseMessage mid result
-  let p = MsgPack.pack response
+  let p = BL.toStrict $ MsgPack.pack response
   backendSend (clientBackend client) p
   clientLog client "sent" response
 
@@ -127,7 +127,7 @@ getNewMessageId ss = IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur +
 
 receiverThread :: Client -> Config -> IO ()
 receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ forever $ do
-    response <- MsgPack.unpack =<< backendRecv (clientBackend client)
+    response <- MsgPack.unpack . BL.fromStrict =<< backendRecv (clientBackend client)
     clientLog client "received" response
     case response of
       ResponseMessage mid result -> do
