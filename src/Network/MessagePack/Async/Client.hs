@@ -42,7 +42,7 @@ data Client =
   Client
     { clientSessionState :: !SessionState
     , clientBackend      :: !Backend
-    , clientLog          :: String -> IO ()
+    , clientLog          :: Logger
     , clientFormat       :: Formatter
     }
 
