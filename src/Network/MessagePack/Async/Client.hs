@@ -26,6 +26,7 @@ import           Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
 import           Data.IORef (IORef)
 import qualified Data.IORef as IORef
+import           Data.Monoid ((<>))
 import qualified Control.Exception as E
 import           Control.Monad (forever, void)
 import qualified Data.ByteString.Lazy as B
@@ -41,7 +42,8 @@ data Client =
   Client
     { clientSessionState :: !SessionState
     , clientBackend      :: !Backend
-    , clientLog          :: String -> Message -> IO ()
+    , clientLog          :: Logger
+    , clientFormat       :: Formatter
     }
 
 data SessionState =
@@ -60,14 +62,18 @@ type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
 type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
--- | Logger type. The first argument is a tag.
-type Logger = String -> Message -> IO ()
+-- | Logger type. Should print out the message passed as a first argument somewhere.
+type Logger = String -> IO ()
+
+-- | Convert 'Message' into a @String@ to print out by 'Logger'
+type Formatter = Message -> String
 
 data Config =
   Config
    { notificationHandler :: NotificationHandler
    , requestHandler :: RequestHandler
    , logger :: Logger
+   , formatter :: Formatter
    }
 
 -- | The default configuration. No action at all.
@@ -75,7 +81,8 @@ defaultConfig :: Config
 defaultConfig = Config {
     notificationHandler = \_ _ _ -> return ()
   , requestHandler      = \_ _ _ _ -> return ()
-  , logger              = \_ _ -> return ()
+  , logger              = \_ -> return ()
+  , formatter           = show
   }
 
 -- fixme: we should use strict ByteString
@@ -102,7 +109,7 @@ callRpc client funName args = do
   sendAndRecv (requestId,rspVar) = do
       let request = RequestMessage requestId funName args
       backendSend (clientBackend client) $ MsgPack.pack request
-      clientLog client "sent" request
+      clientLog client $ "sent: " <> clientFormat client request
       timeout 3000000 $ MVar.takeMVar rspVar
   register = do
       requestId <- getNewMessageId ss
@@ -114,13 +121,13 @@ callRpc client funName args = do
       (HM.delete requestId tbl, ())
   ss = clientSessionState client
 
- -- | Replying RPC. This should be used in 'RequestHandler'.
+-- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> Result -> IO ()
 replyRpc client mid result = do
   let response = ResponseMessage mid result
   let p = MsgPack.pack response
   backendSend (clientBackend client) p
-  clientLog client "sent" response
+  clientLog client $ "sent: " <> clientFormat client response
 
 getNewMessageId :: SessionState -> IO MessageId
 getNewMessageId ss = IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur + 1, cur)
@@ -128,13 +135,13 @@ getNewMessageId ss = IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur +
 receiverThread :: Client -> Config -> IO ()
 receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ forever $ do
     response <- MsgPack.unpack =<< backendRecv (clientBackend client)
-    clientLog client "received" response
+    clientLog client $ "received: " <> clientFormat client response
     case response of
       ResponseMessage mid result -> do
           tbl <- IORef.readIORef $ dispatchTable ss
           case HM.lookup mid tbl of
               Just rspVar -> MVar.putMVar rspVar result
-              Nothing     -> putStrLn $ "ERROR: No MVar assinged with request ID " ++ show mid ++ "."
+              Nothing     -> clientLog client $ "ERROR: No MVar assinged with request ID " ++ show mid ++ "."
       NotificationMessage methodName params -> void . forkIO $
         notificationHandler config client methodName params
       RequestMessage mid methodName params -> void . forkIO $
@@ -148,7 +155,7 @@ initSessionState = SessionState <$> IORef.newIORef 0 <*> IORef.newIORef HM.empty
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
     ss <- initSessionState
-    let client = Client ss backend (logger config)
+    let client = Client ss backend (logger config) (formatter config)
     tid <- forkIO $ receiverThread client config
     takeAction client `E.finally` killThread tid
   where

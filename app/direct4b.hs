@@ -126,7 +126,7 @@ observe = do
   Direct.withClient
     url
     pInfo
-    Direct.defaultConfig { Direct.logger = printMsg }
+    Direct.defaultConfig { Direct.logger = putStrLn, Direct.formatter = showMsg }
     (\_ ->
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
       forever $ threadDelay $ 10 * 1000
@@ -145,12 +145,6 @@ exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
 
 jsonFileName :: FilePath
 jsonFileName = ".direct4b.json"
-
-printMsg :: String -> Msg.Message -> IO ()
-printMsg tag msg = do
-    putStr tag
-    putStr " "
-    putStrLn $ showMsg msg
 
 showObjs :: [M.Object] -> String
 showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
