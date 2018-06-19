@@ -3,11 +3,11 @@
 module Network.MessagePack.Async.Client
   (
     -- * Config
-    NotificationHandler
+    Config(..)
+  , NotificationHandler
   , RequestHandler
   , Logger
   , Formatter
-  , Config(..)
   , defaultConfig
     -- * Backend
   , Backend(..)
@@ -15,11 +15,9 @@ module Network.MessagePack.Async.Client
   , Client
   , withClient
     -- * Call and reply
+  , Result
   , callRpc
   , replyRpc
-
-    -- * Other utility type synonym
-  , Result
   ) where
 
 import           Control.Concurrent (forkIO, killThread)
@@ -60,8 +58,11 @@ data SessionState =
 --   in [the spec of MessagePack RPC](https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md#response-message).
 type Result = Either MsgPack.Object MsgPack.Object
 
+-- | Notification handler. The 3rd argument is response objects.
 type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
+-- | Notification handler. The 2nd argument is message id to be used
+--   for replying. The 3rd argument is response objects.
 type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
 -- | Logger type. Should print out the message passed as a first argument somewhere.
@@ -87,10 +88,11 @@ defaultConfig = Config {
   , formatter           = show
   }
 
+-- | Backend IO functions.
 data Backend = Backend {
-    backendSend :: B.ByteString -> IO ()
-  , backendRecv :: IO B.ByteString
-  , backendClose :: IO ()
+    backendSend :: B.ByteString -> IO () -- ^ Sending
+  , backendRecv :: IO B.ByteString -- ^ Receiving
+  , backendClose :: IO () -- ^ Closing
   }
 
 -- TODO: May need to lock connection before sending (Is Ws.Connection threadsafe?)
@@ -153,6 +155,7 @@ receiverThread client config = E.handle (\(E.SomeException e) -> print e) $ fore
 initSessionState :: IO SessionState
 initSessionState = SessionState <$> IORef.newIORef 0 <*> IORef.newIORef HM.empty
 
+-- | Executing the action in the 3rd argument with a 'Client'.
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
     ss <- initSessionState
