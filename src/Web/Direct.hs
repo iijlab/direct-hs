@@ -22,9 +22,16 @@ module Web.Direct
   , serializePersistedInfo
   , deserializePersistedInfo
   -- * Types
+  , Request(..)
+  , Response(..)
+  , RspInfo
   , Exception(..)
   , DirectInt64
   , TalkId
+  -- * Functions
+  , withResponse
+  , sendRequest
+  , replyAck
   -- * To be obsoleted
   , createMessage
   ) where
@@ -33,7 +40,8 @@ module Web.Direct
 import           Control.Error (fmapL)
 import qualified Control.Exception as E
 import           Control.Monad (forM_, void)
-import qualified Data.MessagePack as MsgPack
+import qualified Data.MessagePack as M
+import qualified Data.MessagePack.RPC as R
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.UUID as Uuid
@@ -48,12 +56,9 @@ import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 --   'NotificationHandler' and 'logger' do nothing.
 --   'formatter' is 'show'.
 defaultConfig :: Rpc.Config
-defaultConfig = Rpc.defaultConfig { Rpc.requestHandler = defaultRequestHandler }
-
-defaultRequestHandler :: Rpc.RequestHandler
-defaultRequestHandler c mid _methodName _objs =
-  Rpc.replyRpc c mid $ Right $ MsgPack.ObjectBool True
-
+defaultConfig = Rpc.defaultConfig {
+    Rpc.requestHandler = \c i _ _ -> replyAck c i
+  }
 
 
 withClient
@@ -77,9 +82,23 @@ subscribeNotification client = do
   void $ rethrowingException $ Rpc.callRpc c "start_notification" []
 
 
+withResponse :: [M.Object] -> (Response -> RspInfo -> IO ()) -> IO ()
+withResponse (M.ObjectMap rspinfo:_) action = case decodeResponse rspinfo of
+    Nothing   -> return ()
+    Just req  -> action req rspinfo
+withResponse _ _ = return ()
+
+sendRequest :: Rpc.Client -> TalkId -> Request -> IO ()
+sendRequest c tid req = do
+    let obj = M.toObject tid : encodeRequest req
+    void $ Rpc.callRpc c "create_message" obj
+
+replyAck :: Rpc.Client -> R.MessageId -> IO ()
+replyAck c mid  = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
+
 createMessage :: Client -> TalkId -> TL.Text -> IO ()
 createMessage c tid content = do
-  let messageType = MsgPack.ObjectWord 1
+  let messageType = M.ObjectWord 1
   -- NOTE:
   --  direct-js internally splits the message by 1024 characters.
   --  So this library follows the behavior.
@@ -87,9 +106,9 @@ createMessage c tid content = do
     rethrowingException $ Rpc.callRpc
       (clientRpcClient c)
       "create_message"
-      [ MsgPack.toObject tid
+      [ M.toObject tid
       , messageType
-      , MsgPack.ObjectStr $ TL.toStrict chunk
+      , M.ObjectStr $ TL.toStrict chunk
       ]
 
 createSession :: Client -> IO ()
@@ -97,9 +116,9 @@ createSession c =
   void $ rethrowingException $ Rpc.callRpc
       (clientRpcClient c)
       "create_session"
-      [ MsgPack.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo c
-      , MsgPack.ObjectStr apiVersion
-      , MsgPack.ObjectStr agentName
+      [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo c
+      , M.ObjectStr apiVersion
+      , M.ObjectStr agentName
       ]
 
 login
@@ -110,19 +129,19 @@ login
 login c email pass = do
   idfv <- genIdfv
 
-  let magicConstant = MsgPack.ObjectStr ""
+  let magicConstant = M.ObjectStr ""
   res <-
     Rpc.callRpc
       c
       "create_access_token"
-      [ MsgPack.ObjectStr email
-      , MsgPack.ObjectStr pass
-      , MsgPack.ObjectStr idfv
-      , MsgPack.ObjectStr agentName
+      [ M.ObjectStr email
+      , M.ObjectStr pass
+      , M.ObjectStr idfv
+      , M.ObjectStr agentName
       , magicConstant
       ]
   case extractResult res of
-      Right (MsgPack.ObjectStr token) ->
+      Right (M.ObjectStr token) ->
         return $ Right $ Client
           (PersistedInfo token idfv)
           c
@@ -133,7 +152,7 @@ login c email pass = do
   -- Example error:    ObjectArray [ObjectWord 1,ObjectWord 0,ObjectMap [(ObjectStr "code",ObjectWord 401),(ObjectStr "message",ObjectStr "invalid email or password")],ObjectNil]
 
 
-rethrowingException :: IO (Either MsgPack.Object MsgPack.Object) -> IO MsgPack.Object
+rethrowingException :: IO (Either M.Object M.Object) -> IO M.Object
 rethrowingException action = do
   res <- action
   case extractResult res of
@@ -141,13 +160,13 @@ rethrowingException action = do
       Left e -> E.throwIO e
 
 
-extractResult :: Rpc.Result -> Either Exception MsgPack.Object
+extractResult :: Rpc.Result -> Either Exception M.Object
 extractResult = fmapL $
   \case
-    err@(MsgPack.ObjectMap errorMap) ->
+    err@(M.ObjectMap errorMap) ->
       let isInvalidEP =
-            lookup (MsgPack.ObjectStr "message") errorMap
-              == Just (MsgPack.ObjectStr "invalid email or password")
+            lookup (M.ObjectStr "message") errorMap
+              == Just (M.ObjectStr "invalid email or password")
       in
         if isInvalidEP
           then InvalidEmailOrPassword
