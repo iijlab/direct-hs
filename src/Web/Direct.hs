@@ -1,12 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Web.Direct
   ( AnonymousClient
@@ -84,7 +81,7 @@ createMessage c tid content = do
   -- NOTE:
   --  direct-js internally splits the message by 1024 characters.
   --  So this library follows the behavior.
-  forM_ (TL.chunksOf 1024 content) $ \chunk -> do
+  forM_ (TL.chunksOf 1024 content) $ \chunk ->
     rethrowingException $ Rpc.callRpc
       (clientRpcClient c)
       "create_message"

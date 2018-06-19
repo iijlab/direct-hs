@@ -6,10 +6,9 @@ module Data.MessagePack.RPC (
   , Message(..)
   ) where
 
-import           Data.MessagePack (MessagePack(..))
+import           Data.MessagePack (MessagePack(..), Object(..))
 import qualified Data.Text as T
 import           Data.Word (Word64)
-import           Data.MessagePack (Object(..))
 
 type MessageId = Word64
 type MethodName = T.Text
