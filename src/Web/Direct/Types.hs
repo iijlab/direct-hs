@@ -19,13 +19,14 @@ import           GHC.Generics (Generic)
 
 import qualified Network.MessagePack.Async.Client as Rpc
 
-
+-- | Direct client.
 data Client =
   Client
     { clientPersistedInfo :: !PersistedInfo
     , clientRpcClient :: !AnonymousClient
     }
 
+-- | Direct client not logined yet.
 type AnonymousClient = Rpc.Client
 
 data PersistedInfo =

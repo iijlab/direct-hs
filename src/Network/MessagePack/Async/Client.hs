@@ -72,6 +72,7 @@ type Logger = String -> IO ()
 -- | Convert 'Message' into a @String@ to print out by 'Logger'
 type Formatter = Message -> String
 
+-- | Configuration for MessagePack RPC.
 data Config =
   Config
    { notificationHandler :: NotificationHandler
@@ -80,7 +81,9 @@ data Config =
    , formatter :: Formatter
    }
 
--- | The default configuration. No action at all.
+-- | The default configuration.
+--    'formatter' is 'show'.
+--     Others do nothing.
 defaultConfig :: Config
 defaultConfig = Config {
     notificationHandler = \_ _ _ -> return ()

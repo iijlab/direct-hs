@@ -6,28 +6,27 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Web.Direct
-  ( AnonymousClient
-  , Client
-  , clientPersistedInfo
-
+  (
+    Rpc.Config(..)
+  , defaultConfig
+  -- * Client not logined yet.
+  , AnonymousClient
   , withAnonymousClient
+  , login
+  -- * Client
+  , Client
   , withClient
-
+  , clientPersistedInfo
+  -- ** Persisted information
   , PersistedInfo(..)
   , serializePersistedInfo
   , deserializePersistedInfo
-
+  -- * Types
   , Exception(..)
-
   , DirectInt64
   , TalkId
-
-  , login
+  -- * To be obsoleted
   , createMessage
-
-  , Rpc.Config(..)
-  , defaultConfig
-  , defaultRequestHandler
   ) where
 
 
@@ -44,7 +43,10 @@ import           Web.Direct.Types
 
 import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 
-
+-- | The default configuration.
+--   'RequestHandler' automatically replies ACK.
+--   'NotificationHandler' and 'logger' do nothing.
+--   'formatter' is 'show'.
 defaultConfig :: Rpc.Config
 defaultConfig = Rpc.defaultConfig { Rpc.requestHandler = defaultRequestHandler }
 
@@ -101,7 +103,7 @@ createSession c =
       ]
 
 login
-  :: Rpc.Client
+  :: AnonymousClient
   -> T.Text -- ^ Login email address for direct.
   -> T.Text -- ^ Login password for direct.
   -> IO (Either Exception Client)
