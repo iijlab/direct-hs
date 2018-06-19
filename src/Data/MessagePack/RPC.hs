@@ -10,12 +10,20 @@ import           Data.MessagePack (MessagePack(..), Object(..))
 import qualified Data.Text as T
 import           Data.Word (Word64)
 
+-- | Message ID.
 type MessageId = Word64
+
+-- | Method name.
 type MethodName = T.Text
 
+-- | Message type of MessagePack PRC.
+--   Use 'toObject' and 'fromObject' for conversion.
 data Message =
+    -- | Request
       RequestMessage MessageId MethodName [Object]
+    -- | Response. 'Left' is an error. 'Right' is a result.
     | ResponseMessage MessageId (Either Object Object)
+    -- | Notification.
     | NotificationMessage MethodName [Object]
   deriving (Eq, Show)
 
