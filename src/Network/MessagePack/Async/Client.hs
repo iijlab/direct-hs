@@ -6,6 +6,7 @@ module Network.MessagePack.Async.Client
     NotificationHandler
   , RequestHandler
   , Logger
+  , Formatter
   , Config(..)
   , defaultConfig
     -- * Backend
