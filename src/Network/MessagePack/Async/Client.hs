@@ -39,20 +39,17 @@ import           System.Timeout (timeout)
 import           Data.MessagePack.RPC
 
 -- | A client data type for MessagePack RPC.
-data Client =
-  Client
-    { clientSessionState :: !SessionState
-    , clientBackend      :: !Backend
-    , clientLog          :: Logger
-    , clientFormat       :: Formatter
-    }
+data Client = Client {
+    clientSessionState :: !SessionState
+  , clientBackend      :: !Backend
+  , clientLog          :: Logger
+  , clientFormat       :: Formatter
+  }
 
-data SessionState =
-  SessionState
-    { lastMessageId :: IORef MessageId
-    , dispatchTable :: IORef (HashMap MessageId (MVar Result))
-    -- ^ MessageId をキーとて、レスポンス(MsgPack.Object)を置くための箱を持つ
-    }
+data SessionState = SessionState {
+    lastMessageId :: IORef MessageId
+  , dispatchTable :: IORef (HashMap MessageId (MVar Result))
+  }
 
 -- | Result type of a RPC call.
 --   Described as "error" and "result" of "Response Message"
@@ -73,13 +70,12 @@ type Logger = String -> IO ()
 type Formatter = Message -> String
 
 -- | Configuration for MessagePack RPC.
-data Config =
-  Config
-   { notificationHandler :: NotificationHandler
-   , requestHandler :: RequestHandler
-   , logger :: Logger
-   , formatter :: Formatter
-   }
+data Config = Config {
+    notificationHandler :: NotificationHandler
+  , requestHandler :: RequestHandler
+  , logger :: Logger
+  , formatter :: Formatter
+  }
 
 -- | The default configuration.
 --    'formatter' is 'show'.

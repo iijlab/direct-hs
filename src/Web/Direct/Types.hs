@@ -21,20 +21,18 @@ import           GHC.Generics (Generic)
 import qualified Network.MessagePack.Async.Client as Rpc
 
 -- | Direct client.
-data Client =
-  Client
-    { clientPersistedInfo :: !PersistedInfo
-    , clientRpcClient :: !AnonymousClient
-    }
+data Client = Client {
+    clientPersistedInfo :: !PersistedInfo
+  , clientRpcClient :: !AnonymousClient
+  }
 
 -- | Direct client not logined yet.
 type AnonymousClient = Rpc.Client
 
-data PersistedInfo =
-  PersistedInfo
-    { persistedInfoDirectAccessToken :: !T.Text
-    , persistedInfoIdfv :: !T.Text
-    } deriving (Eq, Show, Generic)
+data PersistedInfo = PersistedInfo {
+    persistedInfoDirectAccessToken :: !T.Text
+  , persistedInfoIdfv :: !T.Text
+  } deriving (Eq, Show, Generic)
 
 instance FromJSON PersistedInfo where
   parseJSON = Json.genericParseJSON deriveJsonOptions
@@ -51,10 +49,10 @@ deserializePersistedInfo = Json.eitherDecode
 
 
 data Exception =
-  InvalidEmailOrPassword
+      InvalidEmailOrPassword
     | InvalidWsUrl !String
     | UnexpectedReponse !M.Object
-    deriving (Eq, Show, Typeable)
+  deriving (Eq, Show, Typeable)
 
 instance E.Exception Exception
 
@@ -72,19 +70,21 @@ firstLower :: String -> String
 firstLower (x:xs) = Char.toLower x : xs
 firstLower _      = error "firstLower: Assertion failed: empty string"
 
-data Request = ReqText   !T.Text
-             | ReqStamp  !Word64 !DirectInt64
-             | ReqYesNo  !T.Text
-             | ReqSelect !T.Text ![T.Text]
-             | ReqTask   !T.Text Bool -- False: anyone, True: everyone
+data Request =
+    ReqText   !T.Text
+  | ReqStamp  !Word64 !DirectInt64
+  | ReqYesNo  !T.Text
+  | ReqSelect !T.Text ![T.Text]
+  | ReqTask   !T.Text Bool -- False: anyone, True: everyone
 
-data Response = RspText   !TalkId !T.Text
-              | RspStamp  !TalkId !Word64 !DirectInt64
-              | RspYesNo  !TalkId !T.Text Bool
-              | RspSelect !TalkId !T.Text ![T.Text] T.Text
-              | RspTask   !TalkId !T.Text Bool Bool -- done
+data Response =
+    RspText   !TalkId !T.Text
+  | RspStamp  !TalkId !Word64 !DirectInt64
+  | RspYesNo  !TalkId !T.Text Bool
+  | RspSelect !TalkId !T.Text ![T.Text] T.Text
+  | RspTask   !TalkId !T.Text Bool Bool -- done
 
-type RspInfo = [(M.Object,M.Object)]
+type RspInfo = [(M.Object, M.Object)]
 
 decodeResponse :: RspInfo -> Maybe Response
 decodeResponse rspinfo = do
