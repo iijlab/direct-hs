@@ -1,29 +1,26 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Web.Direct.Types where
 
-import qualified Control.Exception as E
-import qualified Data.Aeson as Json
-import           Data.Aeson
-                  ( FromJSON
-                  , ToJSON
-                  , fieldLabelModifier
-                  )
-import qualified Data.ByteString.Lazy as B
-import qualified Data.Char as Char
-import qualified Data.MessagePack as M
-import qualified Data.Text as T
-import           Data.Typeable (Typeable)
-import           Data.Word (Word64)
-import           GHC.Generics (Generic)
+import qualified Control.Exception                as E
+import           Data.Aeson                       (FromJSON, ToJSON,
+                                                   fieldLabelModifier)
+import qualified Data.Aeson                       as Json
+import qualified Data.ByteString.Lazy             as B
+import qualified Data.Char                        as Char
+import qualified Data.MessagePack                 as M
+import qualified Data.Text                        as T
+import           Data.Typeable                    (Typeable)
+import           Data.Word                        (Word64)
+import           GHC.Generics                     (Generic)
 
 import qualified Network.MessagePack.Async.Client as Rpc
 
 -- | Direct client.
 data Client = Client {
     clientPersistedInfo :: !PersistedInfo
-  , clientRpcClient :: !AnonymousClient
+  , clientRpcClient     :: !AnonymousClient
   }
 
 -- | Direct client not logined yet.
@@ -31,7 +28,7 @@ type AnonymousClient = Rpc.Client
 
 data PersistedInfo = PersistedInfo {
     persistedInfoDirectAccessToken :: !T.Text
-  , persistedInfoIdfv :: !T.Text
+  , persistedInfoIdfv              :: !T.Text
   } deriving (Eq, Show, Generic)
 
 instance FromJSON PersistedInfo where

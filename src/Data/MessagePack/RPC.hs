@@ -6,9 +6,9 @@ module Data.MessagePack.RPC (
   , Message(..)
   ) where
 
-import           Data.MessagePack (MessagePack(..), Object(..))
-import qualified Data.Text as T
-import           Data.Word (Word64)
+import           Data.MessagePack (MessagePack (..), Object (..))
+import qualified Data.Text        as T
+import           Data.Word        (Word64)
 
 -- | Message ID.
 type MessageId = Word64

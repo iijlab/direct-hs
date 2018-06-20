@@ -4,17 +4,17 @@
 
 module Main (main) where
 
-import qualified Data.Text as T
-import Control.Monad
+import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as CL
-import Data.Hex
-import Data.IORef
-import Data.List
-import Data.List.Split
-import qualified Data.MessagePack as M
-import System.Environment
-import System.IO
-import System.Process
+import           Data.Hex
+import           Data.IORef
+import           Data.List
+import           Data.List.Split
+import qualified Data.MessagePack           as M
+import qualified Data.Text                  as T
+import           System.Environment
+import           System.IO
+import           System.Process
 
 main :: IO ()
 main = do

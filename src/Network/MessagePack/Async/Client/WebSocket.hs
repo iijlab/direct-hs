@@ -6,8 +6,8 @@ module Network.MessagePack.Async.Client.WebSocket (
   , module Network.MessagePack.Async.Client
   ) where
 
-import qualified Data.Text as T
-import qualified Network.WebSockets.Client as Ws
+import qualified Data.Text                        as T
+import qualified Network.WebSockets.Client        as Ws
 
 import           Network.MessagePack.Async.Client hiding (withClient)
 import qualified Network.MessagePack.Async.Client as Rpc (withClient)

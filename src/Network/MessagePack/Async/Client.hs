@@ -21,20 +21,20 @@ module Network.MessagePack.Async.Client
   , replyRpc
   ) where
 
-import           Control.Concurrent (forkIO, killThread)
+import           Control.Concurrent      (forkIO, killThread)
 import           Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
-import           Data.IORef (IORef)
-import qualified Data.IORef as IORef
-import           Data.Monoid ((<>))
-import qualified Control.Exception as E
-import           Control.Monad (forever, void)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HM
-import qualified Data.MessagePack as MsgPack
-import           System.Timeout (timeout)
+import qualified Control.Exception       as E
+import           Control.Monad           (forever, void)
+import qualified Data.ByteString         as B
+import qualified Data.ByteString.Lazy    as BL
+import           Data.HashMap.Strict     (HashMap)
+import qualified Data.HashMap.Strict     as HM
+import           Data.IORef              (IORef)
+import qualified Data.IORef              as IORef
+import qualified Data.MessagePack        as MsgPack
+import           Data.Monoid             ((<>))
+import           System.Timeout          (timeout)
 
 import           Data.MessagePack.RPC
 
@@ -72,9 +72,9 @@ type Formatter = Message -> String
 -- | Configuration for MessagePack RPC.
 data Config = Config {
     notificationHandler :: NotificationHandler
-  , requestHandler :: RequestHandler
-  , logger :: Logger
-  , formatter :: Formatter
+  , requestHandler      :: RequestHandler
+  , logger              :: Logger
+  , formatter           :: Formatter
   }
 
 -- | The default configuration.
@@ -90,8 +90,8 @@ defaultConfig = Config
 
 -- | Backend IO functions.
 data Backend = Backend {
-    backendSend :: B.ByteString -> IO () -- ^ Sending
-  , backendRecv :: IO B.ByteString -- ^ Receiving
+    backendSend  :: B.ByteString -> IO () -- ^ Sending
+  , backendRecv  :: IO B.ByteString -- ^ Receiving
   , backendClose :: IO () -- ^ Closing
   }
 

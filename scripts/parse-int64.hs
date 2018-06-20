@@ -2,13 +2,13 @@
 -- stack --resolver lts-11.4 script --package text
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Monad (mapM_)
-import           Data.Bits ((.|.), (.&.), shiftL)
-import           Data.Char (isDigit)
-import qualified Data.Text as T
-import           Data.Word (Word64)
+import           Control.Monad      (mapM_)
+import           Data.Bits          (shiftL, (.&.), (.|.))
+import           Data.Char          (isDigit)
+import qualified Data.Text          as T
+import           Data.Word          (Word64)
 import           System.Environment (getArgs)
-import           Text.Read (readMaybe)
+import           Text.Read          (readMaybe)
 
 
 -- |

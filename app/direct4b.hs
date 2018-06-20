@@ -1,35 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Applicative ((<|>), (<**>))
-import           Control.Concurrent (threadDelay)
-import qualified Control.Exception as E
-import           Control.Monad (join, forever)
+import           Control.Applicative    ((<**>), (<|>))
+import           Control.Concurrent     (threadDelay)
+import qualified Control.Exception      as E
+import           Control.Monad          (forever, join)
 import           Control.Monad.IO.Class (liftIO)
-import qualified Data.ByteString.Lazy as B
-import           Data.List (intercalate)
-import qualified Data.MessagePack as M
-import qualified Data.MessagePack.RPC as Msg
-import           Data.Monoid ((<>))
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.IO as TL
-import qualified Options.Applicative as Opt
-import qualified System.Directory as Dir
-import           System.Envy (FromEnv, fromEnv, env, decodeEnv)
-import           System.Exit (die)
-import           System.FilePath ((</>))
-import           System.IO
-                   ( stderr
-                   , stdout
-                   , stdin
-                   , hSetBuffering
-                   , hGetEcho
-                   , hSetEcho
-                   , BufferMode(NoBuffering)
-                   )
+import qualified Data.ByteString.Lazy   as B
+import           Data.List              (intercalate)
+import qualified Data.MessagePack       as M
+import qualified Data.MessagePack.RPC   as Msg
+import           Data.Monoid            ((<>))
+import qualified Data.Text              as T
+import qualified Data.Text.IO           as T
+import qualified Data.Text.Lazy         as TL
+import qualified Data.Text.Lazy.IO      as TL
+import qualified Options.Applicative    as Opt
+import qualified System.Directory       as Dir
+import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
+import           System.Exit            (die)
+import           System.FilePath        ((</>))
+import           System.IO              (BufferMode (NoBuffering), hGetEcho,
+                                         hSetBuffering, hSetEcho, stderr, stdin,
+                                         stdout)
 
-import qualified Web.Direct as Direct
+import qualified Web.Direct             as Direct
 
 
 main :: IO ()
@@ -75,8 +69,8 @@ instance FromEnv EndpointUrl where
 data Env =
   Env
     { directEmailAddress :: T.Text
-    , directPassword :: T.Text
-    , directEndpointUrl :: String
+    , directPassword     :: T.Text
+    , directEndpointUrl  :: String
     } deriving Show
 
 instance FromEnv Env where

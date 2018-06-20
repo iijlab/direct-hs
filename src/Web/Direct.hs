@@ -1,9 +1,9 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 module Web.Direct
   (
@@ -37,15 +37,15 @@ module Web.Direct
   ) where
 
 
-import           Control.Error (fmapL)
-import qualified Control.Exception as E
-import           Control.Monad (forM_, void)
-import qualified Data.MessagePack as M
-import qualified Data.MessagePack.RPC as R
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.UUID as Uuid
-import qualified System.Random.MWC as Random
+import           Control.Error                              (fmapL)
+import qualified Control.Exception                          as E
+import           Control.Monad                              (forM_, void)
+import qualified Data.MessagePack                           as M
+import qualified Data.MessagePack.RPC                       as R
+import qualified Data.Text                                  as T
+import qualified Data.Text.Lazy                             as TL
+import qualified Data.UUID                                  as Uuid
+import qualified System.Random.MWC                          as Random
 
 import           Web.Direct.Types
 
