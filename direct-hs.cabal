@@ -1,7 +1,7 @@
 name:                direct-hs
 version:             0.1.0.0
--- synopsis:
--- description:
+synopsis:            Client library for direct.
+description:         Client library for [direct](https://direct4b.com)
 homepage:            https://github.com/iij-ii/direct-hs
 license:             Apache-2.0
 license-file:        LICENSE
