@@ -33,16 +33,13 @@ main = do
 
 
 parse :: String -> Maybe Integer
-parse s =
-  case T.splitOn "_" $ T.dropAround (not . isDigit) $ T.pack s of
-      [h, l] ->
-        shiftAndAdd <$> readMaybe (T.unpack h) <*> readMaybe (T.unpack l)
-      _ -> Nothing
-  where
-    shiftAndAdd h l = (h `shiftL` 32) .|. getLower32bits l
-    getLower32bits = (.&. 0xffffffff)
+parse s = case T.splitOn "_" $ T.dropAround (not . isDigit) $ T.pack s of
+  [h, l] -> shiftAndAdd <$> readMaybe (T.unpack h) <*> readMaybe (T.unpack l)
+  _      -> Nothing
+ where
+  shiftAndAdd h l = (h `shiftL` 32) .|. getLower32bits l
+  getLower32bits = (.&. 0xffffffff)
 
 
 format :: String -> Maybe Integer -> String
-format input result =
-  input ++ ": " ++ maybe "Invalid" show result
+format input result = input ++ ": " ++ maybe "Invalid" show result

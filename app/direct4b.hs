@@ -34,27 +34,35 @@ import qualified Web.Direct as Direct
 
 main :: IO ()
 main = join $ Opt.execParser optionsInfo
-  where
-    optionsInfo :: Opt.ParserInfo (IO ())
-    optionsInfo =
-      Opt.info
-        (options <**> Opt.helper)
-        (Opt.fullDesc <> Opt.progDesc "Command line client for direct4b.com" <> Opt.header "")
+ where
+  optionsInfo :: Opt.ParserInfo (IO ())
+  optionsInfo = Opt.info
+    (options <**> Opt.helper)
+    (  Opt.fullDesc
+    <> Opt.progDesc "Command line client for direct4b.com"
+    <> Opt.header ""
+    )
 
-    options :: Opt.Parser (IO ())
-    options =
-      Opt.subparser $
-        Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
-          <> Opt.command "send"
-              ( Opt.info
-                  (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
-                  (Opt.fullDesc <> Opt.progDesc "Send a message from stdin as the logged-in user.")
-              )
-          <> Opt.command "observe"
-              ( Opt.info
-                  (pure observe)
-                  (Opt.fullDesc <> Opt.progDesc "Observe all messages for the logged-in user.")
-              )
+  options :: Opt.Parser (IO ())
+  options =
+    Opt.subparser
+      $  Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
+      <> Opt.command
+           "send"
+           ( Opt.info
+             (sendMessage <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
+             ( Opt.fullDesc <> Opt.progDesc
+               "Send a message from stdin as the logged-in user."
+             )
+           )
+      <> Opt.command
+           "observe"
+           ( Opt.info
+             (pure observe)
+             (  Opt.fullDesc
+             <> Opt.progDesc "Observe all messages for the logged-in user."
+             )
+           )
 
 
 newtype EndpointUrl = EndpointUrl { getEndpointUrl :: String } deriving Show
@@ -102,35 +110,41 @@ login = do
   putStrLn $ "Parsed URL:" ++ show url
 
   Direct.withAnonymousClient url Direct.defaultConfig $ \ac -> do
-    c <- throwWhenLeft =<<
-      Direct.login ac (directEmailAddress e) (directPassword e)
+    c <- throwWhenLeft
+      =<< Direct.login ac (directEmailAddress e) (directPassword e)
     putStrLn "Successfully logged in."
 
-    B.writeFile jsonFileName $ Direct.serializePersistedInfo $ Direct.clientPersistedInfo c
+    B.writeFile jsonFileName
+      $ Direct.serializePersistedInfo
+      $ Direct.clientPersistedInfo c
     cd <- Dir.getCurrentDirectory
     putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
 
 sendMessage :: Direct.DirectInt64 -> IO ()
 sendMessage i64 = do
-  msg <- TL.stripEnd <$> TL.getContents
-  pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
+  msg   <- TL.stripEnd <$> TL.getContents
+  pInfo <-
+    dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-  Direct.withClient url pInfo Direct.defaultConfig $ \c -> Direct.createMessage c i64 msg
+  Direct.withClient url pInfo Direct.defaultConfig
+    $ \c -> Direct.createMessage c i64 msg
 
 observe :: IO ()
 observe = do
-  pInfo <- dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
+  pInfo <-
+    dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
   -- TODO: Handle Ctrl + C
   Direct.withClient
     url
     pInfo
-    Direct.defaultConfig { Direct.logger = putStrLn, Direct.formatter = showMsg }
+    Direct.defaultConfig { Direct.logger    = putStrLn
+                         , Direct.formatter = showMsg
+                         }
     (\_ ->
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
-      forever $ threadDelay $ 10 * 1000
-    )
+           forever $ threadDelay $ 10 * 1000)
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
 throwWhenLeft = either E.throwIO return
@@ -150,22 +164,23 @@ showObjs :: [M.Object] -> String
 showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
 
 showObj :: M.Object -> String
-showObj (M.ObjectWord  w) = "+" ++ show w
-showObj (M.ObjectInt   n) = show n
-showObj  M.ObjectNil      = "nil"
+showObj (M.ObjectWord w)  = "+" ++ show w
+showObj (M.ObjectInt  n)  = show n
+showObj M.ObjectNil       = "nil"
 showObj (M.ObjectBool  b) = show b
 showObj (M.ObjectStr   s) = "\"" ++ T.unpack s ++ "\""
 showObj (M.ObjectArray v) = "[" ++ intercalate "," (map showObj v) ++ "]"
 showObj (M.ObjectMap   m) = "{" ++ intercalate "," (map showPair m) ++ "}"
-  where
-    showPair (x,y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
-showObj (M.ObjectBin _)    = error "ObjectBin"
-showObj (M.ObjectExt _ _)  = error "ObjectExt"
-showObj (M.ObjectFloat _)  = error "ObjectFloat"
+  where showPair (x, y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
+showObj (M.ObjectBin _   ) = error "ObjectBin"
+showObj (M.ObjectExt _ _ ) = error "ObjectExt"
+showObj (M.ObjectFloat  _) = error "ObjectFloat"
 showObj (M.ObjectDouble _) = error "ObjectDouble"
 
 showMsg :: Msg.Message -> String
-showMsg (Msg.RequestMessage _ method objs) = "request " ++ T.unpack method ++ " " ++ showObjs objs
-showMsg (Msg.ResponseMessage _ (Left obj)) = "response error " ++ showObj obj
+showMsg (Msg.RequestMessage _ method objs) =
+  "request " ++ T.unpack method ++ " " ++ showObjs objs
+showMsg (Msg.ResponseMessage _ (Left  obj)) = "response error " ++ showObj obj
 showMsg (Msg.ResponseMessage _ (Right obj)) = "response " ++ showObj obj
-showMsg (Msg.NotificationMessage method objs) = "notification " ++ T.unpack method ++ " " ++ showObjs objs
+showMsg (Msg.NotificationMessage method objs) =
+  "notification " ++ T.unpack method ++ " " ++ showObjs objs
