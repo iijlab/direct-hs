@@ -137,8 +137,6 @@ login c email pass = do
       return $ Right $ Client (PersistedInfo token idfv) c
     Right other -> return $ Left $ UnexpectedReponse other
     Left  e     -> return $ Left e
-  -- Example no error: ObjectArray [ObjectWord 1,ObjectWord 0,ObjectNil,ObjectStr "..."]
-  -- Example error:    ObjectArray [ObjectWord 1,ObjectWord 0,ObjectMap [(ObjectStr "code",ObjectWord 401),(ObjectStr "message",ObjectStr "invalid email or password")],ObjectNil]
 
 
 rethrowingException :: IO (Either M.Object M.Object) -> IO M.Object

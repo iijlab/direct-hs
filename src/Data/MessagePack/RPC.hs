@@ -1,4 +1,4 @@
--- | Implementation of [MessagePack RPC](https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md)
+-- | Types in [MessagePack RPC](https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md)
 
 module Data.MessagePack.RPC (
     MessageId

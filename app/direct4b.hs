@@ -135,7 +135,6 @@ observe = do
   pInfo <-
     dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-  -- TODO: Handle Ctrl + C
   Direct.withClient
     url
     pInfo
