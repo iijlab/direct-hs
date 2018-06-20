@@ -142,9 +142,8 @@ observe = do
     Direct.defaultConfig { Direct.logger    = putStrLn
                          , Direct.formatter = showMsg
                          }
-    (\_ ->
-      -- `forever $ return ()` doesn't give up control flow to the receiver thread.
-           forever $ threadDelay $ 10 * 1000)
+    -- `forever $ return ()` doesn't give up control flow to the receiver thread.
+    (\_ -> forever $ threadDelay $ 10 * 1000)
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
 throwWhenLeft = either E.throwIO return
