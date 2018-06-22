@@ -4,14 +4,17 @@ module Network.WebSockets.MockServerSpec
   ( spec
   ) where
 
-import           Control.Applicative ((<|>), empty)
-import           Data.ByteString.Char8 ()
-import           Data.Traversable (for)
-import           System.Envy (FromEnv, fromEnv, env, decodeEnv)
+import           Control.Applicative           (empty, (<|>))
+import           Data.ByteString.Char8         ()
+import           Data.Foldable                 (toList)
+import           Data.Traversable              (for)
+import           Deque                         ()
+import           System.Envy                   (FromEnv, decodeEnv, env,
+                                                fromEnv)
 import           Test.Hspec
-import           Text.Read (readMaybe)
+import           Text.Read                     (readMaybe)
 
-import qualified Network.WebSockets as WS
+import qualified Network.WebSockets            as WS
 import qualified Network.WebSockets.MockServer as MockServer
 
 -- import           Debug.Trace
@@ -35,31 +38,44 @@ spec =
     let runClient = WS.runClient host pn "/"
 
     before_ (MockServer.reinit server) $ do
-      it "after enqueResponses, responds with the given responses and records request" $ do
+      it "after enqueResponses and setDefaultResponse, responds with the given responses and records request" $ do
         let requests =
               [ WS.DataMessage True True True $ WS.Binary "client1"
               , WS.DataMessage True True True $ WS.Binary "client2"
               , WS.DataMessage True True True $ WS.Binary "client3"
-              -- Close code 1000: normal closure: https://tools.ietf.org/html/rfc6455#section-7.4
-              , WS.ControlMessage $ WS.Close 1000 "bye by client"
+              , WS.DataMessage True True True $ WS.Binary "client4"
+              , WS.DataMessage True True True $ WS.Binary "client5"
               ]
+            -- Close code 1000: normal closure: https://tools.ietf.org/html/rfc6455#section-7.4
+            lastRequest = WS.ControlMessage $ WS.Close 1000 "bye by client"
             responses =
               [ WS.DataMessage True True True $ WS.Binary "response1"
               , WS.DataMessage True True True $ WS.Binary "response2"
               , WS.DataMessage True True True $ WS.Binary "response3"
-              -- Close code 1000: normal closure: https://tools.ietf.org/html/rfc6455#section-7.4
-              , WS.ControlMessage $ WS.Close 1000 "bye by server"
               ]
 
-        MockServer.enqueResponses server responses
+            defaultResponse = WS.DataMessage True True True (WS.Binary "default response")
+        MockServer.setDefaultResponse server defaultResponse
 
-        actuallyResponded <- runClient $ \conn ->
-          for requests $ \request -> do
+        mapM_ (MockServer.enqueResponse server) responses
+
+        actuallyResponded <- runClient $ \conn -> do
+          ress <- for requests $ \request -> do
             WS.send conn request
             WS.receive conn
 
-        MockServer.recentlyReceived server `shouldReturn` requests
-        actuallyResponded `shouldBe` responses
+          MockServer.forgetDefaultResponse server
+          WS.send conn lastRequest
+          {- FIXME:
+          -- timeout function doesn't kill `WS.receive conn`.
+          -- So I can't test the exact behaviour of forgetDefaultResponse
+          resLast <- timeout 1 $ WS.receive conn
+          return (ress, resLast)
+          -}
+          return ress
+
+        toList <$> MockServer.recentlyReceived server `shouldReturn` requests ++ [lastRequest]
+        actuallyResponded `shouldBe` responses ++ [defaultResponse, defaultResponse]
 
       it "sendToClients delivers the given message to all connected clients" $ do
         let msg = WS.DataMessage True True True $ WS.Binary "message"
