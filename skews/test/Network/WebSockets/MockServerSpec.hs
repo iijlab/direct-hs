@@ -5,6 +5,9 @@ module Network.WebSockets.MockServerSpec
   ) where
 
 import           Control.Applicative           (empty, (<|>))
+import           Control.Concurrent            (threadDelay)
+import           Control.Concurrent.Async      (async, replicateConcurrently,
+                                                replicateConcurrently_, wait)
 import           Data.ByteString.Char8         ()
 import           Data.Foldable                 (toList)
 import           Data.Traversable              (for)
@@ -79,9 +82,21 @@ spec =
 
       it "sendToClients delivers the given message to all connected clients" $ do
         let msg = WS.DataMessage True True True $ WS.Binary "message"
-        actuallyReceived <- runClient $ \conn1 ->
-          runClient $ \conn2 -> do
-            MockServer.sendToClients server msg
-            (,) <$> WS.receive conn1 <*> WS.receive conn2
+            clientCount = 10
+            clientAction = runClient $ \conn -> do
+              threadDelay $ 100 * 1000
+              WS.receive conn
 
-        actuallyReceived `shouldBe` (msg, msg)
+        actuallyReceived <- async $ replicateConcurrently clientCount clientAction
+        threadDelay $ 50 * 1000
+        MockServer.sendToClients server msg
+
+        wait actuallyReceived `shouldReturn` replicate clientCount msg
+
+      it "can record requests sent concurrently" $ do
+        let msg = WS.DataMessage True True True $ WS.Binary "client message"
+            clientCount = 10
+            clientAction = runClient $ (`WS.send` msg)
+        replicateConcurrently_ clientCount clientAction
+        threadDelay $ 50 * 1000
+        toList <$> MockServer.recentlyReceived server `shouldReturn` replicate clientCount msg

@@ -29,6 +29,7 @@ test-suite mock-ws-server-test
   other-modules:       Network.WebSockets.MockServerSpec
   build-depends:       base
                      , mock-ws-server
+                     , async
                      , bytestring
                      , deque
                      , envy

@@ -19,6 +19,7 @@ module Network.WebSockets.MockServer
   , threadId
   , listeningPort
   , Args(..)
+  , countConnectedClients
   ) where
 
 
@@ -145,3 +146,8 @@ ignoreConnectionClosed = handleJust selectClosed (const $ return ())
     selectClosed :: WS.ConnectionException -> Maybe ()
     selectClosed WS.ConnectionClosed = Just ()
     selectClosed _                   = Nothing
+
+
+-- | For debugging
+countConnectedClients :: Server -> IO Int
+countConnectedClients Server {..} = length <$> IOR.readIORef clientConnections
