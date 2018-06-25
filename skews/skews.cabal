@@ -1,8 +1,8 @@
-name:                mock-ws-server
+name:                skews
 version:             0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/iij-ii/mock-ws-server#readme
+homepage:            https://github.com/iij-ii/skews#readme
 license:             Apache-2.0
 license-file:        LICENSE
 author:              Yuji Yamamoto
@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Network.WebSockets.MockServer
+  exposed-modules:     Network.WebSockets.Skews
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , deque
@@ -26,9 +26,9 @@ test-suite mock-ws-server-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  other-modules:       Network.WebSockets.MockServerSpec
+  other-modules:       Network.WebSockets.SkewsSpec
   build-depends:       base
-                     , mock-ws-server
+                     , skews
                      , async
                      , bytestring
                      , deque
@@ -41,4 +41,4 @@ test-suite mock-ws-server-test
 
 source-repository head
   type:     git
-  location: https://github.com/igrep/mock-ws-server
+  location: https://github.com/iij-ii/skews

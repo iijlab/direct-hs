@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module Network.WebSockets.MockServer
+module Network.WebSockets.Skews
   ( start
   , reinit
   , enqueRequestHandler

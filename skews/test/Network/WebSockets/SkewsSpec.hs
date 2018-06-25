@@ -1,24 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.WebSockets.MockServerSpec
+module Network.WebSockets.SkewsSpec
   ( spec
   ) where
 
-import           Control.Applicative           (empty, (<|>))
-import           Control.Concurrent            (threadDelay)
-import           Control.Concurrent.Async      (async, replicateConcurrently,
-                                                replicateConcurrently_, wait)
-import           Data.ByteString.Char8         ()
-import           Data.Foldable                 (toList)
-import           Data.Traversable              (for)
-import           Deque                         ()
-import           System.Envy                   (FromEnv, decodeEnv, env,
-                                                fromEnv)
+import           Control.Applicative      (empty, (<|>))
+import           Control.Concurrent       (threadDelay)
+import           Control.Concurrent.Async (async, replicateConcurrently,
+                                           replicateConcurrently_, wait)
+import           Data.ByteString.Char8    ()
+import           Data.Foldable            (toList)
+import           Data.Traversable         (for)
+import           Deque                    ()
+import           System.Envy              (FromEnv, decodeEnv, env, fromEnv)
 import           Test.Hspec
-import           Text.Read                     (readMaybe)
+import           Text.Read                (readMaybe)
 
-import qualified Network.WebSockets            as WS
-import qualified Network.WebSockets.MockServer as MockServer
+import qualified Network.WebSockets       as WS
+import qualified Network.WebSockets.Skews as Skews
 
 -- import           Debug.Trace
 
@@ -32,15 +31,15 @@ instance FromEnv PortNumber where
 
 spec :: Spec
 spec =
-  context "After running MockServer.start and starting a client" $ do
+  context "After running Skews.start and starting a client" $ do
     Right (PortNumber pn) <- runIO decodeEnv
 
     let host = "127.0.0.1"
-    server <- runIO $ MockServer.start $ MockServer.Args host pn
+    server <- runIO $ Skews.start $ Skews.Args host pn
 
     let runClient = WS.runClient host pn "/"
 
-    before_ (MockServer.reinit server) $ do
+    before_ (Skews.reinit server) $ do
       it "after enqueResponses and setDefaultResponse, responds with the given responses and records request" $ do
         let requests =
               [ WS.DataMessage True True True $ WS.Binary "client1"
@@ -58,16 +57,16 @@ spec =
               ]
 
             defaultResponse = WS.DataMessage True True True (WS.Binary "default response")
-        MockServer.setDefaultResponse server defaultResponse
+        Skews.setDefaultResponse server defaultResponse
 
-        mapM_ (MockServer.enqueResponse server) responses
+        mapM_ (Skews.enqueResponse server) responses
 
         actuallyResponded <- runClient $ \conn -> do
           ress <- for requests $ \request -> do
             WS.send conn request
             WS.receive conn
 
-          MockServer.forgetDefaultResponse server
+          Skews.forgetDefaultResponse server
           WS.send conn lastRequest
           {- FIXME:
           -- timeout function doesn't kill `WS.receive conn`.
@@ -77,7 +76,7 @@ spec =
           -}
           return ress
 
-        toList <$> MockServer.recentlyReceived server `shouldReturn` requests ++ [lastRequest]
+        toList <$> Skews.recentlyReceived server `shouldReturn` requests ++ [lastRequest]
         actuallyResponded `shouldBe` responses ++ [defaultResponse, defaultResponse]
 
       it "sendToClients delivers the given message to all connected clients" $ do
@@ -89,7 +88,7 @@ spec =
 
         actuallyReceived <- async $ replicateConcurrently clientCount clientAction
         threadDelay $ 50 * 1000
-        MockServer.sendToClients server msg
+        Skews.sendToClients server msg
 
         wait actuallyReceived `shouldReturn` replicate clientCount msg
 
@@ -99,4 +98,4 @@ spec =
             clientAction = runClient $ (`WS.send` msg)
         replicateConcurrently_ clientCount clientAction
         threadDelay $ 50 * 1000
-        toList <$> MockServer.recentlyReceived server `shouldReturn` replicate clientCount msg
+        toList <$> Skews.recentlyReceived server `shouldReturn` replicate clientCount msg
