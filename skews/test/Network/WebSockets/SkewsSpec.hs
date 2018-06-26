@@ -25,7 +25,7 @@ newtype PortNumber = PortNumber Int deriving (Eq, Show)
 
 instance FromEnv PortNumber where
   fromEnv = do
-    mpn <- (readMaybe <$> env "WS_MOCK_SERVER_PORT") <|> pure (Just 8614)
+    mpn <- (readMaybe <$> env "SKEWS_TEST_PORT") <|> pure (Just 8614)
     PortNumber <$> (maybe empty pure mpn)
 
 
