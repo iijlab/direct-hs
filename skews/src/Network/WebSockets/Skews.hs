@@ -3,22 +3,31 @@
 {-# LANGUAGE RecordWildCards   #-}
 
 module Network.WebSockets.Skews
-  ( start
+  ( -- * The server object type and related types.
+    Server
+  , Args(..)
+  , RequestHandler
+
+    -- * Controling the server's lifecycle.
+  , start
   , reinit
+  , threadId
+
+    -- * Configuring how the server responds/sends WebSocket messages to the client.
   , enqueRequestHandler
   , enqueResponse
   , replaceRequestHandlers
   , setDefaultRequestHandler
   , setDefaultResponse
+  , sendToClients
   , forgetDefaultRequestHandler
   , forgetDefaultResponse
-  , sendToClients
-  , recentlyReceived
-  , Server
-  , RequestHandler
-  , threadId
+  , forgetReceivedRequests
+
+    -- * Checking the server's status.
   , listeningPort
-  , Args(..)
+  , listeningHost
+  , recentlyReceived
   , countConnectedClients
   ) where
 
@@ -34,31 +43,37 @@ import qualified Deque               as Q
 import qualified Network.WebSockets  as WS
 
 
+-- | The Server object.
+--   You can easily configure the behavior (how the server responds with some rquests)
+--   after creating by 'start' function.
 data Server =
   Server
     { requestHandlerQueue   :: !(IOR.IORef (Q.Deque RequestHandler))
     , defaultRequestHandler :: !(IOR.IORef (Maybe RequestHandler))
     , recentlyReceivedRef   :: !(IOR.IORef (Q.Deque WS.Message))
     , clientConnections     :: !(IOR.IORef [WS.Connection])
-    , threadId              :: !ThreadId
+    , threadId              :: !ThreadId -- ^ Call 'Control.Concurrent.killThread' to stop the server.
     , listeningPort         :: !Int
     , listeningHost         :: !String
     }
 
 
+-- | Used to configure the server's behavior.
 type RequestHandler = WS.Message -> IO WS.Message
 
+-- Maybe often 'RequestHandler'. Always respond with the given 'WS.Message'.
 respondWith :: WS.Message -> RequestHandler
 respondWith = const . return
 
 
--- TODO: Get port number automatically
+-- TODO: Get an unused port number automatically
 data Args = Args
   { host       :: String
   , portNumber :: Int
   }
 
 
+-- | Start the server by the given hostname and port number as 'Args' object.
 start :: Args -> IO Server
 start (Args listeningHost listeningPort) = do
   requestHandlerQueue <- IOR.newIORef mempty
@@ -86,38 +101,59 @@ addClientConnection :: IOR.IORef [WS.Connection] -> WS.Connection -> IO ()
 addClientConnection ccsr c = IOR.atomicModifyIORef' ccsr (\ccs -> (c : ccs, ()))
 
 
+-- | Configure the request handler called when the server receives next.
+--   'RequestHandler's configured with this function and other non-@Default@ functions are "dequeued".
+--   So the server responds with the request handler only once.
+--
+--   If you need the server to respond always with the same response,
+--   use 'setDefaultResponse' and 'setDefaultRequestHandler'.
 enqueRequestHandler :: Server -> RequestHandler -> IO ()
 enqueRequestHandler Server {..} rh = IOR.atomicModifyIORef' requestHandlerQueue (\q -> (Q.snoc rh q, ()))
 
 
+-- | Configure the response called when the server receives next.
 enqueResponse :: Server -> WS.Message -> IO ()
 enqueResponse s = enqueRequestHandler s . respondWith
 
 
+-- | Configure the request handler called when no request handlers are queued.
 setDefaultRequestHandler :: Server -> RequestHandler -> IO ()
 setDefaultRequestHandler Server {..} = IOR.atomicWriteIORef defaultRequestHandler . Just
 
 
+-- | Reset the request handler queue.
 replaceRequestHandlers :: Server -> [RequestHandler] -> IO ()
 replaceRequestHandlers Server {..} = IOR.atomicWriteIORef requestHandlerQueue . Q.fromList
 
 
+-- | Configure the response called when no request handlers are queued.
 setDefaultResponse :: Server -> WS.Message -> IO ()
 setDefaultResponse s = setDefaultRequestHandler s . respondWith
 
 
+-- | Delete the default request handler. After calling this function,
+--   the 'Server' object doesn't respond to any message if the request handler queue is empty.
 forgetDefaultRequestHandler :: Server -> IO ()
 forgetDefaultRequestHandler Server {..} = IOR.atomicWriteIORef defaultRequestHandler Nothing
 
 
+-- | Alias for 'forgetDefaultRequestHandler'
 forgetDefaultResponse :: Server -> IO ()
 forgetDefaultResponse = forgetDefaultRequestHandler
 
 
+-- | Forget recently received requests.
+forgetReceivedRequests :: Server -> IO ()
+forgetReceivedRequests Server {..} = IOR.atomicWriteIORef recentlyReceivedRef mempty
+
+
+-- | Send the given 'Message' immediately to the all connected clients.
 sendToClients :: Server -> WS.Message -> IO ()
 sendToClients Server {..} msg = mapM_ (`WS.send` msg) =<< IOR.readIORef clientConnections
 
 
+-- | Close all connections, forget recently received requests,
+--   and delete any configured 'RequestHandler's.
 reinit :: Server -> IO ()
 reinit Server {..} = do
   IOR.atomicWriteIORef requestHandlerQueue mempty
@@ -128,6 +164,7 @@ reinit Server {..} = do
   IOR.atomicWriteIORef clientConnections []
 
 
+-- | Retrieve any messages sent by the clients.
 recentlyReceived :: Server -> IO (Q.Deque WS.Message)
 recentlyReceived Server {..} = IOR.readIORef recentlyReceivedRef
 
