@@ -29,7 +29,7 @@ test-suite mock-ws-server-test
   other-modules:       Network.WebSockets.SkewsSpec
   build-depends:       base
                      , skews
-                     , async
+                     , async >= 2.1.1
                      , bytestring
                      , deque
                      , envy
