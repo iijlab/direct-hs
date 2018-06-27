@@ -73,9 +73,9 @@ withConnection url action = do
 withConnectionFromManager
   :: Http.Manager -> String -> (WS.Connection -> IO a) -> IO a
 withConnectionFromManager man rawUrl action = do
-  (isSecure, host, path) <- parseWsUrl rawUrl
+  (isSecure, host, port, path) <- parseWsUrl rawUrl
 
-  let httpUrl = (if isSecure then "https://" else "http://") ++ host ++ path
+  let httpUrl = (if isSecure then "https://" else "http://") ++ host ++ port ++ path
   req <- Http.parseRequest $ "GET " ++ httpUrl
 
   Http.withConnection req man $ \httpConn -> do
@@ -101,7 +101,7 @@ withConnectionFromManager man rawUrl action = do
       )
 
 
-parseWsUrl :: String -> IO (Bool, String, String)
+parseWsUrl :: String -> IO (Bool, String, String, String)
 parseWsUrl raw = do
   uri  <- noteInvalidUrl "Invalid URL given" $ parseURI raw
   auth <- noteInvalidUrl "No authroity specified" $ uriAuthority uri
@@ -111,7 +111,7 @@ parseWsUrl raw = do
       scheme   = if null scheme' then wss else scheme'
       isSecure = scheme == wss
       path     = uriPath uri ++ uriQuery uri ++ uriFragment uri
-  return (isSecure, host, if null path then "/" else path)
+  return (isSecure, host, uriPort auth, if null path then "/" else path)
  where
   noteInvalidUrl :: String -> Maybe a -> IO a
   noteInvalidUrl msg =

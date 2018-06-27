@@ -1,3 +1,7 @@
+# 0.2.1.0
+
+- Fix: ignore port specified in URL
+
 # 0.2.0.0
 
 - Rename `withClient` into `withConnection` because it gives a `Connection` to the given action.
