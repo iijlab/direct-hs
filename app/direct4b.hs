@@ -42,19 +42,19 @@ main = join $ Opt.execParser optionsInfo
             $  Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
             <> Opt.command
                    "send"
-                   ( Opt.info
+                   (Opt.info
                        (   sendMessage
                        <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        )
-                       ( Opt.fullDesc <> Opt.progDesc
+                       (Opt.fullDesc <> Opt.progDesc
                            "Send a message from stdin as the logged-in user."
                        )
                    )
             <> Opt.command
                    "observe"
-                   ( Opt.info
+                   (Opt.info
                        (pure observe)
-                       ( Opt.fullDesc <> Opt.progDesc
+                       (Opt.fullDesc <> Opt.progDesc
                            "Observe all messages for the logged-in user."
                        )
                    )

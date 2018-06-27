@@ -28,8 +28,8 @@ main = do
     visualize ref inp
 
 visualize :: IORef String -> [String] -> IO ()
-visualize _   []     = return ()
-visualize ref (l:ls) = do
+visualize _   []       = return ()
+visualize ref (l : ls) = do
     when ("Internet Protocol Version" `isPrefixOf` l) $ do
         writeIORef ref $ drop 29 l
     if "Data" `isPrefixOf` l
@@ -43,7 +43,7 @@ visualize ref (l:ls) = do
         else visualize ref ls
   where
     extract [] block = return ([], block)
-    extract xxs@(x:xs) block
+    extract xxs@(x : xs) block
         | head x /= ' ' = do
             extract xs (x : block)
         | otherwise = do

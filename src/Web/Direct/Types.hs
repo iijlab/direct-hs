@@ -64,8 +64,8 @@ deriveJsonOptions = Json.defaultOptions
     }
 
 firstLower :: String -> String
-firstLower (x:xs) = Char.toLower x : xs
-firstLower _      = error "firstLower: Assertion failed: empty string"
+firstLower (x : xs) = Char.toLower x : xs
+firstLower _        = error "firstLower: Assertion failed: empty string"
 
 data Request =
     ReqText   !T.Text
