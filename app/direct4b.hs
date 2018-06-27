@@ -23,8 +23,7 @@ import           System.IO              (BufferMode (NoBuffering), hGetEcho,
                                          hSetBuffering, hSetEcho, stderr, stdin,
                                          stdout)
 
-import qualified Web.Direct             as Direct
-
+import qualified Web.Direct             as D
 
 main :: IO ()
 main = join $ Opt.execParser optionsInfo
@@ -103,48 +102,46 @@ login = do
   let url = directEndpointUrl e
   putStrLn $ "Parsed URL:" ++ show url
 
-  Direct.withAnonymousClient url Direct.defaultConfig $ \ac -> do
+  D.withAnonymousClient url D.defaultConfig $ \ac -> do
     c <- throwWhenLeft
-      =<< Direct.login ac (directEmailAddress e) (directPassword e)
+      =<< D.login ac (directEmailAddress e) (directPassword e)
     putStrLn "Successfully logged in."
 
     B.writeFile jsonFileName
-      $ Direct.serializePersistedInfo
-      $ Direct.clientPersistedInfo c
+      $ D.serializePersistedInfo
+      $ D.clientPersistedInfo c
     cd <- Dir.getCurrentDirectory
     putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
 
-sendMessage :: Direct.DirectInt64 -> IO ()
+sendMessage :: D.DirectInt64 -> IO ()
 sendMessage i64 = do
   msg   <- TL.stripEnd <$> TL.getContents
   pInfo <-
-    dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
+    dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-  Direct.withClient url pInfo Direct.defaultConfig
-    $ \c -> Direct.createMessage c i64 msg
+  D.withClient url pInfo D.defaultConfig
+    $ \c -> D.createMessage c i64 msg
 
 observe :: IO ()
 observe = do
   pInfo <-
-    dieWhenLeft . Direct.deserializePersistedInfo =<< B.readFile jsonFileName
+    dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
   (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-  Direct.withClient
+  D.withClient
     url
     pInfo
-    Direct.defaultConfig { Direct.logger    = putStrLn
-                         , Direct.formatter = showMsg
-                         }
+    D.defaultConfig { D.logger    = putStrLn
+                    , D.formatter = showMsg
+                    }
     -- `forever $ return ()` doesn't give up control flow to the receiver thread.
     (\_ -> forever $ threadDelay $ 10 * 1000)
 
 throwWhenLeft :: E.Exception e => Either e a -> IO a
 throwWhenLeft = either E.throwIO return
 
-
 dieWhenLeft :: Either String a -> IO a
 dieWhenLeft = either exitError return
-
 
 exitError :: String -> IO a
 exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
