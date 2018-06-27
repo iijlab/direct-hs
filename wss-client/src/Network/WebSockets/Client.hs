@@ -41,15 +41,15 @@ module Network.WebSockets.Client
   ) where
 
 
-import qualified Control.Exception as E
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import qualified Network.HTTP.Client as Http
+import qualified Control.Exception            as E
+import qualified Data.ByteString              as BS
+import qualified Data.ByteString.Lazy         as BSL
+import qualified Network.HTTP.Client          as Http
 import qualified Network.HTTP.Client.Internal as Http
-import           Network.HTTP.Client.TLS (tlsManagerSettings)
-import qualified Network.WebSockets as WS
-import qualified Network.WebSockets.Stream as WS
-import           Network.URI (parseURI, URI(..), URIAuth(..))
+import           Network.HTTP.Client.TLS      (tlsManagerSettings)
+import           Network.URI                  (URI (..), URIAuth (..), parseURI)
+import qualified Network.WebSockets           as WS
+import qualified Network.WebSockets.Stream    as WS
 
 -- | The main entrypoint to connect by the WebSocket protocol.
 --   This function automatically closes the created connection
