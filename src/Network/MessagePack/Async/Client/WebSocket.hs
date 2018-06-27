@@ -14,13 +14,13 @@ import qualified Network.MessagePack.Async.Client as Rpc (withClient)
 
 -- | Executing the action in the 3rd argument with a 'Client'.
 withClient
-  :: String -- ^ URL
-  -> Config -- ^ Configuration
-  -> (Client -> IO a) -- ^ Action
-  -> IO a
+    :: String -- ^ URL
+    -> Config -- ^ Configuration
+    -> (Client -> IO a) -- ^ Action
+    -> IO a
 withClient url config action = Ws.withConnection url $ \conn -> do
-  Ws.forkPingThread conn 30
-  let backend = Backend (Ws.sendBinaryData conn)
-                        (Ws.receiveData conn)
-                        (Ws.sendClose conn ("Bye!" :: T.Text))
-  Rpc.withClient config backend action
+    Ws.forkPingThread conn 30
+    let backend = Backend (Ws.sendBinaryData conn)
+                          (Ws.receiveData conn)
+                          (Ws.sendClose conn ("Bye!" :: T.Text))
+    Rpc.withClient config backend action

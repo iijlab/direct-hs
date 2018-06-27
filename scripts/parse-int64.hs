@@ -28,17 +28,17 @@ import           Text.Read          (readMaybe)
 --   _176070168_-1744830464
 main :: IO ()
 main = do
-  args <- getArgs
-  mapM_ putStrLn $ zipWith format args $ map parse args
+    args <- getArgs
+    mapM_ putStrLn $ zipWith format args $ map parse args
 
 
 parse :: String -> Maybe Integer
 parse s = case T.splitOn "_" $ T.dropAround (not . isDigit) $ T.pack s of
-  [h, l] -> shiftAndAdd <$> readMaybe (T.unpack h) <*> readMaybe (T.unpack l)
-  _      -> Nothing
- where
-  shiftAndAdd h l = (h `shiftL` 32) .|. getLower32bits l
-  getLower32bits = (.&. 0xffffffff)
+    [h, l] -> shiftAndAdd <$> readMaybe (T.unpack h) <*> readMaybe (T.unpack l)
+    _      -> Nothing
+  where
+    shiftAndAdd h l = (h `shiftL` 32) .|. getLower32bits l
+    getLower32bits = (.&. 0xffffffff)
 
 
 format :: String -> Maybe Integer -> String

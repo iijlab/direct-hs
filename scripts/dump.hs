@@ -18,41 +18,41 @@ import           System.Process
 
 main :: IO ()
 main = do
-  [pcap, keylog] <- getArgs
-  let process =
-        proc "tshark" ["-V", "-o", "ssl.keylog_file:" ++ keylog, "-r", pcap]
-  (_, Just out, _, _) <- createProcess process { std_out = CreatePipe }
-  hSetBuffering out LineBuffering
-  inp <- lines <$> hGetContents out
-  ref <- newIORef ""
-  visualize ref inp
+    [pcap, keylog] <- getArgs
+    let process =
+            proc "tshark" ["-V", "-o", "ssl.keylog_file:" ++ keylog, "-r", pcap]
+    (_, Just out, _, _) <- createProcess process { std_out = CreatePipe }
+    hSetBuffering out LineBuffering
+    inp <- lines <$> hGetContents out
+    ref <- newIORef ""
+    visualize ref inp
 
 visualize :: IORef String -> [String] -> IO ()
 visualize _   []     = return ()
 visualize ref (l:ls) = do
-  when ("Internet Protocol Version" `isPrefixOf` l) $ do
-    writeIORef ref $ drop 29 l
-  if "Data" `isPrefixOf` l
-    then do
-      readIORef ref >>= putStrLn
-      (ls', block) <- extract (tail ls) []
-      let Just obj = M.unpack $ CL.pack $ cook block
-      putStr $ showObj obj
-      putStr "\n\n"
-      visualize ref ls'
-    else visualize ref ls
- where
-  extract [] block = return ([], block)
-  extract xxs@(x:xs) block
-    | head x /= ' ' = do
-      extract xs (x : block)
-    | otherwise = do
-      return (xxs, reverse block)
-  cook xs = h
-   where
-    oneline =
-      concat $ map concat $ map (splitOn " ") $ map (take 47 . drop 6) xs
-    Just h = unhex oneline
+    when ("Internet Protocol Version" `isPrefixOf` l) $ do
+        writeIORef ref $ drop 29 l
+    if "Data" `isPrefixOf` l
+        then do
+            readIORef ref >>= putStrLn
+            (ls', block) <- extract (tail ls) []
+            let Just obj = M.unpack $ CL.pack $ cook block
+            putStr $ showObj obj
+            putStr "\n\n"
+            visualize ref ls'
+        else visualize ref ls
+  where
+    extract [] block = return ([], block)
+    extract xxs@(x:xs) block
+        | head x /= ' ' = do
+            extract xs (x : block)
+        | otherwise = do
+            return (xxs, reverse block)
+    cook xs = h
+      where
+        oneline =
+            concat $ map concat $ map (splitOn " ") $ map (take 47 . drop 6) xs
+        Just h = unhex oneline
 
 showObj :: M.Object -> String
 showObj (M.ObjectWord w)  = "+" ++ show w
@@ -62,7 +62,7 @@ showObj (M.ObjectBool  b) = show b
 showObj (M.ObjectStr   s) = "\"" ++ T.unpack s ++ "\""
 showObj (M.ObjectArray v) = "[" ++ intercalate "," (map showObj v) ++ "]"
 showObj (M.ObjectMap   m) = "{" ++ intercalate "," (map showPair m) ++ "}"
-  where showPair (x, y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
+    where showPair (x, y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
 showObj (M.ObjectBin _   ) = error "ObjectBin"
 showObj (M.ObjectExt _ _ ) = error "ObjectExt"
 showObj (M.ObjectFloat  _) = error "ObjectFloat"

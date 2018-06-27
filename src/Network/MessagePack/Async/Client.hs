@@ -82,11 +82,11 @@ data Config = Config {
 --     Others do nothing.
 defaultConfig :: Config
 defaultConfig = Config
-  { notificationHandler = \_ _ _ -> return ()
-  , requestHandler      = \_ _ _ _ -> return ()
-  , logger              = \_ -> return ()
-  , formatter           = show
-  }
+    { notificationHandler = \_ _ _ -> return ()
+    , requestHandler      = \_ _ _ _ -> return ()
+    , logger              = \_ -> return ()
+    , formatter           = show
+    }
 
 -- | Backend IO functions.
 data Backend = Backend {
@@ -100,73 +100,80 @@ data Backend = Backend {
 -- | Calling RPC.
 callRpc :: Client -> MethodName -> [MsgPack.Object] -> IO Result
 callRpc client funName args = do
-  rrsp <- E.bracket register unregister sendAndRecv
-  case rrsp of
-    Nothing  -> return $ Left MsgPack.ObjectNil
-    Just rsp -> return rsp
- where
-  sendAndRecv (requestId, rspVar) = do
-    let request = RequestMessage requestId funName args
-    backendSend (clientBackend client) $ BL.toStrict $ MsgPack.pack request
-    clientLog client $ "sent: " <> clientFormat client request
-    timeout 3000000 $ MVar.takeMVar rspVar
-  register = do
-    requestId <- getNewMessageId ss
-    rspVar    <- MVar.newEmptyMVar
-    IORef.atomicModifyIORef' (dispatchTable ss)
-      $ \tbl -> (HM.insert requestId rspVar tbl, ())
-    return (requestId, rspVar)
-  unregister (requestId, _) = IORef.atomicModifyIORef' (dispatchTable ss)
-    $ \tbl -> (HM.delete requestId tbl, ())
-  ss = clientSessionState client
+    rrsp <- E.bracket register unregister sendAndRecv
+    case rrsp of
+        Nothing  -> return $ Left MsgPack.ObjectNil
+        Just rsp -> return rsp
+  where
+    sendAndRecv (requestId, rspVar) = do
+        let request = RequestMessage requestId funName args
+        backendSend (clientBackend client) $ BL.toStrict $ MsgPack.pack request
+        clientLog client $ "sent: " <> clientFormat client request
+        timeout 3000000 $ MVar.takeMVar rspVar
+    register = do
+        requestId <- getNewMessageId ss
+        rspVar    <- MVar.newEmptyMVar
+        IORef.atomicModifyIORef' (dispatchTable ss)
+            $ \tbl -> (HM.insert requestId rspVar tbl, ())
+        return (requestId, rspVar)
+    unregister (requestId, _) = IORef.atomicModifyIORef' (dispatchTable ss)
+        $ \tbl -> (HM.delete requestId tbl, ())
+    ss = clientSessionState client
 
 -- | Replying RPC. This should be used in 'RequestHandler'.
 replyRpc :: Client -> MessageId -> Result -> IO ()
 replyRpc client mid result = do
-  let response = ResponseMessage mid result
-  let p        = BL.toStrict $ MsgPack.pack response
-  backendSend (clientBackend client) p
-  clientLog client $ "sent: " <> clientFormat client response
+    let response = ResponseMessage mid result
+    let p        = BL.toStrict $ MsgPack.pack response
+    backendSend (clientBackend client) p
+    clientLog client $ "sent: " <> clientFormat client response
 
 getNewMessageId :: SessionState -> IO MessageId
 getNewMessageId ss =
-  IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur + 1, cur)
+    IORef.atomicModifyIORef (lastMessageId ss) $ \cur -> (cur + 1, cur)
 
 receiverThread :: Client -> Config -> IO ()
 receiverThread client config =
-  E.handle (\(E.SomeException e) -> print e) $ forever $ do
-    response <- MsgPack.unpack . BL.fromStrict =<< backendRecv
-      (clientBackend client)
-    clientLog client $ "received: " <> clientFormat client response
-    case response of
-      ResponseMessage mid result -> do
-        tbl <- IORef.readIORef $ dispatchTable ss
-        case HM.lookup mid tbl of
-          Just rspVar -> MVar.putMVar rspVar result
-          Nothing ->
-            clientLog client
-              $  "ERROR: No MVar assinged with request ID "
-              ++ show mid
-              ++ "."
-      NotificationMessage methodName params ->
-        void . forkIO $ notificationHandler config client methodName params
-      RequestMessage mid methodName params ->
-        void . forkIO $ requestHandler config client mid methodName params
-  where ss = clientSessionState client
+    E.handle (\(E.SomeException e) -> print e) $ forever $ do
+        response <- MsgPack.unpack . BL.fromStrict =<< backendRecv
+            (clientBackend client)
+        clientLog client $ "received: " <> clientFormat client response
+        case response of
+            ResponseMessage mid result -> do
+                tbl <- IORef.readIORef $ dispatchTable ss
+                case HM.lookup mid tbl of
+                    Just rspVar -> MVar.putMVar rspVar result
+                    Nothing ->
+                        clientLog client
+                            $  "ERROR: No MVar assinged with request ID "
+                            ++ show mid
+                            ++ "."
+            NotificationMessage methodName params ->
+                void . forkIO $ notificationHandler config
+                                                    client
+                                                    methodName
+                                                    params
+            RequestMessage mid methodName params ->
+                void . forkIO $ requestHandler config
+                                               client
+                                               mid
+                                               methodName
+                                               params
+    where ss = clientSessionState client
 
 initSessionState :: IO SessionState
 initSessionState =
-  SessionState <$> IORef.newIORef 0 <*> IORef.newIORef HM.empty
+    SessionState <$> IORef.newIORef 0 <*> IORef.newIORef HM.empty
 
 -- | Executing the action in the 3rd argument with a 'Client'.
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
-  ss <- initSessionState
-  let client = Client ss backend (logger config) (formatter config)
-  tid <- forkIO $ receiverThread client config
-  takeAction client `E.finally` killThread tid
- where
-  takeAction client = do
-    returned <- action client
-    backendClose backend
-    return returned
+    ss <- initSessionState
+    let client = Client ss backend (logger config) (formatter config)
+    tid <- forkIO $ receiverThread client config
+    takeAction client `E.finally` killThread tid
+  where
+    takeAction client = do
+        returned <- action client
+        backendClose backend
+        return returned
