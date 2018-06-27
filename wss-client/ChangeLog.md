@@ -1,6 +1,7 @@
 # 0.2.1.0
 
 - Fix: ignore port specified in URL
+- Add simpest test case.
 
 # 0.2.0.0
 
