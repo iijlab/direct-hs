@@ -81,7 +81,7 @@ subscribeNotification client = do
 
 
 withResponse :: [M.Object] -> (Response -> RspInfo -> IO ()) -> IO ()
-withResponse (M.ObjectMap rspinfo:_) action = case decodeResponse rspinfo of
+withResponse (M.ObjectMap rspinfo : _) action = case decodeResponse rspinfo of
     Nothing  -> return ()
     Just req -> action req rspinfo
 withResponse _ _ = return ()

@@ -2,6 +2,8 @@
 -- stack --resolver lts-11.4 script --package text
 {-# LANGUAGE OverloadedStrings #-}
 
+
+
 import           Control.Monad      (mapM_)
 import           Data.Bits          (shiftL, (.&.), (.|.))
 import           Data.Char          (isDigit)
