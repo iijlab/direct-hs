@@ -27,9 +27,10 @@ module Web.Direct
   , Exception(..)
   , DirectInt64
   , TalkId
+  , talkId
   -- * Functions
   , withResponse
-  , sendRequest
+  , sendMessage
   , replyAck
   -- * To be obsoleted
   , createMessage
@@ -85,8 +86,8 @@ withResponse (M.ObjectMap rspinfo : _) action = case decodeMessage rspinfo of
     Just req -> action req rspinfo
 withResponse _ _ = return ()
 
-sendRequest :: Rpc.Client -> Message -> IO ()
-sendRequest c req = do
+sendMessage :: Rpc.Client -> Message -> IO ()
+sendMessage c req = do
     let obj = encodeMessage req
     void $ Rpc.callRpc c "create_message" obj
 
