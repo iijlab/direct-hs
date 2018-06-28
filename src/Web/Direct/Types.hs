@@ -67,26 +67,22 @@ firstLower :: String -> String
 firstLower (x : xs) = Char.toLower x : xs
 firstLower _        = error "firstLower: Assertion failed: empty string"
 
-data Request =
-    ReqText   !T.Text
-  | ReqStamp  !Word64 !DirectInt64
-  | ReqYesNo  !T.Text
-  | ReqSelect !T.Text ![T.Text]
-  | ReqTask   !T.Text Bool -- False: anyone, True: everyone
-
-data Response =
-    RspText     !TalkId !T.Text
-  | RspStamp    !TalkId !Word64 !DirectInt64
-  | RspYesNo    !TalkId !T.Text Bool
-  | RspSelect   !TalkId !T.Text ![T.Text] T.Text
-  | RspTask     !TalkId !T.Text Bool Bool -- done
-  | RspLocation !TalkId !T.Text !T.Text -- Address, GoogleMap URL
-  | RspOther    !TalkId !T.Text
+data Message =
+    Txt       !TalkId !T.Text
+  | Location  !TalkId !T.Text !T.Text -- Address, GoogleMap URL
+  | Stamp     !TalkId !Word64 !DirectInt64
+  | YesNoQ    !TalkId !T.Text
+  | YesNoA    !TalkId !T.Text Bool
+  | SelectQ   !TalkId !T.Text ![T.Text]
+  | SelectA   !TalkId !T.Text ![T.Text] T.Text
+  | TaskQ     !TalkId !T.Text Bool -- False: anyone, True: everyone
+  | TaskA     !TalkId !T.Text Bool Bool -- done
+  | Other     !TalkId !T.Text
 
 type RspInfo = [(M.Object, M.Object)]
 
-decodeResponse :: RspInfo -> Maybe Response
-decodeResponse rspinfo = do
+decodeMessage :: RspInfo -> Maybe Message
+decodeMessage rspinfo = do
     M.ObjectWord tid <- look "talk_id" rspinfo
     typ              <- look "type" rspinfo
     case typ of
@@ -94,63 +90,73 @@ decodeResponse rspinfo = do
             msg <- look "content" rspinfo >>= M.fromObject
             if "今ココ：" `T.isPrefixOf` msg then
                 let ln = T.lines msg
-                in Just $ RspLocation tid (ln !! 1) (ln !! 2)
+                in Just $ Location tid (ln !! 1) (ln !! 2)
               else
-                Just $ RspText tid msg
+                Just $ Txt tid msg
         M.ObjectWord 2 -> do
             set <- look "stamp_set" rspinfo >>= M.fromObject
             idx <- look "stamp_index" rspinfo >>= M.fromObject
-            Just $ RspStamp tid set idx
+            Just $ Stamp tid set idx
         M.ObjectWord 501 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
             yon           <- look "response" m >>= M.fromObject
-            Just $ RspYesNo tid qst yon
+            Just $ YesNoA tid qst yon
         M.ObjectWord 503 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
             opt           <- look "options" m >>= M.fromObject
             idx           <- look "response" m >>= M.fromObject
             let ans = opt !! fromIntegral (idx :: Word64)
-            Just $ RspSelect tid qst opt ans
+            Just $ SelectA tid qst opt ans
         M.ObjectWord 505 -> do
             M.ObjectMap m <- look "content" rspinfo
             ttl           <- look "title" m >>= M.fromObject
             cls'          <- look "closing_type" m >>= M.fromObject
             don           <- look "done" m >>= M.fromObject
             let cls = if cls' == (1 :: Word64) then True else False
-            Just $ RspTask tid ttl cls don
-        _ -> Just $ RspOther tid $ T.pack $ show rspinfo
+            Just $ TaskA tid ttl cls don
+        _ -> Just $ Other tid $ T.pack $ show rspinfo
     where look key = lookup (M.ObjectStr key)
 
-encodeRequest :: Request -> [M.Object]
-encodeRequest (ReqText text) = [M.ObjectWord 1, M.ObjectStr text]
-encodeRequest (ReqStamp s n) =
-    [ M.ObjectWord 2
+encodeMessage :: Message -> [M.Object]
+encodeMessage (Txt tid text) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+encodeMessage (Location tid addr url) =
+    [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr (T.unlines ["今ココ：",addr,url])]
+encodeMessage (Stamp tid s n) =
+    [ M.ObjectWord tid
+    , M.ObjectWord 2
     , M.ObjectMap
         [ (M.ObjectStr "stamp_set"  , M.ObjectWord s)
         , (M.ObjectStr "stamp_index", M.toObject n)
         ]
     ]
-encodeRequest (ReqYesNo q) =
-    [ M.ObjectWord 500
+encodeMessage (YesNoQ tid q) =
+    [ M.ObjectWord tid
+    , M.ObjectWord 500
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr q)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeRequest (ReqSelect q as) =
-    [ M.ObjectWord 502
+encodeMessage (SelectQ tid q as) =
+    [ M.ObjectWord tid
+    , M.ObjectWord 502
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr q)
         , (M.ObjectStr "options" , M.toObject as)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeRequest (ReqTask ttl cls) =
-    [ M.ObjectWord 504
+encodeMessage (TaskQ tid ttl cls) =
+    [ M.ObjectWord tid
+    , M.ObjectWord 504
     , M.ObjectMap
         [ (M.ObjectStr "title"       , M.ObjectStr ttl)
         , (M.ObjectStr "closing_type", M.ObjectWord (if cls then 1 else 0))
         ]
     ]
+
+encodeMessage (Other tid text) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+
+encodeMessage _ = error "encodeMessage"
