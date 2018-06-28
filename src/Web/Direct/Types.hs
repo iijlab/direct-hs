@@ -75,11 +75,13 @@ data Request =
   | ReqTask   !T.Text Bool -- False: anyone, True: everyone
 
 data Response =
-    RspText   !TalkId !T.Text
-  | RspStamp  !TalkId !Word64 !DirectInt64
-  | RspYesNo  !TalkId !T.Text Bool
-  | RspSelect !TalkId !T.Text ![T.Text] T.Text
-  | RspTask   !TalkId !T.Text Bool Bool -- done
+    RspText     !TalkId !T.Text
+  | RspStamp    !TalkId !Word64 !DirectInt64
+  | RspYesNo    !TalkId !T.Text Bool
+  | RspSelect   !TalkId !T.Text ![T.Text] T.Text
+  | RspTask     !TalkId !T.Text Bool Bool -- done
+  | RspLocation !TalkId !T.Text !T.Text -- Address, GoogleMap URL
+  | RspOther    !TalkId !T.Text
 
 type RspInfo = [(M.Object, M.Object)]
 
@@ -90,7 +92,11 @@ decodeResponse rspinfo = do
     case typ of
         M.ObjectWord 1 -> do
             msg <- look "content" rspinfo >>= M.fromObject
-            Just $ RspText tid msg
+            if "今ココ：" `T.isPrefixOf` msg then
+                let ln = T.lines msg
+                in Just $ RspLocation tid (ln !! 1) (ln !! 2)
+              else
+                Just $ RspText tid msg
         M.ObjectWord 2 -> do
             set <- look "stamp_set" rspinfo >>= M.fromObject
             idx <- look "stamp_index" rspinfo >>= M.fromObject
@@ -114,7 +120,7 @@ decodeResponse rspinfo = do
             don           <- look "done" m >>= M.fromObject
             let cls = if cls' == (1 :: Word64) then True else False
             Just $ RspTask tid ttl cls don
-        _ -> Nothing
+        _ -> Just $ RspOther tid $ T.pack $ show rspinfo
     where look key = lookup (M.ObjectStr key)
 
 encodeRequest :: Request -> [M.Object]
