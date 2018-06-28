@@ -24,10 +24,10 @@ module Web.Direct
   -- * Types
   , Message(..)
   , RspInfo
-  , Exception(..)
-  , DirectInt64
   , TalkId
   , talkId
+  , DirectInt64
+  , Exception(..)
   -- * Functions
   , withResponse
   , sendMessage
