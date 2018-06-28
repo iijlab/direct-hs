@@ -49,7 +49,6 @@ test-suite wss-client-test
   other-modules:       Network.WebSockets.ClientSpec
   build-depends:       base
                      , wss-client
-                     , QuickCheck
                      , bytestring
                      , envy
                      , hspec
