@@ -31,7 +31,7 @@ module Web.Direct
   -- * Functions
   , withResponse
   , sendMessage
-  , replyAck
+  , sendAck
   -- * To be obsoleted
   , createMessage
   ) where
@@ -57,7 +57,7 @@ import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 --   'formatter' is 'show'.
 defaultConfig :: Rpc.Config
 defaultConfig =
-    Rpc.defaultConfig { Rpc.requestHandler = \c i _ _ -> replyAck c i }
+    Rpc.defaultConfig { Rpc.requestHandler = \c i _ _ -> sendAck c i }
 
 
 withClient :: String -> PersistedInfo -> Rpc.Config -> (Client -> IO a) -> IO a
@@ -91,8 +91,8 @@ sendMessage c req = do
     let obj = encodeMessage req
     void $ Rpc.callRpc c "create_message" obj
 
-replyAck :: Rpc.Client -> R.MessageId -> IO ()
-replyAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
+sendAck :: Rpc.Client -> R.MessageId -> IO ()
+sendAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
 
 createMessage :: Client -> TalkId -> TL.Text -> IO ()
 createMessage c tid content = do
