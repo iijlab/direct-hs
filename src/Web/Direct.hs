@@ -23,13 +23,12 @@ module Web.Direct
   , deserializePersistedInfo
   -- * Types
   , Message(..)
-  , RspInfo
   , TalkId
   , talkId
   , DirectInt64
   , Exception(..)
   -- * Functions
-  , withResponse
+  , respond
   , sendMessage
   , sendAck
   -- * To be obsoleted
@@ -80,11 +79,11 @@ subscribeNotification client = do
     void $ rethrowingException $ Rpc.callRpc c "start_notification" []
 
 
-withResponse :: [M.Object] -> (Message -> RspInfo -> IO ()) -> IO ()
-withResponse (M.ObjectMap rspinfo : _) action = case decodeMessage rspinfo of
+respond :: [M.Object] -> (Message ->IO ()) -> IO ()
+respond (M.ObjectMap rsp : _) action = case decodeMessage rsp of
     Nothing  -> return ()
-    Just req -> action req rspinfo
-withResponse _ _ = return ()
+    Just req -> action req
+respond _ _ = return ()
 
 sendMessage :: Rpc.Client -> Message -> IO ()
 sendMessage c req = do
