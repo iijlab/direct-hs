@@ -54,10 +54,8 @@ data Exception =
 
 instance E.Exception Exception
 
-type DirectInt64 = Word64
-
-type TalkId = DirectInt64
-
+type MessageId = Word64
+type TalkId = Word64
 
 deriveJsonOptions :: Json.Options
 deriveJsonOptions = Json.defaultOptions
@@ -71,7 +69,7 @@ firstLower _        = error "firstLower: Assertion failed: empty string"
 data Message =
     Txt       !TalkId !T.Text
   | Location  !TalkId !T.Text !T.Text -- Address, GoogleMap URL
-  | Stamp     !TalkId !Word64 !DirectInt64
+  | Stamp     !TalkId !Word64 !Word64
   | YesNoQ    !TalkId !T.Text
   | YesNoA    !TalkId !T.Text Bool
   | SelectQ   !TalkId !T.Text ![T.Text]
@@ -159,7 +157,7 @@ encodeMessage (Stamp tid set idx) =
     , M.ObjectWord 2
     , M.ObjectMap
         [ (M.ObjectStr "stamp_set"  , M.ObjectWord set)
-        , (M.ObjectStr "stamp_index", M.toObject idx)
+        , (M.ObjectStr "stamp_index", M.ObjectWord idx)
         ]
     ]
 encodeMessage (YesNoQ tid qst) =

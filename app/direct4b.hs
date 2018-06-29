@@ -116,13 +116,13 @@ login = do
         putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
 
-sendMessage :: D.DirectInt64 -> IO ()
-sendMessage i64 = do
+sendMessage :: D.TalkId -> IO ()
+sendMessage tid = do
     msg   <- TL.stripEnd <$> TL.getContents
     pInfo <-
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    D.withClient url pInfo D.defaultConfig $ \c -> D.createMessage c i64 msg
+    D.withClient url pInfo D.defaultConfig $ \c -> D.createMessage c tid msg
 
 observe :: IO ()
 observe = do

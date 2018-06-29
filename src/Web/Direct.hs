@@ -23,9 +23,9 @@ module Web.Direct
   , deserializePersistedInfo
   -- * Types
   , Message(..)
+  , MessageId
   , TalkId
   , talkId
-  , DirectInt64
   , Exception(..)
   -- * Functions
   , respond
@@ -85,10 +85,15 @@ respond (M.ObjectMap rsp : _) action = case decodeMessage rsp of
     Just req -> action req
 respond _ _ = return ()
 
-sendMessage :: Rpc.Client -> Message -> IO ()
+sendMessage :: Rpc.Client -> Message -> IO MessageId
 sendMessage c req = do
     let obj = encodeMessage req
-    void $ Rpc.callRpc c "create_message" obj
+    ersp <- Rpc.callRpc c "create_message" obj
+    case ersp of
+      Right (M.ObjectMap rsp) -> case lookup (M.ObjectStr "message_id") rsp of
+        Just (M.ObjectWord x) -> return x
+        _                     -> error "sendMessage" -- fixme
+      _                       -> error "sendMessage" -- fixme
 
 sendAck :: Rpc.Client -> R.MessageId -> IO ()
 sendAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
