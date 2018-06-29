@@ -61,7 +61,7 @@ defaultConfig =
 
 withClient :: String -> PersistedInfo -> Rpc.Config -> (Client -> IO a) -> IO a
 withClient ep pInfo handler action =
-    withAnonymousClient ep handler $ \aClient -> do
+    Rpc.withClient ep handler $ \aClient -> do
         let client = Client pInfo aClient
         createSession client
         subscribeNotification client
