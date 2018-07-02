@@ -19,6 +19,8 @@ module Network.WebSockets.Skews
   , replaceRequestHandlers
   , setDefaultRequestHandler
   , setDefaultResponse
+  , respondWith
+  , doNothing
   , sendToClients
   , forgetDefaultRequestHandler
   , forgetDefaultResponse
@@ -62,9 +64,14 @@ data Server =
 --   If returns @Nothing@, the server does nothing.
 type RequestHandler = WS.Message -> IO (Maybe WS.Message)
 
--- Maybe often 'RequestHandler'. Always respond with the given 'WS.Message'.
+-- | Maybe often used 'RequestHandler'. Always respond with the given 'WS.Message'.
 respondWith :: WS.Message -> RequestHandler
 respondWith = const . return . Just
+
+
+-- | Maybe often used 'RequestHandler'. Do nothing.
+doNothing :: RequestHandler
+doNothing = const $ return Nothing
 
 
 -- TODO: Get an unused port number automatically
