@@ -1,8 +1,8 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 
 module Web.Direct
   (
@@ -56,11 +56,11 @@ data Config = Config {
 --   'NotificationHandler' and 'logger' do nothing.
 --   'formatter' is 'show'.
 defaultConfig :: Config
-defaultConfig = Config {
-    directCreateMessageHandler = \_ _ -> return ()
-  , directLogger               = \_ -> return ()
-  , directFormatter            = show
-  }
+defaultConfig = Config
+    { directCreateMessageHandler = \_ _ -> return ()
+    , directLogger               = \_ -> return ()
+    , directFormatter            = show
+    }
 
 withClient :: String -> PersistedInfo -> Config -> (Client -> IO a) -> IO a
 withClient ep pInfo config action = do
@@ -72,32 +72,32 @@ withClient ep pInfo config action = do
         subscribeNotification client
         action client
   where
-    rpcConfig ref = Rpc.defaultConfig {
-        Rpc.requestHandler  = \rpcClient mid method objs -> do
+    rpcConfig ref = Rpc.defaultConfig
+        { Rpc.requestHandler = \rpcClient mid method objs -> do
              -- sending ACK always
-             sendAck rpcClient mid
-             Just client <- I.readIORef ref
-             -- fixme: "notify_update_domain_users"
-             -- fixme: "notify_update_read_statuses"
-             when (method == "notify_create_message") $ case objs of
-                 M.ObjectMap rsp : _ ->  case decodeMessage rsp of
-                     Nothing  -> return ()
-                     Just req -> directCreateMessageHandler config client req
-                 _                   -> return ()
-      , Rpc.logger          = directLogger config
-      , Rpc.formatter       = directFormatter config
-      }
+            sendAck rpcClient mid
+            Just client <- I.readIORef ref
+            -- fixme: "notify_update_domain_users"
+            -- fixme: "notify_update_read_statuses"
+            when (method == "notify_create_message") $ case objs of
+                M.ObjectMap rsp : _ -> case decodeMessage rsp of
+                    Nothing  -> return ()
+                    Just req -> directCreateMessageHandler config client req
+                _ -> return ()
+        , Rpc.logger         = directLogger config
+        , Rpc.formatter      = directFormatter config
+        }
 
 withAnonymousClient :: String -> Config -> (AnonymousClient -> IO a) -> IO a
 withAnonymousClient ep config action = Rpc.withClient ep rpcConfig action
   where
-    rpcConfig = Rpc.defaultConfig {
-        Rpc.requestHandler  = \rpcClient mid _method _objs -> do
+    rpcConfig = Rpc.defaultConfig
+        { Rpc.requestHandler = \rpcClient mid _method _objs -> do
              -- sending ACK always
-             sendAck rpcClient mid
-      , Rpc.logger          = directLogger config
-      , Rpc.formatter       = directFormatter config
-      }
+            sendAck rpcClient mid
+        , Rpc.logger         = directLogger config
+        , Rpc.formatter      = directFormatter config
+        }
 
 
 subscribeNotification :: Client -> IO ()
@@ -112,10 +112,11 @@ sendMessage c req = do
     let obj = encodeMessage req
     ersp <- Rpc.callRpc (clientRpcClient c) "create_message" obj
     case ersp of
-      Right (M.ObjectMap rsp) -> case lookup (M.ObjectStr "message_id") rsp of
-        Just (M.ObjectWord x) -> return x
-        _                     -> error "sendMessage" -- fixme
-      _                       -> error "sendMessage" -- fixme
+        Right (M.ObjectMap rsp) ->
+            case lookup (M.ObjectStr "message_id") rsp of
+                Just (M.ObjectWord x) -> return x
+                _                     -> error "sendMessage" -- fixme
+        _ -> error "sendMessage" -- fixme
 
 sendAck :: Rpc.Client -> R.MessageId -> IO ()
 sendAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
