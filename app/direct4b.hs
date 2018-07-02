@@ -3,7 +3,7 @@
 import           Control.Applicative    ((<**>), (<|>))
 import           Control.Concurrent     (threadDelay)
 import qualified Control.Exception      as E
-import           Control.Monad          (forever, join)
+import           Control.Monad          (forM_, forever, join)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (intercalate)
@@ -43,7 +43,7 @@ main = join $ Opt.execParser optionsInfo
             <> Opt.command
                    "send"
                    (Opt.info
-                       (   sendMessage
+                       (   sendText
                        <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        )
                        (Opt.fullDesc <> Opt.progDesc
@@ -116,13 +116,15 @@ login = do
         putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
 
-sendMessage :: D.TalkId -> IO ()
-sendMessage tid = do
-    msg   <- TL.stripEnd <$> TL.getContents
+sendText :: D.TalkId -> IO ()
+sendText tid = do
+    txt   <- TL.stripEnd <$> TL.getContents
     pInfo <-
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    D.withClient url pInfo D.defaultConfig $ \c -> D.createMessage c tid msg
+    D.withClient url pInfo D.defaultConfig $ \client -> do
+        forM_ (TL.chunksOf 1024 txt)
+            $ \chunk -> D.sendMessage client $ D.Txt tid $ TL.toStrict chunk
 
 observe :: IO ()
 observe = do
@@ -132,7 +134,9 @@ observe = do
     D.withClient
         url
         pInfo
-        D.defaultConfig { D.logger = putStrLn, D.formatter = showMsg }
+        D.defaultConfig { D.directLogger    = putStrLn
+                        , D.directFormatter = showMsg
+                        }
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
         (\_ -> forever $ threadDelay $ 10 * 1000)
 
