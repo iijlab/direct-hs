@@ -26,7 +26,7 @@ newtype PortNumber = PortNumber Int deriving (Eq, Show)
 instance FromEnv PortNumber where
   fromEnv = do
     mpn <- (readMaybe <$> env "SKEWS_TEST_PORT") <|> pure (Just 8614)
-    PortNumber <$> (maybe empty pure mpn)
+    PortNumber <$> maybe empty pure mpn
 
 
 spec :: Spec
@@ -95,7 +95,7 @@ spec =
       it "can record requests sent concurrently" $ do
         let msg = WS.DataMessage True True True $ WS.Binary "client message"
             clientCount = 10
-            clientAction = runClient $ (`WS.send` msg)
+            clientAction = runClient (`WS.send` msg)
         replicateConcurrently_ clientCount clientAction
         threadDelay $ 50 * 1000
         toList <$> Skews.recentlyReceived server `shouldReturn` replicate clientCount msg
