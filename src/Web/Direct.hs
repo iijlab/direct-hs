@@ -62,10 +62,10 @@ defaultConfig = Config
     , directFormatter            = show
     }
 
-withClient :: String -> PersistedInfo -> Config -> (Client -> IO a) -> IO a
-withClient ep pInfo config action = do
+withClient :: Rpc.URL -> PersistedInfo -> Config -> (Client -> IO a) -> IO a
+withClient url pInfo config action = do
     ref <- I.newIORef Nothing
-    Rpc.withClient ep (rpcConfig ref) $ \rpcClient -> do
+    Rpc.withClient url (rpcConfig ref) $ \rpcClient -> do
         let client = Client pInfo rpcClient
         I.writeIORef ref $ Just client
         createSession client
@@ -88,8 +88,8 @@ withClient ep pInfo config action = do
         , Rpc.formatter      = directFormatter config
         }
 
-withAnonymousClient :: String -> Config -> (AnonymousClient -> IO a) -> IO a
-withAnonymousClient ep config action = Rpc.withClient ep rpcConfig action
+withAnonymousClient :: Rpc.URL -> Config -> (AnonymousClient -> IO a) -> IO a
+withAnonymousClient url config action = Rpc.withClient url rpcConfig action
   where
     rpcConfig = Rpc.defaultConfig
         { Rpc.requestHandler = \rpcClient mid _method _objs -> do
