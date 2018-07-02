@@ -21,11 +21,8 @@ import qualified Network.MessagePack.Async.Client as Rpc
 -- | Direct client.
 data Client = Client {
     clientPersistedInfo :: !PersistedInfo
-  , clientRpcClient     :: !AnonymousClient
+  , clientRpcClient     :: !Rpc.Client
   }
-
--- | Direct client not logined yet.
-type AnonymousClient = Rpc.Client
 
 data PersistedInfo = PersistedInfo {
     persistedInfoDirectAccessToken :: !T.Text
