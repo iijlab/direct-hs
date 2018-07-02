@@ -59,11 +59,11 @@ data Server =
 
 
 -- | Used to configure the server's behavior.
-type RequestHandler = WS.Message -> IO WS.Message
+type RequestHandler = WS.Message -> IO (Maybe WS.Message)
 
 -- Maybe often 'RequestHandler'. Always respond with the given 'WS.Message'.
 respondWith :: WS.Message -> RequestHandler
-respondWith = const . return
+respondWith = const . return . Just
 
 
 -- TODO: Get an unused port number automatically
@@ -90,7 +90,7 @@ start (Args listeningHost listeningPort) = do
         mbrh <- deque requestHandlerQueue
         dmbrh <- IOR.readIORef defaultRequestHandler
         case mbrh <|> dmbrh of
-            Just rh -> WS.send c =<< rh m
+            Just rh -> maybe (return ()) (WS.send c) =<< rh m
             Nothing -> return ()
         IOR.modifyIORef recentlyReceivedRef (Q.snoc m)
 
