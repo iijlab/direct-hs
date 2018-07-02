@@ -88,8 +88,16 @@ withClient ep pInfo config action = do
       , Rpc.formatter       = directFormatter config
       }
 
-withAnonymousClient :: String -> Rpc.Config -> (AnonymousClient -> IO a) -> IO a
-withAnonymousClient = Rpc.withClient
+withAnonymousClient :: String -> Config -> (AnonymousClient -> IO a) -> IO a
+withAnonymousClient ep config action = Rpc.withClient ep rpcConfig action
+  where
+    rpcConfig = Rpc.defaultConfig {
+        Rpc.requestHandler  = \rpcClient mid _method _objs -> do
+             -- sending ACK always
+             sendAck rpcClient mid
+      , Rpc.logger          = directLogger config
+      , Rpc.formatter       = directFormatter config
+      }
 
 
 subscribeNotification :: Client -> IO ()

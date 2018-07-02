@@ -23,7 +23,6 @@ import           System.IO              (BufferMode (NoBuffering), hGetEcho,
                                          hSetBuffering, hSetEcho, stderr, stdin,
                                          stdout)
 
-import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 import qualified Web.Direct             as D
 
 main :: IO ()
@@ -105,7 +104,7 @@ login = do
     let url = directEndpointUrl e
     putStrLn $ "Parsed URL:" ++ show url
 
-    D.withAnonymousClient url Rpc.defaultConfig $ \ac -> do
+    D.withAnonymousClient url D.defaultConfig $ \ac -> do
         c <- throwWhenLeft
             =<< D.login ac (directEmailAddress e) (directPassword e)
         putStrLn "Successfully logged in."
