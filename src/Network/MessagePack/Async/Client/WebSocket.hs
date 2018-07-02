@@ -3,6 +3,7 @@
 -- | MessagePack RPC Client based on WebSocket.
 module Network.MessagePack.Async.Client.WebSocket (
     withClient
+  , URL
   , module Network.MessagePack.Async.Client
   ) where
 
@@ -12,9 +13,11 @@ import qualified Network.WebSockets.Client        as Ws
 import           Network.MessagePack.Async.Client hiding (withClient)
 import qualified Network.MessagePack.Async.Client as Rpc (withClient)
 
+type URL = String
+
 -- | Executing the action in the 3rd argument with a 'Client'.
 withClient
-    :: String -- ^ URL
+    :: URL    -- ^ URL
     -> Config -- ^ Configuration
     -> (Client -> IO a) -- ^ Action
     -> IO a
