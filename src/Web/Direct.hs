@@ -8,9 +8,7 @@ module Web.Direct
   (
     Config(..)
   , defaultConfig
-  -- * Client not logined yet.
-  , AnonymousClient
-  , withAnonymousClient
+  -- * Login
   , login
   -- * Client
   , Client
@@ -62,8 +60,8 @@ defaultConfig = Config
     , directFormatter            = show
     }
 
-withClient :: Rpc.URL -> PersistedInfo -> Config -> (Client -> IO a) -> IO a
-withClient url pInfo config action = do
+withClient :: Config -> Rpc.URL -> PersistedInfo -> (Client -> IO a) -> IO a
+withClient config url pInfo action = do
     ref <- I.newIORef Nothing
     Rpc.withClient url (rpcConfig ref) $ \rpcClient -> do
         let client = Client pInfo rpcClient
@@ -87,18 +85,6 @@ withClient url pInfo config action = do
         , Rpc.logger         = directLogger config
         , Rpc.formatter      = directFormatter config
         }
-
-withAnonymousClient :: Rpc.URL -> Config -> (AnonymousClient -> IO a) -> IO a
-withAnonymousClient url config action = Rpc.withClient url rpcConfig action
-  where
-    rpcConfig = Rpc.defaultConfig
-        { Rpc.requestHandler = \rpcClient mid _method _objs -> do
-             -- sending ACK always
-            sendAck rpcClient mid
-        , Rpc.logger         = directLogger config
-        , Rpc.formatter      = directFormatter config
-        }
-
 
 subscribeNotification :: Client -> IO ()
 subscribeNotification client = do
@@ -131,16 +117,17 @@ createSession c = void $ rethrowingException $ Rpc.callRpc
     ]
 
 login
-    :: AnonymousClient
+    :: Config
+    -> Rpc.URL
     -> T.Text -- ^ Login email address for direct.
     -> T.Text -- ^ Login password for direct.
     -> IO (Either Exception Client)
-login c email pass = do
+login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
     idfv <- genIdfv
 
     let magicConstant = M.ObjectStr ""
     res <- Rpc.callRpc
-        c
+        client
         "create_access_token"
         [ M.ObjectStr email
         , M.ObjectStr pass
@@ -150,10 +137,17 @@ login c email pass = do
         ]
     case extractResult res of
         Right (M.ObjectStr token) ->
-            return $ Right $ Client (PersistedInfo token idfv) c
+            return $ Right $ Client (PersistedInfo token idfv) client
         Right other -> return $ Left $ UnexpectedReponse other
         Left  e     -> return $ Left e
-
+  where
+    rpcConfig = Rpc.defaultConfig
+        { Rpc.requestHandler = \rpcClient mid _method _objs -> do
+             -- sending ACK always
+            sendAck rpcClient mid
+        , Rpc.logger         = directLogger config
+        , Rpc.formatter      = directFormatter config
+        }
 
 rethrowingException :: IO (Either M.Object M.Object) -> IO M.Object
 rethrowingException action = do

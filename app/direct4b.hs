@@ -104,17 +104,17 @@ login = do
     let url = directEndpointUrl e
     putStrLn $ "Parsed URL:" ++ show url
 
-    D.withAnonymousClient url D.defaultConfig $ \ac -> do
-        c <- throwWhenLeft
-            =<< D.login ac (directEmailAddress e) (directPassword e)
-        putStrLn "Successfully logged in."
+    eclient <- D.login D.defaultConfig url (directEmailAddress e) (directPassword e)
+    case eclient of
+        Left _       -> putStrLn "Logged failed,"
+        Right client -> do
+            putStrLn "Successfully logged in."
 
-        B.writeFile jsonFileName
-            $ D.serializePersistedInfo
-            $ D.clientPersistedInfo c
-        cd <- Dir.getCurrentDirectory
-        putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
-
+            B.writeFile jsonFileName
+                $ D.serializePersistedInfo
+                $ D.clientPersistedInfo client
+            cd <- Dir.getCurrentDirectory
+            putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
 sendText :: D.TalkId -> IO ()
 sendText tid = do
@@ -122,7 +122,7 @@ sendText tid = do
     pInfo <-
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    D.withClient url pInfo D.defaultConfig $ \client -> do
+    D.withClient D.defaultConfig url pInfo $ \client -> do
         forM_ (TL.chunksOf 1024 txt)
             $ \chunk -> D.sendMessage client $ D.Txt tid $ TL.toStrict chunk
 
@@ -132,16 +132,13 @@ observe = do
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient
-        url
-        pInfo
         D.defaultConfig { D.directLogger    = putStrLn
                         , D.directFormatter = showMsg
                         }
+        url
+        pInfo
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
         (\_ -> forever $ threadDelay $ 10 * 1000)
-
-throwWhenLeft :: E.Exception e => Either e a -> IO a
-throwWhenLeft = either E.throwIO return
 
 dieWhenLeft :: Either String a -> IO a
 dieWhenLeft = either exitError return
