@@ -59,6 +59,7 @@ data Server =
 
 
 -- | Used to configure the server's behavior.
+--   If returns @Nothing@, the server does nothing.
 type RequestHandler = WS.Message -> IO (Maybe WS.Message)
 
 -- Maybe often 'RequestHandler'. Always respond with the given 'WS.Message'.
