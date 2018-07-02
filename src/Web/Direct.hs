@@ -1,13 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE OverloadedStrings     #-}
 
 module Web.Direct
   (
-    Rpc.Config(..)
+    Config(..)
   , defaultConfig
   -- * Client not logined yet.
   , AnonymousClient
@@ -27,22 +26,18 @@ module Web.Direct
   , TalkId
   , talkId
   , Exception(..)
-  -- * Functions
-  , respond
+  -- * APIs
   , sendMessage
-  , sendAck
-  -- * To be obsoleted
-  , createMessage
   ) where
 
 
 import           Control.Error                              (fmapL)
 import qualified Control.Exception                          as E
-import           Control.Monad                              (forM_, void)
+import           Control.Monad                              (void, when)
+import qualified Data.IORef                                 as I
 import qualified Data.MessagePack                           as M
 import qualified Data.MessagePack.RPC                       as R
 import qualified Data.Text                                  as T
-import qualified Data.Text.Lazy                             as TL
 import qualified Data.UUID                                  as Uuid
 import qualified System.Random.MWC                          as Random
 
@@ -50,23 +45,48 @@ import           Web.Direct.Types
 
 import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 
+data Config = Config {
+    directCreateMessageHandler :: Client -> Message -> IO ()
+  , directLogger               :: Rpc.Logger
+  , directFormatter            :: Rpc.Formatter
+  }
+
 -- | The default configuration.
 --   'RequestHandler' automatically replies ACK.
 --   'NotificationHandler' and 'logger' do nothing.
 --   'formatter' is 'show'.
-defaultConfig :: Rpc.Config
-defaultConfig =
-    Rpc.defaultConfig { Rpc.requestHandler = \c i _ _ -> sendAck c i }
+defaultConfig :: Config
+defaultConfig = Config {
+    directCreateMessageHandler = \_ _ -> return ()
+  , directLogger               = \_ -> return ()
+  , directFormatter            = show
+  }
 
-
-withClient :: String -> PersistedInfo -> Rpc.Config -> (Client -> IO a) -> IO a
-withClient ep pInfo handler action =
-    Rpc.withClient ep handler $ \aClient -> do
-        let client = Client pInfo aClient
+withClient :: String -> PersistedInfo -> Config -> (Client -> IO a) -> IO a
+withClient ep pInfo config action = do
+    ref <- I.newIORef Nothing
+    Rpc.withClient ep (rpcConfig ref) $ \rpcClient -> do
+        let client = Client pInfo rpcClient
+        I.writeIORef ref $ Just client
         createSession client
         subscribeNotification client
         action client
-
+  where
+    rpcConfig ref = Rpc.defaultConfig {
+        Rpc.requestHandler  = \rpcClient mid method objs -> do
+             -- sending ACK always
+             sendAck rpcClient mid
+             Just client <- I.readIORef ref
+             -- fixme: "notify_update_domain_users"
+             -- fixme: "notify_update_read_statuses"
+             when (method == "notify_create_message") $ case objs of
+                 M.ObjectMap rsp : _ ->  case decodeMessage rsp of
+                     Nothing  -> return ()
+                     Just req -> directCreateMessageHandler config client req
+                 _                   -> return ()
+      , Rpc.logger          = directLogger config
+      , Rpc.formatter       = directFormatter config
+      }
 
 withAnonymousClient :: String -> Rpc.Config -> (AnonymousClient -> IO a) -> IO a
 withAnonymousClient = Rpc.withClient
@@ -79,16 +99,10 @@ subscribeNotification client = do
     void $ rethrowingException $ Rpc.callRpc c "start_notification" []
 
 
-respond :: [M.Object] -> (Message ->IO ()) -> IO ()
-respond (M.ObjectMap rsp : _) action = case decodeMessage rsp of
-    Nothing  -> return ()
-    Just req -> action req
-respond _ _ = return ()
-
-sendMessage :: Rpc.Client -> Message -> IO MessageId
+sendMessage :: Client -> Message -> IO MessageId
 sendMessage c req = do
     let obj = encodeMessage req
-    ersp <- Rpc.callRpc c "create_message" obj
+    ersp <- Rpc.callRpc (clientRpcClient c) "create_message" obj
     case ersp of
       Right (M.ObjectMap rsp) -> case lookup (M.ObjectStr "message_id") rsp of
         Just (M.ObjectWord x) -> return x
@@ -97,18 +111,6 @@ sendMessage c req = do
 
 sendAck :: Rpc.Client -> R.MessageId -> IO ()
 sendAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
-
-createMessage :: Client -> TalkId -> TL.Text -> IO ()
-createMessage c tid content = do
-    let messageType = M.ObjectWord 1
-    -- NOTE:
-    --  direct-js internally splits the message by 1024 characters.
-    --  So this library follows the behavior.
-    forM_ (TL.chunksOf 1024 content) $ \chunk ->
-        rethrowingException $ Rpc.callRpc
-            (clientRpcClient c)
-            "create_message"
-            [M.toObject tid, messageType, M.ObjectStr $ TL.toStrict chunk]
 
 createSession :: Client -> IO ()
 createSession c = void $ rethrowingException $ Rpc.callRpc
