@@ -3,7 +3,7 @@
 import           Control.Applicative    ((<**>), (<|>))
 import           Control.Concurrent     (threadDelay)
 import qualified Control.Exception      as E
-import           Control.Monad          (forever, join, forM_)
+import           Control.Monad          (forM_, forever, join)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (intercalate)
@@ -123,8 +123,8 @@ sendText tid = do
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient url pInfo D.defaultConfig $ \client -> do
-        forM_ (TL.chunksOf 1024 txt) $ \chunk ->
-            D.sendMessage client $ D.Txt tid $ TL.toStrict chunk
+        forM_ (TL.chunksOf 1024 txt)
+            $ \chunk -> D.sendMessage client $ D.Txt tid $ TL.toStrict chunk
 
 observe :: IO ()
 observe = do
@@ -134,7 +134,9 @@ observe = do
     D.withClient
         url
         pInfo
-        D.defaultConfig { D.directLogger = putStrLn, D.directFormatter = showMsg }
+        D.defaultConfig { D.directLogger    = putStrLn
+                        , D.directFormatter = showMsg
+                        }
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
         (\_ -> forever $ threadDelay $ 10 * 1000)
 
