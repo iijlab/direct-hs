@@ -91,6 +91,15 @@ subscribeNotification client = do
     let c = clientRpcClient client
     void $ rethrowingException $ Rpc.callRpc c "reset_notification" []
     void $ rethrowingException $ Rpc.callRpc c "start_notification" []
+    void $ rethrowingException $ Rpc.callRpc c "get_domains" []
+    void $ rethrowingException $ Rpc.callRpc c "get_domain_invites" []
+    void $ rethrowingException $ Rpc.callRpc c "get_account_control_requests" []
+    void $ rethrowingException $ Rpc.callRpc c "get_joined_account_control_group" []
+    void $ rethrowingException $ Rpc.callRpc c "get_announcement_statuses" []
+    void $ rethrowingException $ Rpc.callRpc c "get_friends" []
+    void $ rethrowingException $ Rpc.callRpc c "get_acquaintances" []
+    void $ rethrowingException $ Rpc.callRpc c "get_talks" []
+    void $ rethrowingException $ Rpc.callRpc c "get_talk_statuses" []
 
 
 sendMessage :: Client -> Message -> IO MessageId
