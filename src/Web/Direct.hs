@@ -14,8 +14,8 @@ module Web.Direct
   , Client
   , withClient
   , clientPersistedInfo
-  , setDomain
-  , getDomain
+  , setDomains
+  , getDomains
   , setTalkRooms
   , getTalkRooms
   , setMe
@@ -107,7 +107,8 @@ subscribeNotification client = do
     let c = clientRpcClient client
     void $ rethrowingException $ Rpc.callRpc c "reset_notification" []
     void $ rethrowingException $ Rpc.callRpc c "start_notification" []
-    void $ rethrowingException $ Rpc.callRpc c "get_domains" []
+    Right doms <- Rpc.callRpc c "get_domains" []
+    setDomains client $ fromGetDomains doms
     void $ rethrowingException $ Rpc.callRpc c "get_domain_invites" []
     void $ rethrowingException $ Rpc.callRpc c "get_account_control_requests" []
     void $ rethrowingException $ Rpc.callRpc c "get_joined_account_control_group" []

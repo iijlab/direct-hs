@@ -5,8 +5,8 @@ module Web.Direct.Types
   (
     Client(..)
   , newClient
-  , setDomain
-  , getDomain
+  , setDomains
+  , getDomains
   , setTalkRooms
   , getTalkRooms
   , setMe
@@ -30,6 +30,7 @@ module Web.Direct.Types
   , Aux(..)
   , fromCreateSession
   , fromGetAcquaintances
+  , fromGetDomains
   ) where
 
 import qualified Control.Exception                as E
@@ -53,17 +54,17 @@ import qualified Network.MessagePack.Async.Client as Rpc
 data Client = Client {
     clientPersistedInfo :: !PersistedInfo
   , clientRpcClient     :: !Rpc.Client
-  , clientDomain        :: I.IORef (Maybe Domain)
+  , clientDomains       :: I.IORef [Domain]
   , clientTalkRooms     :: I.IORef [TalkRoom]
   , clientMe            :: I.IORef (Maybe User)
   , clientUsers         :: I.IORef [User]
   }
 
-setDomain :: Client -> Domain -> IO ()
-setDomain client domain = I.writeIORef (clientDomain client) (Just domain)
+setDomains :: Client -> [Domain] -> IO ()
+setDomains client domains = I.writeIORef (clientDomains client) domains
 
-getDomain :: Client -> IO (Maybe Domain)
-getDomain client = I.readIORef (clientDomain client)
+getDomains :: Client -> IO [Domain]
+getDomains client = I.readIORef (clientDomains client)
 
 setTalkRooms :: Client -> [TalkRoom] -> IO ()
 setTalkRooms client talks = I.writeIORef (clientTalkRooms client) talks
@@ -85,7 +86,7 @@ getUsers client = I.readIORef (clientUsers client)
 
 newClient :: PersistedInfo -> Rpc.Client -> IO Client
 newClient pinfo rpcClient =
-    Client pinfo rpcClient <$> I.newIORef Nothing
+    Client pinfo rpcClient <$> I.newIORef []
                            <*> I.newIORef []
                            <*> I.newIORef Nothing
                            <*> I.newIORef []
@@ -315,3 +316,15 @@ decodeUser (M.ObjectMap user) = do
     M.ObjectStr cpdname <- look "canonical_phonetic_display_name" user
     Just $ User uid dname cdname pdname cpdname
 decodeUser _ = Nothing
+
+fromGetDomains :: M.Object -> [Domain]
+fromGetDomains (M.ObjectArray arr) = catMaybes $ map decodeDomain arr
+fromGetDomains _ = []
+
+decodeDomain :: M.Object -> Maybe Domain
+decodeDomain (M.ObjectMap m) = do
+    M.ObjectWord did <- look "domain_id" m
+    M.ObjectMap s <- look "domain" m
+    M.ObjectStr dname <- look "domain_name" s
+    Just $ Domain did dname
+decodeDomain _ = Nothing
