@@ -17,9 +17,9 @@ module Web.Direct.Types
   , TalkRoom(..)
   , User(..)
   , Message(..)
-  , messageTalkId
   , encodeMessage
   , decodeMessage
+  , Aux(..)
   ) where
 import qualified Control.Exception                as E
 import           Data.Aeson                       (FromJSON, ToJSON,
@@ -116,33 +116,26 @@ data TalkRoom = TalkRoom {
   }
 
 data Message =
-    Txt       !TalkId !T.Text
-  | Location  !TalkId !T.Text !T.Text -- Address, GoogleMap URL
-  | Stamp     !TalkId !Word64 !Word64
-  | YesNoQ    !TalkId !T.Text
-  | YesNoA    !TalkId !T.Text Bool
-  | SelectQ   !TalkId !T.Text ![T.Text]
-  | SelectA   !TalkId !T.Text ![T.Text] T.Text
-  | TaskQ     !TalkId !T.Text Bool -- False: anyone, True: everyone
-  | TaskA     !TalkId !T.Text Bool Bool -- done
-  | Other     !TalkId !T.Text
+    Txt       !T.Text
+  | Location  !T.Text !T.Text -- Address, GoogleMap URL
+  | Stamp     !Word64 !Word64
+  | YesNoQ    !T.Text
+  | YesNoA    !T.Text Bool
+  | SelectQ   !T.Text ![T.Text]
+  | SelectA   !T.Text ![T.Text] T.Text
+  | TaskQ     !T.Text Bool -- False: anyone, True: everyone
+  | TaskA     !T.Text Bool Bool -- done
+  | Other     !T.Text
   deriving (Eq, Show)
 
-messageTalkId :: Message -> TalkId
-messageTalkId (Txt       tid _)     = tid
-messageTalkId (Location  tid _ _)   = tid
-messageTalkId (Stamp     tid _ _)   = tid
-messageTalkId (YesNoQ    tid _)     = tid
-messageTalkId (YesNoA    tid _ _)   = tid
-messageTalkId (SelectQ   tid _ _)   = tid
-messageTalkId (SelectA   tid _ _ _) = tid
-messageTalkId (TaskQ     tid _ _)   = tid
-messageTalkId (TaskA     tid _ _ _) = tid
-messageTalkId (Other     tid _)     = tid
+data Aux = Aux !TalkId !MessageId !UserId
 
-decodeMessage :: [(M.Object, M.Object)] -> Maybe Message
+decodeMessage :: [(M.Object, M.Object)] -> Maybe (Message, Aux)
 decodeMessage rspinfo = do
     M.ObjectWord tid <- look "talk_id" rspinfo
+    M.ObjectWord mid <- look "message_id" rspinfo
+    M.ObjectWord uid <- look "user_id" rspinfo
+    let aux = Aux tid mid uid
     typ              <- look "type" rspinfo
     case typ of
         M.ObjectWord 1 -> do
@@ -151,57 +144,57 @@ decodeMessage rspinfo = do
                 let ln = T.lines text
                     addr = ln !! 1
                     url  = ln !! 2
-                in Just $ Location tid addr url
+                in Just (Location addr url, aux)
               else
-                Just $ Txt tid text
+                Just (Txt text, aux)
         M.ObjectWord 2 -> do
             set <- look "stamp_set" rspinfo >>= M.fromObject
             idx <- look "stamp_index" rspinfo >>= M.fromObject
-            Just $ Stamp tid set idx
+            Just (Stamp set idx, aux)
         M.ObjectWord 500 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
-            Just $ YesNoQ tid qst
+            Just (YesNoQ qst, aux)
         M.ObjectWord 501 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
             ans           <- look "response" m >>= M.fromObject
-            Just $ YesNoA tid qst ans
+            Just (YesNoA qst ans, aux)
         M.ObjectWord 502 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
             opt           <- look "options" m >>= M.fromObject
-            Just $ SelectQ tid qst opt
+            Just (SelectQ qst opt, aux)
         M.ObjectWord 503 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
             opt           <- look "options" m >>= M.fromObject
             idx           <- look "response" m >>= M.fromObject
             let ans = opt !! fromIntegral (idx :: Word64)
-            Just $ SelectA tid qst opt ans
+            Just (SelectA qst opt ans, aux)
         M.ObjectWord 504 -> do
             M.ObjectMap m <- look "content" rspinfo
             ttl           <- look "title" m >>= M.fromObject
             cls'          <- look "closing_type" m >>= M.fromObject
             let cls = if cls' == (1 :: Word64) then True else False
-            Just $ TaskQ tid ttl cls
+            Just (TaskQ ttl cls, aux)
         M.ObjectWord 505 -> do
             M.ObjectMap m <- look "content" rspinfo
             ttl           <- look "title" m >>= M.fromObject
             cls'          <- look "closing_type" m >>= M.fromObject
             don           <- look "done" m >>= M.fromObject
             let cls = if cls' == (1 :: Word64) then True else False
-            Just $ TaskA tid ttl cls don
-        _ -> Just $ Other tid $ T.pack $ show rspinfo
+            Just (TaskA ttl cls don, aux)
+        _ -> Just (Other $ T.pack $ show rspinfo, aux)
 
 look :: T.Text -> [(M.Object, a)] -> Maybe a
 look key = lookup (M.ObjectStr key)
 
-encodeMessage :: Message -> [M.Object]
-encodeMessage (Txt tid text) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
-encodeMessage (Location tid addr url) =
+encodeMessage :: Message -> Aux -> [M.Object]
+encodeMessage (Txt text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+encodeMessage (Location addr url) (Aux tid _ _) =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr (T.unlines ["今ココ：",addr,url])]
-encodeMessage (Stamp tid set idx) =
+encodeMessage (Stamp set idx) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 2
     , M.ObjectMap
@@ -209,7 +202,7 @@ encodeMessage (Stamp tid set idx) =
         , (M.ObjectStr "stamp_index", M.ObjectWord idx)
         ]
     ]
-encodeMessage (YesNoQ tid qst) =
+encodeMessage (YesNoQ qst) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 500
     , M.ObjectMap
@@ -217,7 +210,7 @@ encodeMessage (YesNoQ tid qst) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (YesNoA tid qst ans) =
+encodeMessage (YesNoA qst ans) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 501
     , M.ObjectMap
@@ -226,7 +219,7 @@ encodeMessage (YesNoA tid qst ans) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (SelectQ tid qst opt) =
+encodeMessage (SelectQ qst opt) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 502
     , M.ObjectMap
@@ -235,7 +228,7 @@ encodeMessage (SelectQ tid qst opt) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (SelectA tid qst opt ans) =
+encodeMessage (SelectA qst opt ans) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 503
     , M.ObjectMap
@@ -247,7 +240,7 @@ encodeMessage (SelectA tid qst opt ans) =
     ]
   where
     Just idx = ans `elemIndex` opt -- fixme
-encodeMessage (TaskQ tid ttl cls) =
+encodeMessage (TaskQ ttl cls) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 504
     , M.ObjectMap
@@ -255,7 +248,7 @@ encodeMessage (TaskQ tid ttl cls) =
         , (M.ObjectStr "closing_type", M.ObjectWord (if cls then 1 else 0))
         ]
     ]
-encodeMessage (TaskA tid ttl cls don) =
+encodeMessage (TaskA ttl cls don) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 505
     , M.ObjectMap
@@ -265,4 +258,4 @@ encodeMessage (TaskA tid ttl cls don) =
         ]
     ]
 
-encodeMessage (Other tid text) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+encodeMessage (Other text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]

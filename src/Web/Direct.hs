@@ -29,7 +29,7 @@ module Web.Direct
   , TalkRoom(..)
   , User(..)
   , Message(..)
-  , messageTalkId
+  , Aux(..)
   -- ** Exceptions
   , Exception(..)
   -- * APIs
@@ -52,7 +52,7 @@ import           Web.Direct.Types
 import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 
 data Config = Config {
-    directCreateMessageHandler :: Client -> Message -> IO ()
+    directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
   , directLogger               :: Rpc.Logger
   , directFormatter            :: Rpc.Formatter
   }
@@ -63,7 +63,7 @@ data Config = Config {
 --   'formatter' is 'show'.
 defaultConfig :: Config
 defaultConfig = Config
-    { directCreateMessageHandler = \_ _ -> return ()
+    { directCreateMessageHandler = \_ _ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
     }
@@ -87,8 +87,8 @@ withClient config url pInfo action = do
             -- fixme: "notify_update_read_statuses"
             when (method == "notify_create_message") $ case objs of
                 M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                    Nothing  -> return ()
-                    Just req -> directCreateMessageHandler config client req
+                    Nothing        -> return ()
+                    Just (msg,aux) -> directCreateMessageHandler config client msg aux
                 _ -> return ()
         , Rpc.logger         = directLogger config
         , Rpc.formatter      = directFormatter config
@@ -110,10 +110,10 @@ subscribeNotification client = do
     void $ rethrowingException $ Rpc.callRpc c "get_talk_statuses" []
 
 
-sendMessage :: Client -> Message -> IO MessageId
-sendMessage c req = do
-    let obj = encodeMessage req
-    ersp <- Rpc.callRpc (clientRpcClient c) "create_message" obj
+sendMessage :: Client -> Message -> Aux -> IO MessageId
+sendMessage client req aux = do
+    let obj = encodeMessage req aux
+    ersp <- Rpc.callRpc (clientRpcClient client) "create_message" obj
     case ersp of
         Right (M.ObjectMap rsp) ->
             case lookup (M.ObjectStr "message_id") rsp of
