@@ -14,15 +14,31 @@ module Web.Direct
   , Client
   , withClient
   , clientPersistedInfo
+  , setDomains
+  , getDomains
+  , setTalkRooms
+  , getTalkRooms
+  , setMe
+  , getMe
+  , setUsers
+  , getUsers
   -- ** Persisted information
   , PersistedInfo(..)
   , serializePersistedInfo
   , deserializePersistedInfo
   -- * Types
-  , Message(..)
-  , MessageId
+  -- ** Ids
+  , DomainId
   , TalkId
-  , talkId
+  , UserId
+  , MessageId
+  -- ** Main types
+  , Domain(..)
+  , TalkRoom(..)
+  , User(..)
+  , Message(..)
+  , Aux(..)
+  -- ** Exceptions
   , Exception(..)
   -- * APIs
   , sendMessage
@@ -44,7 +60,7 @@ import           Web.Direct.Types
 import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
 
 data Config = Config {
-    directCreateMessageHandler :: Client -> Message -> IO ()
+    directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
   , directLogger               :: Rpc.Logger
   , directFormatter            :: Rpc.Formatter
   }
@@ -55,7 +71,7 @@ data Config = Config {
 --   'formatter' is 'show'.
 defaultConfig :: Config
 defaultConfig = Config
-    { directCreateMessageHandler = \_ _ -> return ()
+    { directCreateMessageHandler = \_ _ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
     }
@@ -64,7 +80,7 @@ withClient :: Config -> Rpc.URL -> PersistedInfo -> (Client -> IO a) -> IO a
 withClient config url pInfo action = do
     ref <- I.newIORef Nothing
     Rpc.withClient url (rpcConfig ref) $ \rpcClient -> do
-        let client = Client pInfo rpcClient
+        client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
         createSession client
         subscribeNotification client
@@ -79,8 +95,8 @@ withClient config url pInfo action = do
             -- fixme: "notify_update_read_statuses"
             when (method == "notify_create_message") $ case objs of
                 M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                    Nothing  -> return ()
-                    Just req -> directCreateMessageHandler config client req
+                    Nothing        -> return ()
+                    Just (msg,aux) -> directCreateMessageHandler config client msg aux
                 _ -> return ()
         , Rpc.logger         = directLogger config
         , Rpc.formatter      = directFormatter config
@@ -91,12 +107,24 @@ subscribeNotification client = do
     let c = clientRpcClient client
     void $ rethrowingException $ Rpc.callRpc c "reset_notification" []
     void $ rethrowingException $ Rpc.callRpc c "start_notification" []
+    Right doms <- Rpc.callRpc c "get_domains" []
+    setDomains client $ fromGetDomains doms
+    void $ rethrowingException $ Rpc.callRpc c "get_domain_invites" []
+    void $ rethrowingException $ Rpc.callRpc c "get_account_control_requests" []
+    void $ rethrowingException $ Rpc.callRpc c "get_joined_account_control_group" []
+    void $ rethrowingException $ Rpc.callRpc c "get_announcement_statuses" []
+    void $ rethrowingException $ Rpc.callRpc c "get_friends" []
+    Right acq <- Rpc.callRpc c "get_acquaintances" []
+    setUsers client $ fromGetAcquaintances acq
+    Right talks <- Rpc.callRpc c "get_talks" []
+    setTalkRooms client $ fromGetTalks talks
+    void $ rethrowingException $ Rpc.callRpc c "get_talk_statuses" []
 
 
-sendMessage :: Client -> Message -> IO MessageId
-sendMessage c req = do
-    let obj = encodeMessage req
-    ersp <- Rpc.callRpc (clientRpcClient c) "create_message" obj
+sendMessage :: Client -> Message -> Aux -> IO MessageId
+sendMessage client req aux = do
+    let obj = encodeMessage req aux
+    ersp <- Rpc.callRpc (clientRpcClient client) "create_message" obj
     case ersp of
         Right (M.ObjectMap rsp) ->
             case lookup (M.ObjectStr "message_id") rsp of
@@ -105,16 +133,21 @@ sendMessage c req = do
         _ -> error "sendMessage" -- fixme
 
 sendAck :: Rpc.Client -> R.MessageId -> IO ()
-sendAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
+sendAck rpcClient mid = Rpc.replyRpc rpcClient mid $ Right $ M.ObjectBool True
 
 createSession :: Client -> IO ()
-createSession c = void $ rethrowingException $ Rpc.callRpc
-    (clientRpcClient c)
-    "create_session"
-    [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo c
-    , M.ObjectStr apiVersion
-    , M.ObjectStr agentName
-    ]
+createSession client = do
+    ersp <- Rpc.callRpc (clientRpcClient client)
+                       "create_session"
+                       [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo client
+                       , M.ObjectStr apiVersion
+                       , M.ObjectStr agentName
+                       ]
+    case ersp of
+        Right rsp -> case fromCreateSession rsp of
+            Just user -> setMe client user
+            Nothing   -> return ()
+        _             -> return ()
 
 login
     :: Config
@@ -137,7 +170,7 @@ login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
         ]
     case extractResult res of
         Right (M.ObjectStr token) ->
-            return $ Right $ Client (PersistedInfo token idfv) client
+            Right <$> newClient (PersistedInfo token idfv) client
         Right other -> return $ Left $ UnexpectedReponse other
         Left  e     -> return $ Left e
   where
