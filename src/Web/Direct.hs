@@ -72,7 +72,7 @@ withClient :: Config -> Rpc.URL -> PersistedInfo -> (Client -> IO a) -> IO a
 withClient config url pInfo action = do
     ref <- I.newIORef Nothing
     Rpc.withClient url (rpcConfig ref) $ \rpcClient -> do
-        let client = Client pInfo rpcClient
+        client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
         createSession client
         subscribeNotification client
@@ -154,7 +154,7 @@ login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
         ]
     case extractResult res of
         Right (M.ObjectStr token) ->
-            return $ Right $ Client (PersistedInfo token idfv) client
+            Right <$> newClient (PersistedInfo token idfv) client
         Right other -> return $ Left $ UnexpectedReponse other
         Left  e     -> return $ Left e
   where

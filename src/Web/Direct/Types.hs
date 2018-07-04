@@ -9,6 +9,7 @@ import           Data.Aeson                       (FromJSON, ToJSON,
 import qualified Data.Aeson                       as Json
 import qualified Data.ByteString.Lazy             as B
 import qualified Data.Char                        as Char
+import qualified Data.IORef                       as I
 import           Data.List                        (elemIndex)
 import qualified Data.MessagePack                 as M
 import qualified Data.Text                        as T
@@ -22,7 +23,18 @@ import qualified Network.MessagePack.Async.Client as Rpc
 data Client = Client {
     clientPersistedInfo :: !PersistedInfo
   , clientRpcClient     :: !Rpc.Client
+  , clientDomain        :: I.IORef (Maybe Domain)
+  , clientTalkRooms     :: I.IORef [TalkRoom]
+  , clientMe            :: I.IORef (Maybe User)
+  , clientUsers         :: I.IORef [User]
   }
+
+newClient :: PersistedInfo -> Rpc.Client -> IO Client
+newClient pinfo rpcClient =
+    Client pinfo rpcClient <$> I.newIORef Nothing
+                           <*> I.newIORef []
+                           <*> I.newIORef Nothing
+                           <*> I.newIORef []
 
 data PersistedInfo = PersistedInfo {
     persistedInfoDirectAccessToken :: !T.Text
