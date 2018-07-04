@@ -113,7 +113,8 @@ subscribeNotification client = do
     void $ rethrowingException $ Rpc.callRpc c "get_joined_account_control_group" []
     void $ rethrowingException $ Rpc.callRpc c "get_announcement_statuses" []
     void $ rethrowingException $ Rpc.callRpc c "get_friends" []
-    void $ rethrowingException $ Rpc.callRpc c "get_acquaintances" []
+    Right acq <- Rpc.callRpc c "get_acquaintances" []
+    setUsers client $ fromGetAcquaintances acq
     void $ rethrowingException $ Rpc.callRpc c "get_talks" []
     void $ rethrowingException $ Rpc.callRpc c "get_talk_statuses" []
 
@@ -141,7 +142,7 @@ createSession client = do
                        , M.ObjectStr agentName
                        ]
     case ersp of
-        Right rsp -> case decodeUser rsp of
+        Right rsp -> case fromCreateSession rsp of
             Just user -> setMe client user
             Nothing   -> return ()
         _             -> return ()
