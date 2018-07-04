@@ -76,17 +76,17 @@ data Message =
   | Other     !TalkId !T.Text
   deriving (Eq, Show)
 
-talkId :: Message -> TalkId
-talkId (Txt       tid _)     = tid
-talkId (Location  tid _ _)   = tid
-talkId (Stamp     tid _ _)   = tid
-talkId (YesNoQ    tid _)     = tid
-talkId (YesNoA    tid _ _)   = tid
-talkId (SelectQ   tid _ _)   = tid
-talkId (SelectA   tid _ _ _) = tid
-talkId (TaskQ     tid _ _)   = tid
-talkId (TaskA     tid _ _ _) = tid
-talkId (Other     tid _)     = tid
+messageTalkId :: Message -> TalkId
+messageTalkId (Txt       tid _)     = tid
+messageTalkId (Location  tid _ _)   = tid
+messageTalkId (Stamp     tid _ _)   = tid
+messageTalkId (YesNoQ    tid _)     = tid
+messageTalkId (YesNoA    tid _ _)   = tid
+messageTalkId (SelectQ   tid _ _)   = tid
+messageTalkId (SelectA   tid _ _ _) = tid
+messageTalkId (TaskQ     tid _ _)   = tid
+messageTalkId (TaskA     tid _ _ _) = tid
+messageTalkId (Other     tid _)     = tid
 
 type RspInfo = [(M.Object, M.Object)]
 
