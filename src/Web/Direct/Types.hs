@@ -22,6 +22,7 @@ module Web.Direct.Types
   , UserId
   , MessageId
   , Domain(..)
+  , TalkType
   , TalkRoom(..)
   , User(..)
   , Message(..)
@@ -31,6 +32,7 @@ module Web.Direct.Types
   , fromCreateSession
   , fromGetAcquaintances
   , fromGetDomains
+  , fromGetTalks
   ) where
 
 import qualified Control.Exception                as E
@@ -145,10 +147,13 @@ data Domain = Domain {
   , domainName :: !T.Text
   }
 
+
+data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show)
+
 data TalkRoom = TalkRoom {
     talkId    :: !TalkId
-  , talkName  :: !T.Text
-  , talkUsers :: [User]
+  , talkType  :: !TalkType
+  , talkUsers :: [UserId]
   }
 
 data Message =
@@ -328,3 +333,24 @@ decodeDomain (M.ObjectMap m) = do
     M.ObjectStr dname <- look "domain_name" s
     Just $ Domain did dname
 decodeDomain _ = Nothing
+
+fromGetTalks :: M.Object -> [TalkRoom]
+fromGetTalks (M.ObjectArray arr) = catMaybes $ map decodeTalkRoom arr
+fromGetTalks _ = []
+
+decodeTalkRoom :: M.Object -> Maybe TalkRoom
+decodeTalkRoom (M.ObjectMap m) = do
+    M.ObjectWord tid <- look "talk_id" m
+    M.ObjectWord tp <- look "type" m
+    let typ | tp == 1   = PairTalk
+            | tp == 2   = case look "talk_name" m of
+                Just (M.ObjectStr tname) -> GroupTalk tname
+                _                        -> error "decodeTalkRoom"
+            | otherwise = UnknownTalk
+    M.ObjectArray uids <- look "user_ids" m
+    let userIds = catMaybes $ map extract uids
+    Just $ TalkRoom tid typ userIds
+  where
+    extract (M.ObjectWord uid) = Just uid
+    extract _                  = Nothing
+decodeTalkRoom _ = Nothing

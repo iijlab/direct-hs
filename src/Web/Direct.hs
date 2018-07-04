@@ -116,7 +116,8 @@ subscribeNotification client = do
     void $ rethrowingException $ Rpc.callRpc c "get_friends" []
     Right acq <- Rpc.callRpc c "get_acquaintances" []
     setUsers client $ fromGetAcquaintances acq
-    void $ rethrowingException $ Rpc.callRpc c "get_talks" []
+    Right talks <- Rpc.callRpc c "get_talks" []
+    setTalkRooms client $ fromGetTalks talks
     void $ rethrowingException $ Rpc.callRpc c "get_talk_statuses" []
 
 
