@@ -42,7 +42,7 @@ packages:
 extra-deps:
 - http-client-0.5.13
 - git: https://github.com/iij-ii/skews.git
-  commit: b3ed54e4c36c724367c500448bab231f128a7eb9
+  commit: f1d33039ec9eca9c59d0460283b683b4784f301e
 
 # Override default flag values for local packages and extra-deps
 flags:
