@@ -14,6 +14,14 @@ module Web.Direct
   , Client
   , withClient
   , clientPersistedInfo
+  , setDomain
+  , getDomain
+  , setTalkRooms
+  , getTalkRooms
+  , setMe
+  , getMe
+  , setUsers
+  , getUsers
   -- ** Persisted information
   , PersistedInfo(..)
   , serializePersistedInfo
