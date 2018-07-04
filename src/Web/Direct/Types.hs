@@ -1,8 +1,26 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Direct.Types where
-
+module Web.Direct.Types
+  (
+    Client(..)
+  , newClient
+  , PersistedInfo(..)
+  , serializePersistedInfo
+  , deserializePersistedInfo
+  , Exception(..)
+  , DomainId
+  , TalkId
+  , UserId
+  , MessageId
+  , Domain(..)
+  , TalkRoom(..)
+  , User(..)
+  , Message(..)
+  , messageTalkId
+  , encodeMessage
+  , decodeMessage
+  ) where
 import qualified Control.Exception                as E
 import           Data.Aeson                       (FromJSON, ToJSON,
                                                    fieldLabelModifier)
