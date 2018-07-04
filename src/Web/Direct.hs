@@ -23,6 +23,7 @@ module Web.Direct
   , MessageId
   , TalkId
   , messageTalkId
+  -- ** Exceptions
   , Exception(..)
   -- * APIs
   , sendMessage
