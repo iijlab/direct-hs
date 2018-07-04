@@ -5,6 +5,14 @@ module Web.Direct.Types
   (
     Client(..)
   , newClient
+  , setDomain
+  , getDomain
+  , setTalkRooms
+  , getTalkRooms
+  , setMe
+  , getMe
+  , setUsers
+  , getUsers
   , PersistedInfo(..)
   , serializePersistedInfo
   , deserializePersistedInfo
@@ -47,6 +55,30 @@ data Client = Client {
   , clientMe            :: I.IORef (Maybe User)
   , clientUsers         :: I.IORef [User]
   }
+
+setDomain :: Client -> Domain -> IO ()
+setDomain client domain = I.writeIORef (clientDomain client) (Just domain)
+
+getDomain :: Client -> IO (Maybe Domain)
+getDomain client = I.readIORef (clientDomain client)
+
+setTalkRooms :: Client -> [TalkRoom] -> IO ()
+setTalkRooms client talks = I.writeIORef (clientTalkRooms client) talks
+
+getTalkRooms :: Client -> IO [TalkRoom]
+getTalkRooms client = I.readIORef (clientTalkRooms client)
+
+setMe :: Client -> User -> IO ()
+setMe client user = I.writeIORef (clientMe client) (Just user)
+
+getMe :: Client -> IO (Maybe User)
+getMe client = I.readIORef (clientMe client)
+
+setUsers :: Client -> [User] -> IO ()
+setUsers client users = I.writeIORef (clientUsers client) users
+
+getUsers :: Client -> IO [User]
+getUsers client = I.readIORef (clientUsers client)
 
 newClient :: PersistedInfo -> Rpc.Client -> IO Client
 newClient pinfo rpcClient =
