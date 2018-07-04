@@ -133,7 +133,7 @@ data User = User {
   , userEmail                    :: !T.Text
   , displayName                  :: !T.Text
   , canonicalDisplayName         :: !T.Text
-  , phonetic_display_name        :: !T.Text
+  , phoneticDisplayName          :: !T.Text
   , canonicalPhoneticIisplayName :: !T.Text
   }
 
