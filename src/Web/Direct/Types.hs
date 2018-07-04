@@ -195,7 +195,9 @@ decodeMessage rspinfo = do
             let cls = if cls' == (1 :: Word64) then True else False
             Just $ TaskA tid ttl cls don
         _ -> Just $ Other tid $ T.pack $ show rspinfo
-    where look key = lookup (M.ObjectStr key)
+
+look :: T.Text -> [(M.Object, a)] -> Maybe a
+look key = lookup (M.ObjectStr key)
 
 encodeMessage :: Message -> [M.Object]
 encodeMessage (Txt tid text) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
