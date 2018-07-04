@@ -122,16 +122,21 @@ sendMessage client req aux = do
         _ -> error "sendMessage" -- fixme
 
 sendAck :: Rpc.Client -> R.MessageId -> IO ()
-sendAck c mid = Rpc.replyRpc c mid $ Right $ M.ObjectBool True
+sendAck rpcClient mid = Rpc.replyRpc rpcClient mid $ Right $ M.ObjectBool True
 
 createSession :: Client -> IO ()
-createSession c = void $ rethrowingException $ Rpc.callRpc
-    (clientRpcClient c)
-    "create_session"
-    [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo c
-    , M.ObjectStr apiVersion
-    , M.ObjectStr agentName
-    ]
+createSession client = do
+    ersp <- Rpc.callRpc (clientRpcClient client)
+                       "create_session"
+                       [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo client
+                       , M.ObjectStr apiVersion
+                       , M.ObjectStr agentName
+                       ]
+    case ersp of
+        Right rsp -> case decodeUser rsp of
+            Just user -> setMe client user
+            Nothing   -> return ()
+        _             -> return ()
 
 login
     :: Config

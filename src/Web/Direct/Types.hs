@@ -28,6 +28,7 @@ module Web.Direct.Types
   , encodeMessage
   , decodeMessage
   , Aux(..)
+  , decodeUser
   ) where
 
 import qualified Control.Exception                as E
@@ -292,3 +293,16 @@ encodeMessage (TaskA ttl cls don) (Aux tid _ _) =
     ]
 
 encodeMessage (Other text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+
+
+decodeUser :: M.Object -> Maybe User
+decodeUser (M.ObjectMap map) = do
+    M.ObjectMap user <- look "user" map
+    M.ObjectWord uid <- look "user_id" user
+    M.ObjectStr eml <- look "email" user
+    M.ObjectStr dname <- look "display_name" user
+    M.ObjectStr cdname <- look "canonical_display_name" user
+    M.ObjectStr pdname <- look "phonetic_display_name" user
+    M.ObjectStr cpdname <- look "canonical_phonetic_display_name" user
+    Just $ User uid eml dname cdname pdname cpdname
+decodeUser _ = Nothing
