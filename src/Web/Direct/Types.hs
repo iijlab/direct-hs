@@ -140,9 +140,7 @@ messageTalkId (TaskQ     tid _ _)   = tid
 messageTalkId (TaskA     tid _ _ _) = tid
 messageTalkId (Other     tid _)     = tid
 
-type RspInfo = [(M.Object, M.Object)]
-
-decodeMessage :: RspInfo -> Maybe Message
+decodeMessage :: [(M.Object, M.Object)] -> Maybe Message
 decodeMessage rspinfo = do
     M.ObjectWord tid <- look "talk_id" rspinfo
     typ              <- look "type" rspinfo
