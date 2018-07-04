@@ -21,6 +21,7 @@ module Web.Direct.Types
   , decodeMessage
   , Aux(..)
   ) where
+
 import qualified Control.Exception                as E
 import           Data.Aeson                       (FromJSON, ToJSON,
                                                    fieldLabelModifier)
