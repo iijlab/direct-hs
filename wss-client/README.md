@@ -5,9 +5,8 @@ Thanks to [http-client](https://hackage.haskell.org/package/http-client) and [ht
 
 ## TODO
 
-- Support non-TLS connection via an HTTP proxy server (I have to modify the [websockets](https://hackage.haskell.org/package/websockets) package to do that).
+- Support non-TLS connection via an HTTP proxy server (I have to add one more API to http-client to check if the connection is proxied package to do that).
 - Add APIs to modify config of both http-client and websockets.
-- Test with a mock server.
 
 ## Example
 
