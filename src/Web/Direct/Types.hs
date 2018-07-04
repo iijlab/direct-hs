@@ -65,6 +65,26 @@ firstLower :: String -> String
 firstLower (x : xs) = Char.toLower x : xs
 firstLower _        = error "firstLower: Assertion failed: empty string"
 
+data User = User {
+    userId                       :: !UserId
+  , userEmail                    :: !T.Text
+  , displayName                  :: !T.Text
+  , canonicalDisplayName         :: !T.Text
+  , phonetic_display_name        :: !T.Text
+  , canonicalPhoneticIisplayName :: !T.Text
+  }
+
+data Domain = Domain {
+    domainId   :: !DomainId
+  , domainName :: !T.Text
+  }
+
+data TalkRoom = TalkRoom {
+    talkId    :: !TalkId
+  , talkName  :: !T.Text
+  , talkUsers :: [User]
+  }
+
 data Message =
     Txt       !TalkId !T.Text
   | Location  !TalkId !T.Text !T.Text -- Address, GoogleMap URL

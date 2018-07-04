@@ -24,7 +24,10 @@ module Web.Direct
   , TalkId
   , UserId
   , MessageId
-  -- ** Messages
+  -- ** Main types
+  , Domain(..)
+  , TalkRoom(..)
+  , User(..)
   , Message(..)
   , messageTalkId
   -- ** Exceptions
