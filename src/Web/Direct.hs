@@ -19,9 +19,13 @@ module Web.Direct
   , serializePersistedInfo
   , deserializePersistedInfo
   -- * Types
-  , Message(..)
-  , MessageId
+  -- ** Ids
+  , DomainId
   , TalkId
+  , UserId
+  , MessageId
+  -- ** Messages
+  , Message(..)
   , messageTalkId
   -- ** Exceptions
   , Exception(..)

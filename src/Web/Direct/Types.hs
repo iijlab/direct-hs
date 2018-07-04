@@ -51,8 +51,10 @@ data Exception =
 
 instance E.Exception Exception
 
+type DomainId  = Word64
+type TalkId    = Word64
+type UserId    = Word64
 type MessageId = Word64
-type TalkId = Word64
 
 deriveJsonOptions :: Json.Options
 deriveJsonOptions = Json.defaultOptions
