@@ -34,6 +34,7 @@ module Web.Direct
   , MessageId
   -- ** Main types
   , Domain(..)
+  , TalkType(..)
   , TalkRoom(..)
   , User(..)
   , Message(..)

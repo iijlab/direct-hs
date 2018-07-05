@@ -22,7 +22,7 @@ module Web.Direct.Types
   , UserId
   , MessageId
   , Domain(..)
-  , TalkType
+  , TalkType(..)
   , TalkRoom(..)
   , User(..)
   , Message(..)
