@@ -380,7 +380,7 @@ decodeTalkRoom _ = Nothing
 
 type ChannelKey = (TalkId, UserId)
 
-data Channel = Channel (C.MVar (Message, Aux))
+newtype Channel = Channel (C.MVar (Message, Aux))
 
 fromAux :: Aux -> ChannelKey
 fromAux (Aux tid _ uid) = (tid, uid)
