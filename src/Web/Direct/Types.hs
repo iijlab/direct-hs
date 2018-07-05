@@ -13,10 +13,11 @@ module Web.Direct.Types
   , getMe
   , setUsers
   , getUsers
+    --
   , PersistedInfo(..)
   , serializePersistedInfo
   , deserializePersistedInfo
-  , Exception(..)
+    --
   , DomainId
   , TalkId
   , UserId
@@ -26,13 +27,17 @@ module Web.Direct.Types
   , TalkRoom(..)
   , User(..)
   , Message(..)
+  , Aux(..)
+    --
   , encodeMessage
   , decodeMessage
-  , Aux(..)
+    --
   , fromCreateSession
   , fromGetAcquaintances
   , fromGetDomains
   , fromGetTalks
+    --
+  , Exception(..)
   ) where
 
 import qualified Control.Concurrent               as C
