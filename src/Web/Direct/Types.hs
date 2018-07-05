@@ -54,6 +54,8 @@ import           GHC.Generics                     (Generic)
 
 import qualified Network.MessagePack.Async.Client as Rpc
 
+----------------------------------------------------------------
+
 -- | Direct client.
 data Client = Client {
     clientPersistedInfo :: !PersistedInfo
@@ -97,6 +99,8 @@ newClient pinfo rpcClient =
                            <*> I.newIORef []
                            <*> I.newIORef M.empty
 
+----------------------------------------------------------------
+
 data PersistedInfo = PersistedInfo {
     persistedInfoDirectAccessToken :: !T.Text
   , persistedInfoIdfv              :: !T.Text
@@ -115,20 +119,6 @@ serializePersistedInfo = Json.encode
 deserializePersistedInfo :: B.ByteString -> Either String PersistedInfo
 deserializePersistedInfo = Json.eitherDecode
 
-
-data Exception =
-      InvalidEmailOrPassword
-    | InvalidWsUrl !String
-    | UnexpectedReponse !M.Object
-  deriving (Eq, Show, Typeable)
-
-instance E.Exception Exception
-
-type DomainId  = Word64
-type TalkId    = Word64
-type UserId    = Word64
-type MessageId = Word64
-
 deriveJsonOptions :: Json.Options
 deriveJsonOptions = Json.defaultOptions
     { fieldLabelModifier = firstLower . drop (T.length "PersistedInfo")
@@ -137,6 +127,13 @@ deriveJsonOptions = Json.defaultOptions
 firstLower :: String -> String
 firstLower (x : xs) = Char.toLower x : xs
 firstLower _        = error "firstLower: Assertion failed: empty string"
+
+----------------------------------------------------------------
+
+type DomainId  = Word64
+type TalkId    = Word64
+type UserId    = Word64
+type MessageId = Word64
 
 data User = User {
     userId                       :: !UserId
@@ -174,6 +171,13 @@ data Message =
   deriving (Eq, Show)
 
 data Aux = Aux !TalkId !MessageId !UserId
+
+----------------------------------------------------------------
+
+look :: T.Text -> [(M.Object, a)] -> Maybe a
+look key = lookup (M.ObjectStr key)
+
+----------------------------------------------------------------
 
 decodeMessage :: [(M.Object, M.Object)] -> Maybe (Message, Aux)
 decodeMessage rspinfo = do
@@ -232,8 +236,7 @@ decodeMessage rspinfo = do
             Just (TaskA ttl cls don, aux)
         _ -> Just (Other $ T.pack $ show rspinfo, aux)
 
-look :: T.Text -> [(M.Object, a)] -> Maybe a
-look key = lookup (M.ObjectStr key)
+----------------------------------------------------------------
 
 encodeMessage :: Message -> Aux -> [M.Object]
 encodeMessage (Txt text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
@@ -305,6 +308,8 @@ encodeMessage (TaskA ttl cls don) (Aux tid _ _) =
 
 encodeMessage (Other text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 
+----------------------------------------------------------------
+
 fromCreateSession :: M.Object -> Maybe User
 fromCreateSession (M.ObjectMap m) = do
     user <- look "user" m
@@ -358,3 +363,13 @@ decodeTalkRoom (M.ObjectMap m) = do
     extract (M.ObjectWord uid) = Just uid
     extract _                  = Nothing
 decodeTalkRoom _ = Nothing
+
+----------------------------------------------------------------
+
+data Exception =
+      InvalidEmailOrPassword
+    | InvalidWsUrl !String
+    | UnexpectedReponse !M.Object
+  deriving (Eq, Show, Typeable)
+
+instance E.Exception Exception
