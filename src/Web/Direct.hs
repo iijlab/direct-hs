@@ -44,7 +44,7 @@ module Web.Direct
   -- * APIs
   , sendMessage
   , Channel
-  , fork
+  , withChannel
   , recv
   ) where
 
@@ -233,8 +233,8 @@ apiVersion = "1.91"
 
 data Channel = Channel (C.MVar (Message, Aux))
 
-fork :: Client -> Aux -> (Channel -> IO ()) -> IO ()
-fork client (Aux tid _ uid) body = E.bracket register (\chan -> void . C.forkIO $ body chan) unregister
+withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
+withChannel client (Aux tid _ uid) body = E.bracket register unregister body
   where
     key = (tid, uid)
     register = do
