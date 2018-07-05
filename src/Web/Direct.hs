@@ -26,7 +26,7 @@ module Web.Direct
   , PersistedInfo(..)
   , serializePersistedInfo
   , deserializePersistedInfo
-  -- * Types
+  -- * Message
   -- ** Ids
   , DomainId
   , TalkId
@@ -39,13 +39,14 @@ module Web.Direct
   , User(..)
   , Message(..)
   , Aux(..)
-  -- ** Exceptions
-  , Exception(..)
-  -- * APIs
+  -- * Sending
   , sendMessage
+  -- * Channel
   , Channel
   , withChannel
   , recv
+  -- *Exceptions
+  , Exception(..)
   ) where
 
 
