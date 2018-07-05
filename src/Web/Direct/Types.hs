@@ -37,6 +37,13 @@ module Web.Direct.Types
   , fromGetDomains
   , fromGetTalks
     --
+  , Channel
+  , newChannel
+  , freeChannel
+  , dispatch
+  , recv
+  , findChannel
+    --
   , Exception(..)
   ) where
 
@@ -49,7 +56,7 @@ import qualified Data.ByteString.Lazy             as B
 import qualified Data.Char                        as Char
 import qualified Data.IORef                       as I
 import           Data.List                        (elemIndex)
-import qualified Data.HashMap.Strict              as M
+import qualified Data.HashMap.Strict              as HM
 import           Data.Maybe                       (catMaybes)
 import qualified Data.MessagePack                 as M
 import qualified Data.Text                        as T
@@ -69,7 +76,7 @@ data Client = Client {
   , clientTalkRooms     :: I.IORef [TalkRoom]
   , clientMe            :: I.IORef (Maybe User)
   , clientUsers         :: I.IORef [User]
-  , clientChannels      :: I.IORef (M.HashMap (TalkId,UserId) (C.MVar (Message,Aux)))
+  , clientChannels      :: I.IORef (HM.HashMap ChannelKey Channel)
   }
 
 setDomains :: Client -> [Domain] -> IO ()
@@ -102,7 +109,7 @@ newClient pinfo rpcClient =
                            <*> I.newIORef []
                            <*> I.newIORef Nothing
                            <*> I.newIORef []
-                           <*> I.newIORef M.empty
+                           <*> I.newIORef HM.empty
 
 ----------------------------------------------------------------
 
@@ -368,6 +375,45 @@ decodeTalkRoom (M.ObjectMap m) = do
     extract (M.ObjectWord uid) = Just uid
     extract _                  = Nothing
 decodeTalkRoom _ = Nothing
+
+----------------------------------------------------------------
+
+type ChannelKey = (TalkId, UserId)
+
+data Channel = Channel (C.MVar (Message, Aux))
+
+fromAux :: Aux -> ChannelKey
+fromAux (Aux tid _ uid) = (tid, uid)
+
+newChannel :: Client -> Aux -> IO Channel
+newChannel client aux = do
+    var <- C.newEmptyMVar
+    let chan = Channel var
+    I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
+    return chan
+  where
+    ref = clientChannels client
+    key = fromAux aux
+
+freeChannel :: Client -> Aux -> IO ()
+freeChannel client aux = I.atomicModifyIORef' ref $ \m -> (HM.delete key m, ())
+  where
+    ref = clientChannels client
+    key = fromAux aux
+
+dispatch :: Channel -> Message -> Aux -> IO ()
+dispatch (Channel var) msg aux = C.putMVar var (msg, aux)
+
+recv :: Channel -> IO (Message, Aux)
+recv (Channel var) = C.takeMVar var
+
+findChannel :: Client -> Aux -> IO (Maybe Channel)
+findChannel client aux = do
+    chans <- I.readIORef ref
+    return $ HM.lookup key chans
+  where
+    ref = clientChannels client
+    key = fromAux aux
 
 ----------------------------------------------------------------
 

@@ -49,13 +49,10 @@ module Web.Direct
   , Exception(..)
   ) where
 
-
-import qualified Control.Concurrent                         as C
 import           Control.Error                              (fmapL)
 import qualified Control.Exception                          as E
 import           Control.Monad                              (void, when)
 import qualified Data.IORef                                 as I
-import qualified Data.HashMap.Strict                        as HM
 import qualified Data.MessagePack                           as M
 import qualified Data.MessagePack.RPC                       as R
 import qualified Data.Text                                  as T
@@ -169,11 +166,10 @@ withClient config url pInfo action = do
             when (method == "notify_create_message") $ case objs of
                 M.ObjectMap rsp : _ -> case decodeMessage rsp of
                     Nothing        -> return ()
-                    Just (msg,aux@(Aux tid _ uid)) -> do
-                        let key = (tid, uid)
-                        hm <- I.readIORef $ clientChannels client
-                        case HM.lookup key hm of
-                            Just mvar -> C.putMVar mvar (msg, aux)
+                    Just (msg, aux) -> do
+                        ec <- findChannel client aux
+                        case ec of
+                            Just chan -> dispatch chan msg aux
                             Nothing   -> directCreateMessageHandler config client msg aux
                 _ -> return ()
         , Rpc.logger         = directLogger config
@@ -239,20 +235,8 @@ sendMessage client req aux = do
 
 ----------------------------------------------------------------
 
-data Channel = Channel (C.MVar (Message, Aux))
-
 withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
-withChannel client (Aux tid _ uid) body = E.bracket register unregister body
+withChannel client aux body = E.bracket register unregister body
   where
-    key = (tid, uid)
-    register = do
-        var <- C.newEmptyMVar
-        I.atomicModifyIORef' (clientChannels client) $ \m ->
-            (HM.insert key var m, ())
-        return $ Channel var
-    unregister _ =
-        I.atomicModifyIORef' (clientChannels client) $ \m ->
-            (HM.delete key m, ())
-
-recv :: Channel -> IO (Message, Aux)
-recv (Channel var) = C.takeMVar var
+    register = newChannel client aux
+    unregister _ = freeChannel client aux
