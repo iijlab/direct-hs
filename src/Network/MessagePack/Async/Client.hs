@@ -74,6 +74,11 @@ data Config = Config {
     notificationHandler :: NotificationHandler
   , requestHandler      :: RequestHandler
   , logger              :: Logger
+  , exceptionHandlers   :: [E.Handler ()]
+    -- ^ Handles an exception thrown from the receiver thread,
+    --   which is the only thread to receive 'Message's via 'Backend'.
+    --   Until exiting from the block of 'withClient', the receiver thread
+    --   indefinitely waits for frames via 'backendRecv'.
   , formatter           :: Formatter
   }
 
@@ -85,6 +90,7 @@ defaultConfig = Config
     { notificationHandler = \_ _ _ -> return ()
     , requestHandler      = \_ _ _ _ -> return ()
     , logger              = \_ -> return ()
+    , exceptionHandlers   = [E.Handler $ \(E.SomeException _) -> return ()]
     , formatter           = show
     }
 
@@ -134,7 +140,7 @@ getNewMessageId ss =
 
 receiverThread :: Client -> Config -> IO ()
 receiverThread client config =
-    E.handle (\(E.SomeException e) -> print e) $ forever $ do
+    (`E.catches` exceptionHandlers config) $ forever $ do
         response <- MsgPack.unpack . BL.fromStrict =<< backendRecv
             (clientBackend client)
         clientLog client $ "received: " <> clientFormat client response
