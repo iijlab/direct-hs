@@ -41,8 +41,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - http-client-0.5.13
-- git: https://github.com/iij-ii/skews.git
-  commit: 51e9ecfd4bcb59d1e6be437b8a1daafb272611d7
+- skews-0.1.0.0
 
 # Override default flag values for local packages and extra-deps
 flags:
