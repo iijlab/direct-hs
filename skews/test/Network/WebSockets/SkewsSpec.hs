@@ -42,20 +42,16 @@ spec = context "After running Skews.start and starting a client" $ do
     it
         "after enqueResponses and setDefaultResponse, responds with the given responses and records request"
       $ do
-          let
-            requests = ["client1", "client2", "client3", "client4", "client5"]
-            -- Close code 1000: normal closure: https://tools.ietf.org/html/rfc6455#section-7.4
-            lastRequest = WS.ControlMessage $ WS.Close 1000 "bye by client"
-            responses =
-              [ "response1"
-              , "response2"
-              , "response3"
-              ]
+          let requests =
+                ["client1", "client2", "client3", "client4", "client5"]
+              -- Close code 1000: normal closure: https://tools.ietf.org/html/rfc6455#section-7.4
+              lastRequest = WS.ControlMessage $ WS.Close 1000 "bye by client"
+              responses = ["response1", "response2", "response3"]
 
-            defaultResponse = "default response"
-          Skews.setDefaultResponse server defaultResponse
+              defaultResponse = "default response"
+          Skews.setDefaultResponse server                       defaultResponse
 
-          mapM_ (Skews.enqueResponse server) responses
+          mapM_                    (Skews.enqueResponse server) responses
 
           actuallyResponded <- runClient $ \conn -> do
             ress <- for requests $ \request -> do
@@ -73,7 +69,9 @@ spec = context "After running Skews.start and starting a client" $ do
             return ress
 
           toList <$> Skews.recentlyReceived server `shouldReturn` requests
-          actuallyResponded `shouldBe` responses ++ [defaultResponse, defaultResponse]
+          actuallyResponded
+            `shouldBe` responses
+            ++         [defaultResponse, defaultResponse]
 
     it "sendToClients delivers the given message to all connected clients" $ do
       let msg          = "message"
@@ -89,9 +87,11 @@ spec = context "After running Skews.start and starting a client" $ do
       wait actuallyReceived `shouldReturn` replicate clientCount msg
 
     it "can record requests sent concurrently" $ do
-      let msg = "client message"
-          clientCount = 10
+      let msg          = "client message"
+          clientCount  = 10
           clientAction = runClient (`WS.sendBinaryData` msg)
       replicateConcurrently_ clientCount clientAction
       threadDelay $ 50 * 1000
-      toList <$> Skews.recentlyReceived server `shouldReturn` replicate clientCount msg
+      toList
+        <$>            Skews.recentlyReceived server
+        `shouldReturn` replicate clientCount msg

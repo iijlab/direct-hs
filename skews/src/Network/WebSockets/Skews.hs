@@ -91,22 +91,22 @@ start (Args listeningHost listeningPort) = do
     c <- WS.acceptRequest pc
     addClientConnection clientConnections c
 
-    let loop = do
-          m <- WS.receive c
-          case m of
-              WS.DataMessage _ _ _ dat -> do
-                mbrh  <- deque requestHandlerQueue
-                dmbrh <- IOR.readIORef defaultRequestHandler
-                let bs = WS.fromDataMessage dat
-                case mbrh <|> dmbrh of
-                  Just rh -> maybe (return ()) (WS.sendBinaryData c) =<< rh bs
-                  Nothing -> return ()
-                IOR.modifyIORef recentlyReceivedRef (Q.snoc bs)
-                loop
-              WS.ControlMessage (WS.Close _ _) ->
-                WS.sendClose c ("Bye" :: B.ByteString)
-              _other ->
-                loop
+    let
+      loop = do
+        m <- WS.receive c
+        case m of
+          WS.DataMessage _ _ _ dat -> do
+            mbrh  <- deque requestHandlerQueue
+            dmbrh <- IOR.readIORef defaultRequestHandler
+            let bs = WS.fromDataMessage dat
+            case mbrh <|> dmbrh of
+              Just rh -> maybe (return ()) (WS.sendBinaryData c) =<< rh bs
+              Nothing -> return ()
+            IOR.modifyIORef recentlyReceivedRef (Q.snoc bs)
+            loop
+          WS.ControlMessage (WS.Close _ _) ->
+            WS.sendClose c ("Bye" :: B.ByteString)
+          _other -> loop
 
     ignoreConnectionClosed loop
 
