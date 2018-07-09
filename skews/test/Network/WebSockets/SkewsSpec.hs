@@ -30,72 +30,68 @@ instance FromEnv PortNumber where
 
 
 spec :: Spec
-spec =
-  context "After running Skews.start and starting a client" $ do
-    Right (PortNumber pn) <- runIO decodeEnv
+spec = context "After running Skews.start and starting a client" $ do
+  Right (PortNumber pn) <- runIO decodeEnv
 
-    let host = "127.0.0.1"
-    server <- runIO $ Skews.start $ Skews.Args host pn
+  let host = "127.0.0.1"
+  server <- runIO $ Skews.start $ Skews.Args host pn
 
-    let runClient = WS.runClient host pn "/"
+  let runClient = WS.runClient host pn "/"
 
-    before_ (Skews.reinit server) $ do
-      it "after enqueResponses and setDefaultResponse, responds with the given responses and records request" $ do
-        let requests =
-              [ WS.DataMessage True True True $ WS.Binary "client1"
-              , WS.DataMessage True True True $ WS.Binary "client2"
-              , WS.DataMessage True True True $ WS.Binary "client3"
-              , WS.DataMessage True True True $ WS.Binary "client4"
-              , WS.DataMessage True True True $ WS.Binary "client5"
-              ]
+  before_ (Skews.reinit server) $ do
+    it
+        "after enqueResponses and setDefaultResponse, responds with the given responses and records request"
+      $ do
+          let
+            requests = ["client1", "client2", "client3", "client4", "client5"]
             -- Close code 1000: normal closure: https://tools.ietf.org/html/rfc6455#section-7.4
             lastRequest = WS.ControlMessage $ WS.Close 1000 "bye by client"
             responses =
-              [ WS.DataMessage True True True $ WS.Binary "response1"
-              , WS.DataMessage True True True $ WS.Binary "response2"
-              , WS.DataMessage True True True $ WS.Binary "response3"
+              [ "response1"
+              , "response2"
+              , "response3"
               ]
 
-            defaultResponse = WS.DataMessage True True True (WS.Binary "default response")
-        Skews.setDefaultResponse server defaultResponse
+            defaultResponse = "default response"
+          Skews.setDefaultResponse server defaultResponse
 
-        mapM_ (Skews.enqueResponse server) responses
+          mapM_ (Skews.enqueResponse server) responses
 
-        actuallyResponded <- runClient $ \conn -> do
-          ress <- for requests $ \request -> do
-            WS.send conn request
-            WS.receive conn
+          actuallyResponded <- runClient $ \conn -> do
+            ress <- for requests $ \request -> do
+              WS.sendBinaryData conn request
+              WS.receiveData conn
 
-          Skews.forgetDefaultResponse server
-          WS.send conn lastRequest
-          {- FIXME:
-          -- timeout function doesn't kill `WS.receive conn`.
-          -- So I can't test the exact behaviour of forgetDefaultResponse
-          resLast <- timeout 1 $ WS.receive conn
-          return (ress, resLast)
-          -}
-          return ress
+            Skews.forgetDefaultResponse server
+            WS.send conn lastRequest
+            {- FIXME:
+              -- timeout function doesn't kill `WS.receive conn`.
+              -- So I can't test the exact behaviour of forgetDefaultResponse
+              resLast <- timeout 1 $ WS.receive conn
+              return (ress, resLast)
+            -}
+            return ress
 
-        toList <$> Skews.recentlyReceived server `shouldReturn` requests ++ [lastRequest]
-        actuallyResponded `shouldBe` responses ++ [defaultResponse, defaultResponse]
+          toList <$> Skews.recentlyReceived server `shouldReturn` requests
+          actuallyResponded `shouldBe` responses ++ [defaultResponse, defaultResponse]
 
-      it "sendToClients delivers the given message to all connected clients" $ do
-        let msg = WS.DataMessage True True True $ WS.Binary "message"
-            clientCount = 10
-            clientAction = runClient $ \conn -> do
-              threadDelay $ 100 * 1000
-              WS.receive conn
+    it "sendToClients delivers the given message to all connected clients" $ do
+      let msg          = "message"
+          clientCount  = 10
+          clientAction = runClient $ \conn -> do
+            threadDelay $ 100 * 1000
+            WS.receiveData conn
 
-        actuallyReceived <- async $ replicateConcurrently clientCount clientAction
-        threadDelay $ 50 * 1000
-        Skews.sendToClients server msg
+      actuallyReceived <- async $ replicateConcurrently clientCount clientAction
+      threadDelay $ 50 * 1000
+      Skews.sendToClients server msg
 
-        wait actuallyReceived `shouldReturn` replicate clientCount msg
+      wait actuallyReceived `shouldReturn` replicate clientCount msg
 
-      it "can record requests sent concurrently" $ do
-        let msg = WS.DataMessage True True True $ WS.Binary "client message"
-            clientCount = 10
-            clientAction = runClient (`WS.send` msg)
-        replicateConcurrently_ clientCount clientAction
-        threadDelay $ 50 * 1000
-        toList <$> Skews.recentlyReceived server `shouldReturn` replicate clientCount msg
+    it "can record requests sent concurrently" $ do
+      let msg = "client message"
+          clientCount = 10
+          clientAction = runClient (`WS.sendBinaryData` msg)
+      replicateConcurrently_ clientCount clientAction
+      threadDelay $ 50 * 1000
+      toList <$> Skews.recentlyReceived server `shouldReturn` replicate clientCount msg

@@ -33,25 +33,25 @@ module Network.WebSockets.Skews
   ) where
 
 
-import           Control.Applicative ((<|>))
-import           Control.Concurrent  (ThreadId, forkIO)
-import           Control.Exception   (handleJust)
-import           Control.Monad       (forever, mapM_)
-import qualified Data.ByteString     as B
-import qualified Data.IORef          as IOR
-import           Data.Monoid         (mempty)
-import qualified Deque               as Q
-import qualified Network.WebSockets  as WS
+import           Control.Applicative  ((<|>))
+import           Control.Concurrent   (ThreadId, forkIO)
+import           Control.Exception    (handleJust)
+import           Control.Monad        (mapM_)
+import qualified Data.ByteString.Lazy as B
+import qualified Data.IORef           as IOR
+import           Data.Monoid          (mempty)
+import qualified Deque                as Q
+import qualified Network.WebSockets   as WS
 
 
 -- | The Server object.
---   You can easily configure the behavior (how the server responds with some rquests)
+--   You can easily configure the behavior (how the server responds with some requests)
 --   after creating by 'start' function.
 data Server =
   Server
     { requestHandlerQueue   :: !(IOR.IORef (Q.Deque RequestHandler))
     , defaultRequestHandler :: !(IOR.IORef (Maybe RequestHandler))
-    , recentlyReceivedRef   :: !(IOR.IORef (Q.Deque WS.Message))
+    , recentlyReceivedRef   :: !(IOR.IORef (Q.Deque B.ByteString))
     , clientConnections     :: !(IOR.IORef [WS.Connection])
     , threadId              :: !ThreadId -- ^ Call 'Control.Concurrent.killThread' to stop the server.
     , listeningPort         :: !Int
@@ -59,12 +59,12 @@ data Server =
     }
 
 
--- | Used to configure the server's behavior.
+-- | Used to configure the server's behavior when receiving 'WS.DataMessage' as a 'B.ByteString'.
 --   If returns @Nothing@, the server does nothing.
-type RequestHandler = WS.Message -> IO (Maybe WS.Message)
+type RequestHandler = B.ByteString -> IO (Maybe B.ByteString)
 
 -- | Maybe often used 'RequestHandler'. Always respond with the given 'WS.Message'.
-respondWith :: WS.Message -> RequestHandler
+respondWith :: B.ByteString -> RequestHandler
 respondWith = const . return . Just
 
 
@@ -83,29 +83,39 @@ data Args = Args
 -- | Start the server by the given hostname and port number as 'Args' object.
 start :: Args -> IO Server
 start (Args listeningHost listeningPort) = do
-  requestHandlerQueue <- IOR.newIORef mempty
+  requestHandlerQueue   <- IOR.newIORef mempty
   defaultRequestHandler <- IOR.newIORef Nothing
-  recentlyReceivedRef <- IOR.newIORef mempty
-  clientConnections <- IOR.newIORef mempty
-  threadId <- forkIO $
-    WS.runServer listeningHost listeningPort $ \pc -> do
-      c <- WS.acceptRequest pc
-      addClientConnection clientConnections c
+  recentlyReceivedRef   <- IOR.newIORef mempty
+  clientConnections     <- IOR.newIORef mempty
+  threadId <- forkIO $ WS.runServer listeningHost listeningPort $ \pc -> do
+    c <- WS.acceptRequest pc
+    addClientConnection clientConnections c
 
-      ignoreConnectionClosed $ forever $ do
-        m <- WS.receive c
-        mbrh <- deque requestHandlerQueue
-        dmbrh <- IOR.readIORef defaultRequestHandler
-        case mbrh <|> dmbrh of
-            Just rh -> maybe (return ()) (WS.send c) =<< rh m
-            Nothing -> return ()
-        IOR.modifyIORef recentlyReceivedRef (Q.snoc m)
+    let loop = do
+          m <- WS.receive c
+          case m of
+              WS.DataMessage _ _ _ dat -> do
+                mbrh  <- deque requestHandlerQueue
+                dmbrh <- IOR.readIORef defaultRequestHandler
+                let bs = WS.fromDataMessage dat
+                case mbrh <|> dmbrh of
+                  Just rh -> maybe (return ()) (WS.sendBinaryData c) =<< rh bs
+                  Nothing -> return ()
+                IOR.modifyIORef recentlyReceivedRef (Q.snoc bs)
+                loop
+              WS.ControlMessage (WS.Close _ _) ->
+                WS.sendClose c ("Bye" :: B.ByteString)
+              _other ->
+                loop
+
+    ignoreConnectionClosed loop
 
   return Server {..}
 
 
 addClientConnection :: IOR.IORef [WS.Connection] -> WS.Connection -> IO ()
-addClientConnection ccsr c = IOR.atomicModifyIORef' ccsr (\ccs -> (c : ccs, ()))
+addClientConnection ccsr c =
+  IOR.atomicModifyIORef' ccsr (\ccs -> (c : ccs, ()))
 
 
 -- | Configure the request handler called when the server receives next.
@@ -115,33 +125,37 @@ addClientConnection ccsr c = IOR.atomicModifyIORef' ccsr (\ccs -> (c : ccs, ()))
 --   If you need the server to respond always with the same response,
 --   use 'setDefaultResponse' and 'setDefaultRequestHandler'.
 enqueRequestHandler :: Server -> RequestHandler -> IO ()
-enqueRequestHandler Server {..} rh = IOR.atomicModifyIORef' requestHandlerQueue (\q -> (Q.snoc rh q, ()))
+enqueRequestHandler Server {..} rh =
+  IOR.atomicModifyIORef' requestHandlerQueue (\q -> (Q.snoc rh q, ()))
 
 
 -- | Configure the response called when the server receives next.
-enqueResponse :: Server -> WS.Message -> IO ()
+enqueResponse :: Server -> B.ByteString -> IO ()
 enqueResponse s = enqueRequestHandler s . respondWith
 
 
 -- | Configure the request handler called when no request handlers are queued.
 setDefaultRequestHandler :: Server -> RequestHandler -> IO ()
-setDefaultRequestHandler Server {..} = IOR.atomicWriteIORef defaultRequestHandler . Just
+setDefaultRequestHandler Server {..} =
+  IOR.atomicWriteIORef defaultRequestHandler . Just
 
 
 -- | Reset the request handler queue.
 replaceRequestHandlers :: Server -> [RequestHandler] -> IO ()
-replaceRequestHandlers Server {..} = IOR.atomicWriteIORef requestHandlerQueue . Q.fromList
+replaceRequestHandlers Server {..} =
+  IOR.atomicWriteIORef requestHandlerQueue . Q.fromList
 
 
 -- | Configure the response called when no request handlers are queued.
-setDefaultResponse :: Server -> WS.Message -> IO ()
+setDefaultResponse :: Server -> B.ByteString -> IO ()
 setDefaultResponse s = setDefaultRequestHandler s . respondWith
 
 
 -- | Delete the default request handler. After calling this function,
 --   the 'Server' object doesn't respond to any message if the request handler queue is empty.
 forgetDefaultRequestHandler :: Server -> IO ()
-forgetDefaultRequestHandler Server {..} = IOR.atomicWriteIORef defaultRequestHandler Nothing
+forgetDefaultRequestHandler Server {..} =
+  IOR.atomicWriteIORef defaultRequestHandler Nothing
 
 
 -- | Alias for 'forgetDefaultRequestHandler'
@@ -151,45 +165,46 @@ forgetDefaultResponse = forgetDefaultRequestHandler
 
 -- | Forget recently received requests.
 forgetReceivedRequests :: Server -> IO ()
-forgetReceivedRequests Server {..} = IOR.atomicWriteIORef recentlyReceivedRef mempty
+forgetReceivedRequests Server {..} =
+  IOR.atomicWriteIORef recentlyReceivedRef mempty
 
 
 -- | Send the given 'Message' immediately to the all connected clients.
-sendToClients :: Server -> WS.Message -> IO ()
-sendToClients Server {..} msg = mapM_ (`WS.send` msg) =<< IOR.readIORef clientConnections
+sendToClients :: Server -> B.ByteString -> IO ()
+sendToClients Server {..} msg =
+  mapM_ (`WS.sendBinaryData` msg) =<< IOR.readIORef clientConnections
 
 
 -- | Close all connections, forget recently received requests,
 --   and delete any configured 'RequestHandler's.
 reinit :: Server -> IO ()
 reinit Server {..} = do
-  IOR.atomicWriteIORef requestHandlerQueue mempty
+  IOR.atomicWriteIORef requestHandlerQueue   mempty
   IOR.atomicWriteIORef defaultRequestHandler Nothing
-  IOR.atomicWriteIORef recentlyReceivedRef mempty
+  IOR.atomicWriteIORef recentlyReceivedRef   mempty
 
-  mapM_ (ignoreConnectionClosed . (`WS.sendClose` ("Bye" :: B.ByteString))) =<< IOR.readIORef clientConnections
+  mapM_ (ignoreConnectionClosed . (`WS.sendClose` ("Bye" :: B.ByteString)))
+    =<< IOR.readIORef clientConnections
   IOR.atomicWriteIORef clientConnections []
 
 
 -- | Retrieve any messages sent by the clients.
-recentlyReceived :: Server -> IO (Q.Deque WS.Message)
+recentlyReceived :: Server -> IO (Q.Deque B.ByteString)
 recentlyReceived Server {..} = IOR.readIORef recentlyReceivedRef
 
 
 deque :: IOR.IORef (Q.Deque a) -> IO (Maybe a)
-deque qr =
-  IOR.atomicModifyIORef' qr $ \q ->
-    case Q.uncons q of
-        Just (x, qLeft) -> (qLeft, Just x)
-        _               -> (mempty, Nothing)
+deque qr = IOR.atomicModifyIORef' qr $ \q -> case Q.uncons q of
+  Just (x, qLeft) -> (qLeft, Just x)
+  _               -> (mempty, Nothing)
 
 
 ignoreConnectionClosed :: IO () -> IO ()
 ignoreConnectionClosed = handleJust selectClosed (const $ return ())
-  where
-    selectClosed :: WS.ConnectionException -> Maybe ()
-    selectClosed WS.ConnectionClosed = Just ()
-    selectClosed _                   = Nothing
+ where
+  selectClosed :: WS.ConnectionException -> Maybe ()
+  selectClosed WS.ConnectionClosed = Just ()
+  selectClosed _                   = Nothing
 
 
 -- | For debugging
