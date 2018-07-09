@@ -6,13 +6,13 @@ module Network.WebSockets.ClientSpec
   ) where
 
 
-import           Control.Applicative       (empty, (<|>))
-import qualified Data.ByteString.Char8     as BS
-import qualified Data.Text                 as T
-import qualified Network.WebSockets.Skews  as Skews
-import           System.Envy               (FromEnv, decodeEnv, env, fromEnv)
+import           Control.Applicative        (empty, (<|>))
+import qualified Data.ByteString.Lazy.Char8 as BS
+import qualified Data.Text                  as T
+import qualified Network.WebSockets.Skews   as Skews
+import           System.Envy                (FromEnv, decodeEnv, env, fromEnv)
 import           Test.Hspec
-import           Text.Read                 (readMaybe)
+import           Text.Read                  (readMaybe)
 
 import qualified Network.WebSockets.Client as WS
 
@@ -39,10 +39,11 @@ spec = describe "withConnection" $ do
   server <- runIO $ Skews.start $ Skews.Args host pn
 
   let withConnection = WS.withConnection ("ws://" ++ host ++ ":" ++ show pn)
-      response = WS.DataMessage True True True (WS.Binary "response")
+      payload = "response"
+      response = WS.DataMessage False False False (WS.Binary payload)
       beforeAction = do
         Skews.reinit server
-        Skews.setDefaultResponse server response
+        Skews.setDefaultResponse server payload
 
   before_ beforeAction $
     it "can send and receive messages via the connection" $ do
