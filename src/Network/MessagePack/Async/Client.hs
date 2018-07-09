@@ -24,7 +24,7 @@ module Network.MessagePack.Async.Client
 import           Control.Concurrent      (forkIO, killThread)
 import           Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
-import qualified Control.Exception       as E
+import qualified Control.Exception.Safe  as E
 import           Control.Monad           (forever, void)
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as BL
@@ -74,7 +74,7 @@ data Config = Config {
     notificationHandler :: NotificationHandler
   , requestHandler      :: RequestHandler
   , logger              :: Logger
-  , exceptionHandlers   :: [E.Handler ()]
+  , exceptionHandlers   :: [E.Handler IO ()]
     -- ^ Handles an exception thrown from the receiver thread,
     --   which is the only thread to receive 'Message's via 'Backend'.
     --   Until exiting from the block of 'withClient', the receiver thread

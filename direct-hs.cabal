@@ -26,6 +26,7 @@ library
     , aeson
     , bytestring
     , unordered-containers
+    , safe-exceptions
     , data-msgpack
     , errors
     , mwc-random
