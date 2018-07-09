@@ -101,7 +101,6 @@ data Backend = Backend {
   , backendClose :: IO () -- ^ Closing
   }
 
--- TODO: May need to lock connection before sending (Is Ws.Connection threadsafe?)
 -- TODO: Returns any exception
 -- | Calling RPC.
 callRpc :: Client -> MethodName -> [MsgPack.Object] -> IO Result
