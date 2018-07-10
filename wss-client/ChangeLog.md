@@ -1,3 +1,7 @@
+# 0.2.1.1
+
+- Change the license to follow the rule of IIJ-II.
+
 # 0.2.1.0
 
 - Fix: ignore port specified in URL
