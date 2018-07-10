@@ -39,7 +39,11 @@ module Web.Direct
   , TalkRoom(..)
   , User(..)
   , Message(..)
-  , Aux(..)
+  , Aux
+  , auxMessageId
+  , auxTalkId
+  , auxUserId
+  , defaultAux
   -- * Sending
   , sendMessage
   -- * Channel

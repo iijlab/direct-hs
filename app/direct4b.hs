@@ -122,7 +122,7 @@ sendText tid = do
     pInfo <-
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    let aux = D.Aux tid undefined undefined -- fixme
+    let aux = D.defaultAux { D.auxTalkId = tid }
     D.withClient D.defaultConfig url pInfo $ \client -> do
         forM_ (TL.chunksOf 1024 txt)
             $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) aux

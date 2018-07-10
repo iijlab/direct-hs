@@ -28,6 +28,7 @@ module Web.Direct.Types
   , User(..)
   , Message(..)
   , Aux(..)
+  , defaultAux
     --
   , encodeMessage
   , decodeMessage
@@ -182,7 +183,14 @@ data Message =
   | Other     !T.Text
   deriving (Eq, Show)
 
-data Aux = Aux !TalkId !MessageId !UserId
+data Aux = Aux {
+    auxTalkId    :: !TalkId
+  , auxMessageId :: !MessageId
+  , auxUserId    :: !UserId
+  }
+
+defaultAux :: Aux
+defaultAux = Aux 0 0 0
 
 ----------------------------------------------------------------
 
