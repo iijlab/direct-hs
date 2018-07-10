@@ -34,10 +34,20 @@ module Web.Direct
   , UserId
   , MessageId
   -- ** Main types
-  , Domain(..)
+  , Domain
+  , domainId
+  , domainName
   , TalkType(..)
-  , TalkRoom(..)
-  , User(..)
+  , TalkRoom
+  , talkId
+  , talkType
+  , talkUsers
+  , User
+  , userId
+  , displayName
+  , canonicalDisplayName
+  , phoneticDisplayName
+  , canonicalPhoneticIisplayName
   , Message(..)
   , Aux
   , auxMessageId
