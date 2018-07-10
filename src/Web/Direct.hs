@@ -10,6 +10,7 @@ module Web.Direct
   , defaultConfig
   -- * Login
   , login
+  , Rpc.URL
   -- * Client
   , Client
   , withClient
