@@ -164,14 +164,17 @@ withClient config url pInfo action = do
             Just client <- I.readIORef ref
             -- fixme: "notify_update_domain_users"
             -- fixme: "notify_update_read_statuses"
+            Just me <- getMe client
+            let myid = userId me
             when (method == "notify_create_message") $ case objs of
                 M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                    Nothing        -> return ()
-                    Just (msg, aux) -> do
+                    Just (msg, aux@(Aux _ _ uid))
+                      | uid /= myid -> do
                         echan <- findChannel client aux
                         case echan of
                             Just chan -> dispatch chan msg aux
                             Nothing   -> directCreateMessageHandler config client msg aux
+                    _ -> return ()
                 _ -> return ()
         , Rpc.logger         = directLogger config
         , Rpc.formatter      = directFormatter config
