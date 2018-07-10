@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+module Main (main) where
+
 import           Control.Concurrent     (threadDelay)
 import           Control.Monad          (forever, void)
 import qualified Data.ByteString.Lazy   as B
@@ -18,7 +20,6 @@ main = do
                         }
         url
         pInfo
-      -- `forever $ return ()` doesn't give up control flow to the receiver thread.
         (\_ -> forever $ threadDelay $ 10 * 1000)
 
 handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
