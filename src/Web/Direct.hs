@@ -168,8 +168,8 @@ withClient config url pInfo action = do
                 M.ObjectMap rsp : _ -> case decodeMessage rsp of
                     Nothing        -> return ()
                     Just (msg, aux) -> do
-                        ec <- findChannel client aux
-                        case ec of
+                        echan <- findChannel client aux
+                        case echan of
                             Just chan -> dispatch chan msg aux
                             Nothing   -> directCreateMessageHandler config client msg aux
                 _ -> return ()
