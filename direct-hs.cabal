@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            Client library for direct.
 description:         Client library for [direct](https://direct4b.com)
 homepage:            https://github.com/iij-ii/direct-hs
-license:             Apache-2.0
+license:             BSD3
 license-file:        LICENSE
 author:              Yuji Yamamoto
 maintainer:          yuji-yamamoto@iij.ad.jp
