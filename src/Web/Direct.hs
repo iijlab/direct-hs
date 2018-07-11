@@ -60,6 +60,7 @@ module Web.Direct
   , Channel
   , withChannel
   , recv
+  , send
   -- *Exceptions
   , Exception(..)
   ) where
@@ -258,3 +259,6 @@ withChannel client aux body = E.bracket register unregister body
   where
     register = newChannel client aux
     unregister _ = freeChannel client aux
+
+send :: Channel -> Message -> IO MessageId
+send (Channel _ client aux) msg = sendMessage client msg aux

@@ -38,7 +38,7 @@ module Web.Direct.Types
   , fromGetDomains
   , fromGetTalks
     --
-  , Channel
+  , Channel(..)
   , newChannel
   , freeChannel
   , dispatch
@@ -388,7 +388,7 @@ decodeTalkRoom _ = Nothing
 
 type ChannelKey = (TalkId, UserId)
 
-newtype Channel = Channel (C.MVar (Message, Aux))
+data Channel = Channel (C.MVar (Message, Aux)) Client Aux
 
 fromAux :: Aux -> ChannelKey
 fromAux (Aux tid _ uid) = (tid, uid)
@@ -396,7 +396,7 @@ fromAux (Aux tid _ uid) = (tid, uid)
 newChannel :: Client -> Aux -> IO Channel
 newChannel client aux = do
     var <- C.newEmptyMVar
-    let chan = Channel var
+    let chan = Channel var client aux
     I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
     return chan
   where
@@ -410,10 +410,10 @@ freeChannel client aux = I.atomicModifyIORef' ref $ \m -> (HM.delete key m, ())
     key = fromAux aux
 
 dispatch :: Channel -> Message -> Aux -> IO ()
-dispatch (Channel var) msg aux = C.putMVar var (msg, aux)
+dispatch (Channel var _ _) msg aux = C.putMVar var (msg, aux)
 
 recv :: Channel -> IO (Message, Aux)
-recv (Channel var) = C.takeMVar var
+recv (Channel var _ _) = C.takeMVar var
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
 findChannel client aux = do
