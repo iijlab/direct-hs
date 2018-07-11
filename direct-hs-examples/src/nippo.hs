@@ -31,17 +31,36 @@ handleCreateMessage _client _msg _aux = return ()
 
 nippo :: D.Client -> D.Aux -> D.Channel -> IO ()
 nippo client aux0 chan = do
-    let peerId = D.auxUserId aux0
-    users <- D.getUsers client
-    let Just peer = find (\x -> D.userId x == peerId) users
-        msg = D.displayName peer `T.append` "さん、\nお疲れ様です。\n今日はどんな業務をしましたか？\n1件1メッセージでお願いします。"
-    void $ D.sendMessage client (D.Txt msg) aux0
-    loop
+    greeting
+    _jobs <- askJobs []
+    _eval <- askEvaluation
+    bye
   where
-    loop = do
-        (msg, aux) <- D.recv chan
+    greeting = do
+        let peerId = D.auxUserId aux0
+        users <- D.getUsers client
+        let Just peer = find (\x -> D.userId x == peerId) users
+            msg = D.displayName peer `T.append` "さん、\nお疲れ様です。\n今日はどんな業務をしましたか？\n1件1メッセージでお願いします。"
+        void $ D.send chan (D.Txt msg)
+    askJobs jobs = do
+        (msg, _aux) <- D.recv chan
         case msg of
-            D.Txt "。" -> void $ D.sendMessage client (D.Txt "気をつけてお帰りください。") aux
+            D.Txt "。" -> return jobs
+            D.Txt job  -> do
+                void $ D.send chan (D.Txt "他にも業務があれば教えてください。\n(ない場合は、「。」とだけ入力してください)")
+                askJobs (job:jobs)
             _          -> do
-                void $ D.sendMessage client (D.Txt "他にも業務があれば教えてください。\n(ない場合は、「。」とだけ入力してください)") aux
-                loop
+                void $ D.send chan (D.Txt "終わる場合は、「。」とだけ入力してください)")
+                askJobs jobs
+    askEvaluation = do
+        void $ D.send chan (D.SelectQ "達成度はどれくらいですか？" ["100","75","50","25","0"])
+        recvLoop
+     where
+        recvLoop = do
+            (msg, _aux) <- D.recv chan
+            case msg of
+              D.SelectA _ _ ans -> return ans
+              _                 -> do
+                  void $ D.send chan (D.Txt "数値を選んでください。")
+                  recvLoop
+    bye = void $ D.send chan (D.Txt "気をつけてお帰りください。")
