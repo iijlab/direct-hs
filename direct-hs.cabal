@@ -1,12 +1,12 @@
 name:                direct-hs
 version:             0.1.0.0
-synopsis:            Client library for direct.
-description:         Client library for [direct](https://direct4b.com)
+synopsis:            Bot library for direct.
+description:         Bot library for [direct](https://direct4b.com)
 homepage:            https://github.com/iij-ii/direct-hs
 license:             BSD3
 license-file:        LICENSE
-author:              Yuji Yamamoto
-maintainer:          yuji-yamamoto@iij.ad.jp
+author:              Yuji Yamamoto and Kazu Yamamoto
+maintainer:          yuji-yamamoto@iij.ad.jp, kazu@iij.ad.jp
 copyright:           2018 Yuji Yamamoto
 category:            Web
 build-type:          Simple
@@ -14,27 +14,22 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  hs-source-dirs: src
-  ghc-options: -Wall
+  hs-source-dirs:  src
+  ghc-options:     -Wall
   exposed-modules: Web.Direct
-                 , Data.MessagePack.RPC
-                 , Network.MessagePack.RPC.Client
-                 , Network.MessagePack.RPC.Client.WebSocket
   other-modules:   Web.Direct.Types
   build-depends:
       base >= 4.7 && < 5
     , aeson
     , bytestring
-    , unordered-containers
-    , safe-exceptions
     , data-msgpack
     , errors
+    , messagepack-rpc
+    , messagepack-rpc-websocket
     , mwc-random
-    , stm
     , text
+    , unordered-containers
     , uuid
-    , websockets
-    , wss-client >= 0.2
   default-language: Haskell2010
 
 executable direct4b
@@ -52,26 +47,8 @@ executable direct4b
     , optparse-applicative
     , envy
     , text
+    , messagepack-rpc
   default-language: Haskell2010
-
-test-suite direct-hs-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  other-modules:       Network.MessagePack.RPC.Client.WebSocketSpec
-  build-depends:       base
-    , direct-hs
-    , QuickCheck
-    , async
-    , bytestring
-    , data-msgpack
-    , envy
-    , hspec
-    , skews
-    , text
-    , wss-client
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  default-language:    Haskell2010
 
 source-repository head
   type:     git
