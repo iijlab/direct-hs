@@ -15,7 +15,6 @@ main = do
     pInfo <- dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     D.withClient
         D.defaultConfig { D.directLogger               = putStrLn
-                        , D.directFormatter            = showMsg
                         , D.directCreateMessageHandler = handleCreateMessage
                         }
         url
