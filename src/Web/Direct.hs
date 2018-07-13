@@ -124,7 +124,7 @@ login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
         Left  e     -> return $ Left e
   where
     rpcConfig = Rpc.defaultConfig
-        { Rpc.requestHandler = \rpcClient mid _method _objs -> do
+        { Rpc.requestHandler = \rpcClient mid _method _objs ->
              -- sending ACK always
             sendAck rpcClient mid
         , Rpc.logger         = directLogger config
