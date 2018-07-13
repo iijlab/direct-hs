@@ -108,7 +108,7 @@ login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
     idfv <- genIdfv
 
     let magicConstant = M.ObjectStr ""
-    res <- Rpc.callRpc
+    res <- Rpc.call
         client
         "create_access_token"
         [ M.ObjectStr email
@@ -197,12 +197,12 @@ withClient config url pInfo action = do
 
 createSession :: Client -> IO ()
 createSession client = do
-    ersp <- Rpc.callRpc (clientRpcClient client)
-                       "create_session"
-                       [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo client
-                       , M.ObjectStr apiVersion
-                       , M.ObjectStr agentName
-                       ]
+    ersp <- Rpc.call (clientRpcClient client)
+                     "create_session"
+                     [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo client
+                     , M.ObjectStr apiVersion
+                     , M.ObjectStr agentName
+                     ]
     case ersp of
         Right rsp -> case fromCreateSession rsp of
             Just user -> setMe client user
@@ -212,20 +212,20 @@ createSession client = do
 subscribeNotification :: Client -> IO ()
 subscribeNotification client = do
     let c = clientRpcClient client
-    void $ rethrowingException $ Rpc.callRpc c "reset_notification" []
-    void $ rethrowingException $ Rpc.callRpc c "start_notification" []
-    Right doms <- Rpc.callRpc c "get_domains" []
+    void $ rethrowingException $ Rpc.call c "reset_notification" []
+    void $ rethrowingException $ Rpc.call c "start_notification" []
+    Right doms <- Rpc.call c "get_domains" []
     setDomains client $ fromGetDomains doms
-    void $ rethrowingException $ Rpc.callRpc c "get_domain_invites" []
-    void $ rethrowingException $ Rpc.callRpc c "get_account_control_requests" []
-    void $ rethrowingException $ Rpc.callRpc c "get_joined_account_control_group" []
-    void $ rethrowingException $ Rpc.callRpc c "get_announcement_statuses" []
-    void $ rethrowingException $ Rpc.callRpc c "get_friends" []
-    Right acq <- Rpc.callRpc c "get_acquaintances" []
+    void $ rethrowingException $ Rpc.call c "get_domain_invites" []
+    void $ rethrowingException $ Rpc.call c "get_account_control_requests" []
+    void $ rethrowingException $ Rpc.call c "get_joined_account_control_group" []
+    void $ rethrowingException $ Rpc.call c "get_announcement_statuses" []
+    void $ rethrowingException $ Rpc.call c "get_friends" []
+    Right acq <- Rpc.call c "get_acquaintances" []
     setUsers client $ fromGetAcquaintances acq
-    Right talks <- Rpc.callRpc c "get_talks" []
+    Right talks <- Rpc.call c "get_talks" []
     setTalkRooms client $ fromGetTalks talks
-    void $ rethrowingException $ Rpc.callRpc c "get_talk_statuses" []
+    void $ rethrowingException $ Rpc.call c "get_talk_statuses" []
 
 rethrowingException :: IO (Either M.Object M.Object) -> IO M.Object
 rethrowingException action = do
@@ -237,14 +237,14 @@ rethrowingException action = do
 ----------------------------------------------------------------
 
 sendAck :: Rpc.Client -> R.MessageId -> IO ()
-sendAck rpcClient mid = Rpc.replyRpc rpcClient mid $ Right $ M.ObjectBool True
+sendAck rpcClient mid = Rpc.reply rpcClient mid $ Right $ M.ObjectBool True
 
 ----------------------------------------------------------------
 
 sendMessage :: Client -> Message -> Aux -> IO MessageId
 sendMessage client req aux = do
     let obj = encodeMessage req aux
-    ersp <- Rpc.callRpc (clientRpcClient client) "create_message" obj
+    ersp <- Rpc.call (clientRpcClient client) "create_message" obj
     case ersp of
         Right (M.ObjectMap rsp) ->
             case lookup (M.ObjectStr "message_id") rsp of

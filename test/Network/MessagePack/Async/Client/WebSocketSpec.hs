@@ -38,7 +38,7 @@ instance FromEnv PortNumber where
 
 
 spec :: Spec
-spec = describe "callRpc" $ do
+spec = describe "call" $ do
     Right (PortNumber pn) <- runIO decodeEnv
 
     let host = "localhost"
@@ -49,7 +49,7 @@ spec = describe "callRpc" $ do
 
     before_ (Skews.reinit server) $ do
         it
-                "when several threads callRpc, every thread should receive corresponding response"
+                "when several threads call, every thread should receive corresponding response"
             $ do
                   Skews.setDefaultRequestHandler server $ \bin -> do
                       rpcMsg <- MsgPack.unpack bin
@@ -69,7 +69,7 @@ spec = describe "callRpc" $ do
 
                   actualResponses <- withClient $ \client ->
                       forConcurrently requestIds
-                          $ Rpc.callRpc client "someMethod"
+                          $ Rpc.call client "someMethod"
                           . (: [])
                           . MsgPack.ObjectWord
                   actualResponses `shouldBe` expectedResponses
@@ -83,7 +83,7 @@ spec = describe "callRpc" $ do
                   actualResponse <-
                       async
                       $ withClient
-                      $ \client -> Rpc.callRpc client
+                      $ \client -> Rpc.call client
                                                "someMethod"
                                                [MsgPack.ObjectStr "request"]
                   threadDelay $ 50 * 1000 -- Wait until connection is established

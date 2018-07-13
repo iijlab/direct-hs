@@ -17,8 +17,8 @@ module Network.MessagePack.Async.Client
   , withClient
     -- * Call and reply
   , Result
-  , callRpc
-  , replyRpc
+  , call
+  , reply
   ) where
 
 import           Control.Concurrent      (forkIO, killThread)
@@ -103,8 +103,8 @@ data Backend = Backend {
 
 -- TODO: Returns any exception
 -- | Calling RPC.
-callRpc :: Client -> MethodName -> [MsgPack.Object] -> IO Result
-callRpc client funName args = do
+call :: Client -> MethodName -> [MsgPack.Object] -> IO Result
+call client funName args = do
     rrsp <- E.bracket register unregister sendAndRecv
     case rrsp of
         Nothing  -> return $ Left MsgPack.ObjectNil
@@ -126,8 +126,8 @@ callRpc client funName args = do
     ss = clientSessionState client
 
 -- | Replying RPC. This should be used in 'RequestHandler'.
-replyRpc :: Client -> MessageId -> Result -> IO ()
-replyRpc client mid result = do
+reply :: Client -> MessageId -> Result -> IO ()
+reply client mid result = do
     let response = ResponseMessage mid result
     let p        = BL.toStrict $ MsgPack.pack response
     backendSend (clientBackend client) p
