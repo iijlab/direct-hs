@@ -58,7 +58,7 @@ import qualified Data.Char                        as Char
 import qualified Data.IORef                       as I
 import           Data.List                        (elemIndex)
 import qualified Data.HashMap.Strict              as HM
-import           Data.Maybe                       (catMaybes)
+import           Data.Maybe                       (mapMaybe)
 import qualified Data.MessagePack                 as M
 import qualified Data.Text                        as T
 import           Data.Typeable                    (Typeable)
@@ -245,14 +245,14 @@ decodeMessage rspinfo = do
             M.ObjectMap m <- look "content" rspinfo
             ttl           <- look "title" m >>= M.fromObject
             cls'          <- look "closing_type" m >>= M.fromObject
-            let cls = if cls' == (1 :: Word64) then True else False
+            let cls = cls' == (1 :: Word64)
             Just (TaskQ ttl cls, aux)
         M.ObjectWord 505 -> do
             M.ObjectMap m <- look "content" rspinfo
             ttl           <- look "title" m >>= M.fromObject
             cls'          <- look "closing_type" m >>= M.fromObject
             don           <- look "done" m >>= M.fromObject
-            let cls = if cls' == (1 :: Word64) then True else False
+            let cls = cls' == (1 :: Word64)
             Just (TaskA ttl cls don, aux)
         _ -> Just (Other $ T.pack $ show rspinfo, aux)
 
@@ -338,7 +338,7 @@ fromCreateSession _ = Nothing
 
 fromGetAcquaintances :: M.Object -> [User]
 fromGetAcquaintances (M.ObjectArray [M.ObjectArray [M.ObjectWord _domain, M.ObjectArray users]]) =
-    catMaybes $ map decodeUser users
+    mapMaybe decodeUser users
 fromGetAcquaintances _ = []
 
 decodeUser :: M.Object -> Maybe User
@@ -352,7 +352,7 @@ decodeUser (M.ObjectMap user) = do
 decodeUser _ = Nothing
 
 fromGetDomains :: M.Object -> [Domain]
-fromGetDomains (M.ObjectArray arr) = catMaybes $ map decodeDomain arr
+fromGetDomains (M.ObjectArray arr) = mapMaybe decodeDomain arr
 fromGetDomains _ = []
 
 decodeDomain :: M.Object -> Maybe Domain
@@ -364,7 +364,7 @@ decodeDomain (M.ObjectMap m) = do
 decodeDomain _ = Nothing
 
 fromGetTalks :: M.Object -> [TalkRoom]
-fromGetTalks (M.ObjectArray arr) = catMaybes $ map decodeTalkRoom arr
+fromGetTalks (M.ObjectArray arr) = mapMaybe decodeTalkRoom arr
 fromGetTalks _ = []
 
 decodeTalkRoom :: M.Object -> Maybe TalkRoom
@@ -377,7 +377,7 @@ decodeTalkRoom (M.ObjectMap m) = do
                 _                        -> error "decodeTalkRoom"
             | otherwise = UnknownTalk
     M.ObjectArray uids <- look "user_ids" m
-    let userIds = catMaybes $ map extract uids
+    let userIds = mapMaybe extract uids
     Just $ TalkRoom tid typ userIds
   where
     extract (M.ObjectWord uid) = Just uid
@@ -416,9 +416,7 @@ recv :: Channel -> IO (Message, Aux)
 recv (Channel var _ _) = C.takeMVar var
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
-findChannel client aux = do
-    chans <- I.readIORef ref
-    return $ HM.lookup key chans
+findChannel client aux = HM.lookup key <$> I.readIORef ref
   where
     ref = clientChannels client
     key = fromAux aux
