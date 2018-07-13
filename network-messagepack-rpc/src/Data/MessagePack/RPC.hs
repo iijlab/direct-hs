@@ -7,6 +7,7 @@ module Data.MessagePack.RPC (
   ) where
 
 import           Data.MessagePack (MessagePack (..), Object (..))
+import           Data.List        (intercalate)
 import qualified Data.Text        as T
 import           Data.Word        (Word64)
 
@@ -25,7 +26,7 @@ data Message =
     | ResponseMessage MessageId (Either Object Object)
     -- | Notification.
     | NotificationMessage MethodName [Object]
-  deriving (Eq, Show)
+  deriving Eq
 
 instance MessagePack Message where
   toObject (RequestMessage mid methodName args) =
@@ -99,3 +100,30 @@ instance MessagePack Message where
 
   fromObject other =
     fail $ "Unexpected object:" ++ show other
+
+instance Show Message where
+  show (RequestMessage mid method objs) =
+      "request(" ++ show mid ++ ") " ++ T.unpack method ++ " " ++ showObjs objs
+  show (ResponseMessage mid (Left  obj)) =
+      "response error(" ++ show mid ++ ") " ++ showObj obj
+  show (ResponseMessage mid (Right obj)) =
+      "response(" ++ show mid ++ ") " ++ showObj obj
+  show (NotificationMessage method objs) =
+      "notification " ++ T.unpack method ++ " " ++ showObjs objs
+
+showObjs :: [Object] -> String
+showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
+
+showObj :: Object -> String
+showObj (ObjectWord w)  = "+" ++ show w
+showObj (ObjectInt  n)  = show n
+showObj ObjectNil       = "nil"
+showObj (ObjectBool  b) = show b
+showObj (ObjectStr   s) = "\"" ++ T.unpack s ++ "\""
+showObj (ObjectArray v) = "[" ++ intercalate "," (map showObj v) ++ "]"
+showObj (ObjectMap   m) = "{" ++ intercalate "," (map showPair m) ++ "}"
+    where showPair (x, y) = "(" ++ showObj x ++ "," ++ showObj y ++ ")"
+showObj (ObjectBin _   ) = error "ObjectBin"
+showObj (ObjectExt _ _ ) = error "ObjectExt"
+showObj (ObjectFloat  _) = error "ObjectFloat"
+showObj (ObjectDouble _) = error "ObjectDouble"
