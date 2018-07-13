@@ -18,8 +18,8 @@ library
   ghc-options: -Wall
   exposed-modules: Web.Direct
                  , Data.MessagePack.RPC
-                 , Network.MessagePack.Async.Client
-                 , Network.MessagePack.Async.Client.WebSocket
+                 , Network.MessagePack.RPC.Client
+                 , Network.MessagePack.RPC.Client.WebSocket
   other-modules:   Web.Direct.Types
   build-depends:
       base >= 4.7 && < 5
@@ -58,7 +58,7 @@ test-suite direct-hs-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  other-modules:       Network.MessagePack.Async.Client.WebSocketSpec
+  other-modules:       Network.MessagePack.RPC.Client.WebSocketSpec
   build-depends:       base
     , direct-hs
     , QuickCheck

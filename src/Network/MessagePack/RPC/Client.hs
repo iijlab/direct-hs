@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | MessagePack RPC Client.
-module Network.MessagePack.Async.Client
+module Network.MessagePack.RPC.Client
   (
     -- * Config
     Config(..)

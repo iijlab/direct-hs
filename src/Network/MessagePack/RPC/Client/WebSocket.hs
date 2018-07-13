@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | MessagePack RPC Client based on WebSocket.
-module Network.MessagePack.Async.Client.WebSocket (
+module Network.MessagePack.RPC.Client.WebSocket (
     withClient
   , URL
-  , module Network.MessagePack.Async.Client
+  , module Network.MessagePack.RPC.Client
   ) where
 
 import qualified Data.Text                        as T
 import qualified Network.WebSockets.Client        as Ws
 
-import           Network.MessagePack.Async.Client hiding (withClient)
-import qualified Network.MessagePack.Async.Client as RPC (withClient)
+import           Network.MessagePack.RPC.Client hiding (withClient)
+import qualified Network.MessagePack.RPC.Client as RPC (withClient)
 
 type URL = String
 

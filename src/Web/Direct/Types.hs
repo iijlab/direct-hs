@@ -65,7 +65,7 @@ import           Data.Typeable                    (Typeable)
 import           Data.Word                        (Word64)
 import           GHC.Generics                     (Generic)
 
-import qualified Network.MessagePack.Async.Client.WebSocket as RPC
+import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 ----------------------------------------------------------------
 

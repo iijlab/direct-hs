@@ -72,7 +72,7 @@ import qualified Data.Text                                  as T
 import qualified Data.UUID                                  as Uuid
 import qualified System.Random.MWC                          as Random
 
-import qualified Network.MessagePack.Async.Client.WebSocket as RPC
+import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
