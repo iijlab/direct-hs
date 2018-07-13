@@ -7,7 +7,7 @@ module Web.Direct
   , defaultConfig
   -- * Login
   , login
-  , Rpc.URL
+  , RPC.URL
   -- * Client
   , Client
   , withClient
@@ -72,15 +72,15 @@ import qualified Data.Text                                  as T
 import qualified Data.UUID                                  as Uuid
 import qualified System.Random.MWC                          as Random
 
-import qualified Network.MessagePack.Async.Client.WebSocket as Rpc
+import qualified Network.MessagePack.Async.Client.WebSocket as RPC
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
 
 data Config = Config {
     directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
-  , directLogger               :: Rpc.Logger
-  , directFormatter            :: Rpc.Formatter
+  , directLogger               :: RPC.Logger
+  , directFormatter            :: RPC.Formatter
   }
 
 -- | The default configuration.
@@ -97,15 +97,15 @@ defaultConfig = Config
 ----------------------------------------------------------------
 
 login :: Config
-      -> Rpc.URL
+      -> RPC.URL
       -> T.Text -- ^ Login email address for direct.
       -> T.Text -- ^ Login password for direct.
       -> IO (Either Exception Client)
-login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
+login config url email pass = RPC.withClient url rpcConfig $ \client -> do
     idfv <- genIdfv
 
     let magicConstant = M.ObjectStr ""
-    res <- Rpc.call
+    res <- RPC.call
         client
         "create_access_token"
         [ M.ObjectStr email
@@ -120,15 +120,15 @@ login config url email pass = Rpc.withClient url rpcConfig $ \client -> do
         Right other -> return $ Left $ UnexpectedReponse other
         Left  e     -> return $ Left e
   where
-    rpcConfig = Rpc.defaultConfig
-        { Rpc.requestHandler = \rpcClient mid _method _objs ->
+    rpcConfig = RPC.defaultConfig
+        { RPC.requestHandler = \rpcClient mid _method _objs ->
              -- sending ACK always
             sendAck rpcClient mid
-        , Rpc.logger         = directLogger config
-        , Rpc.formatter      = directFormatter config
+        , RPC.logger         = directLogger config
+        , RPC.formatter      = directFormatter config
         }
 
-extractResult :: Rpc.Result -> Either Exception M.Object
+extractResult :: RPC.Result -> Either Exception M.Object
 extractResult = fmapL $ \case
     err@(M.ObjectMap errorMap) ->
         let isInvalidEP = lookup (M.ObjectStr "message") errorMap
@@ -159,18 +159,18 @@ apiVersion = "1.91"
 
 ----------------------------------------------------------------
 
-withClient :: Config -> Rpc.URL -> PersistedInfo -> (Client -> IO a) -> IO a
+withClient :: Config -> RPC.URL -> PersistedInfo -> (Client -> IO a) -> IO a
 withClient config url pInfo action = do
     ref <- I.newIORef Nothing
-    Rpc.withClient url (rpcConfig ref) $ \rpcClient -> do
+    RPC.withClient url (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
         createSession client
         subscribeNotification client
         action client
   where
-    rpcConfig ref = Rpc.defaultConfig
-        { Rpc.requestHandler = \rpcClient mid method objs -> do
+    rpcConfig ref = RPC.defaultConfig
+        { RPC.requestHandler = \rpcClient mid method objs -> do
              -- sending ACK always
             sendAck rpcClient mid
             Just client <- I.readIORef ref
@@ -188,13 +188,13 @@ withClient config url pInfo action = do
                             Nothing   -> directCreateMessageHandler config client msg aux
                     _ -> return ()
                 _ -> return ()
-        , Rpc.logger         = directLogger config
-        , Rpc.formatter      = directFormatter config
+        , RPC.logger         = directLogger config
+        , RPC.formatter      = directFormatter config
         }
 
 createSession :: Client -> IO ()
 createSession client = do
-    ersp <- Rpc.call (clientRpcClient client)
+    ersp <- RPC.call (clientRpcClient client)
                      "create_session"
                      [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo client
                      , M.ObjectStr apiVersion
@@ -209,20 +209,20 @@ createSession client = do
 subscribeNotification :: Client -> IO ()
 subscribeNotification client = do
     let c = clientRpcClient client
-    void $ rethrowingException $ Rpc.call c "reset_notification" []
-    void $ rethrowingException $ Rpc.call c "start_notification" []
-    Right doms <- Rpc.call c "get_domains" []
+    void $ rethrowingException $ RPC.call c "reset_notification" []
+    void $ rethrowingException $ RPC.call c "start_notification" []
+    Right doms <- RPC.call c "get_domains" []
     setDomains client $ fromGetDomains doms
-    void $ rethrowingException $ Rpc.call c "get_domain_invites" []
-    void $ rethrowingException $ Rpc.call c "get_account_control_requests" []
-    void $ rethrowingException $ Rpc.call c "get_joined_account_control_group" []
-    void $ rethrowingException $ Rpc.call c "get_announcement_statuses" []
-    void $ rethrowingException $ Rpc.call c "get_friends" []
-    Right acq <- Rpc.call c "get_acquaintances" []
+    void $ rethrowingException $ RPC.call c "get_domain_invites" []
+    void $ rethrowingException $ RPC.call c "get_account_control_requests" []
+    void $ rethrowingException $ RPC.call c "get_joined_account_control_group" []
+    void $ rethrowingException $ RPC.call c "get_announcement_statuses" []
+    void $ rethrowingException $ RPC.call c "get_friends" []
+    Right acq <- RPC.call c "get_acquaintances" []
     setUsers client $ fromGetAcquaintances acq
-    Right talks <- Rpc.call c "get_talks" []
+    Right talks <- RPC.call c "get_talks" []
     setTalkRooms client $ fromGetTalks talks
-    void $ rethrowingException $ Rpc.call c "get_talk_statuses" []
+    void $ rethrowingException $ RPC.call c "get_talk_statuses" []
 
 rethrowingException :: IO (Either M.Object M.Object) -> IO M.Object
 rethrowingException action = do
@@ -233,15 +233,15 @@ rethrowingException action = do
 
 ----------------------------------------------------------------
 
-sendAck :: Rpc.Client -> R.MessageId -> IO ()
-sendAck rpcClient mid = Rpc.reply rpcClient mid $ Right $ M.ObjectBool True
+sendAck :: RPC.Client -> R.MessageId -> IO ()
+sendAck rpcClient mid = RPC.reply rpcClient mid $ Right $ M.ObjectBool True
 
 ----------------------------------------------------------------
 
 sendMessage :: Client -> Message -> Aux -> IO MessageId
 sendMessage client req aux = do
     let obj = encodeMessage req aux
-    ersp <- Rpc.call (clientRpcClient client) "create_message" obj
+    ersp <- RPC.call (clientRpcClient client) "create_message" obj
     case ersp of
         Right (M.ObjectMap rsp) ->
             case lookup (M.ObjectStr "message_id") rsp of

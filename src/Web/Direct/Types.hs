@@ -65,14 +65,14 @@ import           Data.Typeable                    (Typeable)
 import           Data.Word                        (Word64)
 import           GHC.Generics                     (Generic)
 
-import qualified Network.MessagePack.Async.Client as Rpc
+import qualified Network.MessagePack.Async.Client.WebSocket as RPC
 
 ----------------------------------------------------------------
 
 -- | Direct client.
 data Client = Client {
     clientPersistedInfo :: !PersistedInfo
-  , clientRpcClient     :: !Rpc.Client
+  , clientRpcClient     :: !RPC.Client
   , clientDomains       :: I.IORef [Domain]
   , clientTalkRooms     :: I.IORef [TalkRoom]
   , clientMe            :: I.IORef (Maybe User)
@@ -104,7 +104,7 @@ setUsers client users = I.writeIORef (clientUsers client) users
 getUsers :: Client -> IO [User]
 getUsers client = I.readIORef (clientUsers client)
 
-newClient :: PersistedInfo -> Rpc.Client -> IO Client
+newClient :: PersistedInfo -> RPC.Client -> IO Client
 newClient pinfo rpcClient =
     Client pinfo rpcClient <$> I.newIORef []
                            <*> I.newIORef []

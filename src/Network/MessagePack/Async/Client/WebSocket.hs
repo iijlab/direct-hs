@@ -11,7 +11,7 @@ import qualified Data.Text                        as T
 import qualified Network.WebSockets.Client        as Ws
 
 import           Network.MessagePack.Async.Client hiding (withClient)
-import qualified Network.MessagePack.Async.Client as Rpc (withClient)
+import qualified Network.MessagePack.Async.Client as RPC (withClient)
 
 type URL = String
 
@@ -26,4 +26,4 @@ withClient url config action = Ws.withConnection url $ \conn -> do
     let backend = Backend (Ws.sendBinaryData conn)
                           (Ws.receiveData conn)
                           (Ws.sendClose conn ("Bye!" :: T.Text))
-    Rpc.withClient config backend action
+    RPC.withClient config backend action
