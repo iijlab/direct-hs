@@ -27,6 +27,7 @@ import qualified Network.WebSockets.Client        as Ws
 import           Network.MessagePack.RPC.Client hiding (withClient)
 import qualified Network.MessagePack.RPC.Client as RPC (withClient)
 
+-- | URL for websocket end points.
 type URL = String
 
 -- | Executing the action in the 3rd argument with a 'Client'.
