@@ -2,9 +2,23 @@
 
 -- | MessagePack RPC Client based on WebSocket.
 module Network.MessagePack.RPC.Client.WebSocket (
-    withClient
+    -- * Config
+    Config(..)
+  , NotificationHandler
+  , RequestHandler
+  , Logger
+  , Formatter
+  , defaultConfig
+    -- * Backend
+  , Backend(..)
+    -- * Client
   , URL
-  , module Network.MessagePack.RPC.Client
+  , Client
+  , withClient
+    -- * Call and reply
+  , Result
+  , call
+  , reply
   ) where
 
 import qualified Data.Text                        as T
