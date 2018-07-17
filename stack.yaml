@@ -43,10 +43,8 @@ extra-deps:
 - http-client-0.5.13
 - wss-client-0.2.1.0
 - skews-0.1.0.1
-- git: https://github.com/iij-ii/messagepack-rpc.git
-  commit: befce225ae841324c4ec406a43f6964dabaf3f26
-- git: https://github.com/iij-ii/messagepack-rpc-websocket.git
-  commit: fa9fa236c22af781b8431e466fa4fa377962a878
+- network-messagepack-rpc-0.1.0.0
+- network-messagepack-rpc-websocket-0.1.0.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
