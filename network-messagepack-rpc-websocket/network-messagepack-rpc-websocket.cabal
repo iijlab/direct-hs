@@ -1,8 +1,8 @@
-name:                messagepack-rpc-websocket
+name:                network-messagepack-rpc-websocket
 version:             0.1.0.0
 synopsis:            WebSocket backend for MessagePack RPC
-description:         WebSocket backend for "messagepack-rpc"
-homepage:            https://github.com/iij-ii/messagepack-rpc-websocket
+description:         WebSocket backend for "network-messagepack-rpc"
+homepage:            https://github.com/iij-ii/network-messagepack-rpc-websocket
 license:             BSD3
 license-file:        LICENSE
 author:              Yuji Yamamoto and Kazu Yamamoto
@@ -18,7 +18,7 @@ library
   exposed-modules: Network.MessagePack.RPC.Client.WebSocket
   build-depends:
       base >= 4.7 && < 5
-    , messagepack-rpc
+    , network-messagepack-rpc
     , text
     , websockets
     , wss-client >= 0.2
@@ -36,8 +36,8 @@ test-suite spec
     , data-msgpack
     , envy
     , hspec
-    , messagepack-rpc
-    , messagepack-rpc-websocket
+    , network-messagepack-rpc
+    , network-messagepack-rpc-websocket
     , skews
     , text
     , wss-client
@@ -46,4 +46,4 @@ test-suite spec
 
 source-repository head
   type:     git
-  location: https://github.com/iij-ii/messagepack-rpc-websocket
+  location: https://github.com/iij-ii/network-messagepack-rpc-websocket
