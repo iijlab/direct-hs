@@ -25,7 +25,7 @@ handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
 handleCreateMessage client (D.Txt "ping") aux =
     void $ D.sendMessage client (D.Txt "pong") aux
 handleCreateMessage client (D.Txt "stamp") aux =
-    void $ D.sendMessage client (D.Stamp 3 1152921507291204297) aux
+    void $ D.sendMessage client (D.Stamp 3 1152921507291204297 (Just "スタンプ！")) aux
 handleCreateMessage client (D.Txt "yesno") aux =
     void $ D.sendMessage client (D.YesNoQ "お元気ですか？") aux
 handleCreateMessage client (D.Txt "select") aux =
