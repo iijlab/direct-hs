@@ -81,27 +81,29 @@ data Config = Config {
     directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
   , directLogger               :: RPC.Logger
   , directFormatter            :: RPC.Formatter
+  , directEndpointUrl          :: RPC.URL -- Endpoint URL for direct WebSocket API.
   }
 
 -- | The default configuration.
 --   'RequestHandler' automatically replies ACK.
 --   'NotificationHandler' and 'logger' do nothing.
 --   'formatter' is 'show'.
+--   'endpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
 defaultConfig :: Config
 defaultConfig = Config
     { directCreateMessageHandler = \_ _ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
+    , directEndpointUrl          = "wss://api.direct4b.com/albero-app-server/api"
     }
 
 ----------------------------------------------------------------
 
 login :: Config
-      -> RPC.URL
       -> T.Text -- ^ Login email address for direct.
       -> T.Text -- ^ Login password for direct.
       -> IO (Either Exception Client)
-login config url email pass = RPC.withClient url rpcConfig $ \client -> do
+login config email pass = RPC.withClient (directEndpointUrl config) rpcConfig $ \client -> do
     idfv <- genIdfv
 
     let magicConstant = M.ObjectStr ""
@@ -159,10 +161,10 @@ apiVersion = "1.91"
 
 ----------------------------------------------------------------
 
-withClient :: Config -> RPC.URL -> PersistedInfo -> (Client -> IO a) -> IO a
-withClient config url pInfo action = do
+withClient :: Config -> PersistedInfo -> (Client -> IO a) -> IO a
+withClient config pInfo action = do
     ref <- I.newIORef Nothing
-    RPC.withClient url (rpcConfig ref) $ \rpcClient -> do
+    RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
         createSession client
