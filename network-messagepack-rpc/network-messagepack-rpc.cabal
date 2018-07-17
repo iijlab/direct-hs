@@ -9,7 +9,6 @@ author:              Yuji Yamamoto and Kazu Yamamoto
 maintainer:          yuji-yamamoto@iij.ad.jp, kazu@iij.ad.jp
 category:            Data Network
 build-type:          Simple
-extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
