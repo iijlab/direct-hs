@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Web.Direct
   (
@@ -62,15 +62,15 @@ module Web.Direct
   , Exception(..)
   ) where
 
-import           Control.Error                              (fmapL)
-import qualified Control.Exception                          as E
-import           Control.Monad                              (void, when)
-import qualified Data.IORef                                 as I
-import qualified Data.MessagePack                           as M
-import qualified Data.MessagePack.RPC                       as R
-import qualified Data.Text                                  as T
-import qualified Data.UUID                                  as Uuid
-import qualified System.Random.MWC                          as Random
+import           Control.Error                            (fmapL)
+import qualified Control.Exception                        as E
+import           Control.Monad                            (void, when)
+import qualified Data.IORef                               as I
+import qualified Data.MessagePack                         as M
+import qualified Data.MessagePack.RPC                     as R
+import qualified Data.Text                                as T
+import qualified Data.UUID                                as Uuid
+import qualified System.Random.MWC                        as Random
 
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import           Web.Direct.Types

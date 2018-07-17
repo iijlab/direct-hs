@@ -42,19 +42,19 @@ main = join $ Opt.execParser optionsInfo
             $  Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
             <> Opt.command
                    "send"
-                   (Opt.info
+                   ( Opt.info
                        (   sendText
                        <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        )
-                       (Opt.fullDesc <> Opt.progDesc
+                       ( Opt.fullDesc <> Opt.progDesc
                            "Send a message from stdin as the logged-in user."
                        )
                    )
             <> Opt.command
                    "observe"
-                   (Opt.info
+                   ( Opt.info
                        (pure observe)
-                       (Opt.fullDesc <> Opt.progDesc
+                       ( Opt.fullDesc <> Opt.progDesc
                            "Observe all messages for the logged-in user."
                        )
                    )
@@ -106,7 +106,7 @@ login = do
 
     eclient <- D.login D.defaultConfig url (directEmailAddress e) (directPassword e)
     case eclient of
-        Left _       -> putStrLn "Logged failed,"
+        Left  _      -> putStrLn "Logged failed,"
         Right client -> do
             putStrLn "Successfully logged in."
 
@@ -114,7 +114,10 @@ login = do
                 $ D.serializePersistedInfo
                 $ D.clientPersistedInfo client
             cd <- Dir.getCurrentDirectory
-            putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
+            putStrLn
+                $  "Saved access token at '"
+                ++ (cd </> jsonFileName)
+                ++ "'."
 
 sendText :: D.TalkId -> IO ()
 sendText tid = do
