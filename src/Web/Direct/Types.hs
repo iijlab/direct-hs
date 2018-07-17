@@ -173,7 +173,7 @@ data TalkRoom = TalkRoom {
 data Message =
     Txt       !T.Text
   | Location  !T.Text !T.Text -- Address, GoogleMap URL
-  | Stamp     !Word64 !Word64
+  | Stamp     !Word64 !Word64 !(Maybe T.Text)
   | YesNoQ    !T.Text
   | YesNoA    !T.Text Bool
   | SelectQ   !T.Text ![T.Text]
@@ -219,7 +219,8 @@ decodeMessage rspinfo = do
         M.ObjectWord 2 -> do
             set <- look "stamp_set" rspinfo >>= M.fromObject
             idx <- look "stamp_index" rspinfo >>= M.fromObject
-            Just (Stamp set idx, aux)
+            let txt = look "text" rspinfo >>= M.fromObject
+            Just (Stamp set idx txt, aux)
         M.ObjectWord 500 -> do
             M.ObjectMap m <- look "content" rspinfo
             qst           <- look "question" m >>= M.fromObject
@@ -262,12 +263,21 @@ encodeMessage :: Message -> Aux -> [M.Object]
 encodeMessage (Txt text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 encodeMessage (Location addr url) (Aux tid _ _) =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr (T.unlines ["今ココ：",addr,url])]
-encodeMessage (Stamp set idx) (Aux tid _ _) =
+encodeMessage (Stamp set idx Nothing) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 2
     , M.ObjectMap
         [ (M.ObjectStr "stamp_set"  , M.ObjectWord set)
         , (M.ObjectStr "stamp_index", M.ObjectWord idx)
+        ]
+    ]
+encodeMessage (Stamp set idx (Just txt)) (Aux tid _ _) =
+    [ M.ObjectWord tid
+    , M.ObjectWord 2
+    , M.ObjectMap
+        [ (M.ObjectStr "stamp_set"  , M.ObjectWord set)
+        , (M.ObjectStr "stamp_index", M.ObjectWord idx)
+        , (M.ObjectStr "text", M.ObjectStr txt)
         ]
     ]
 encodeMessage (YesNoQ qst) (Aux tid _ _) =
