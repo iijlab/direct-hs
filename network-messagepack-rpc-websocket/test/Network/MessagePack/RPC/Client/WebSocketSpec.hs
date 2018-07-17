@@ -86,7 +86,7 @@ spec = describe "call" $ do
                       $ \client -> Rpc.call client
                                                "someMethod"
                                                [MsgPack.ObjectStr "request"]
-                  threadDelay $ 50 * 1000 -- Wait until connection is established
+                  threadDelay $ 1000 * 1000 -- Wait until connection is established
                   Skews.sendToClients server
                       $ MsgPack.pack
                       $ Rpc.ResponseMessage midNotSentByClient
