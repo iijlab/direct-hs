@@ -81,44 +81,48 @@ data Config = Config {
     directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
   , directLogger               :: RPC.Logger
   , directFormatter            :: RPC.Formatter
+  , directEndpointUrl          :: RPC.URL -- Endpoint URL for direct WebSocket API.
   }
 
 -- | The default configuration.
 --   'RequestHandler' automatically replies ACK.
 --   'NotificationHandler' and 'logger' do nothing.
 --   'formatter' is 'show'.
+--   'endpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
 defaultConfig :: Config
 defaultConfig = Config
     { directCreateMessageHandler = \_ _ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
+    , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
     }
 
 ----------------------------------------------------------------
 
-login :: Config
-      -> RPC.URL
-      -> T.Text -- ^ Login email address for direct.
-      -> T.Text -- ^ Login password for direct.
-      -> IO (Either Exception Client)
-login config url email pass = RPC.withClient url rpcConfig $ \client -> do
-    idfv <- genIdfv
+login
+    :: Config
+    -> T.Text -- ^ Login email address for direct.
+    -> T.Text -- ^ Login password for direct.
+    -> IO (Either Exception Client)
+login config email pass =
+    RPC.withClient (directEndpointUrl config) rpcConfig $ \client -> do
+        idfv <- genIdfv
 
-    let magicConstant = M.ObjectStr ""
-    res <- RPC.call
-        client
-        "create_access_token"
-        [ M.ObjectStr email
-        , M.ObjectStr pass
-        , M.ObjectStr idfv
-        , M.ObjectStr agentName
-        , magicConstant
-        ]
-    case extractResult res of
-        Right (M.ObjectStr token) ->
-            Right <$> newClient (PersistedInfo token idfv) client
-        Right other -> return $ Left $ UnexpectedReponse other
-        Left  e     -> return $ Left e
+        let magicConstant = M.ObjectStr ""
+        res <- RPC.call
+            client
+            "create_access_token"
+            [ M.ObjectStr email
+            , M.ObjectStr pass
+            , M.ObjectStr idfv
+            , M.ObjectStr agentName
+            , magicConstant
+            ]
+        case extractResult res of
+            Right (M.ObjectStr token) ->
+                Right <$> newClient (PersistedInfo token idfv) client
+            Right other -> return $ Left $ UnexpectedReponse other
+            Left  e     -> return $ Left e
   where
     rpcConfig = RPC.defaultConfig
         { RPC.requestHandler = \rpcClient mid _method _objs ->
@@ -159,10 +163,10 @@ apiVersion = "1.91"
 
 ----------------------------------------------------------------
 
-withClient :: Config -> RPC.URL -> PersistedInfo -> (Client -> IO a) -> IO a
-withClient config url pInfo action = do
+withClient :: Config -> PersistedInfo -> (Client -> IO a) -> IO a
+withClient config pInfo action = do
     ref <- I.newIORef Nothing
-    RPC.withClient url (rpcConfig ref) $ \rpcClient -> do
+    RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
         createSession client
@@ -176,16 +180,16 @@ withClient config url pInfo action = do
             Just client <- I.readIORef ref
             -- fixme: "notify_update_domain_users"
             -- fixme: "notify_update_read_statuses"
-            Just me <- getMe client
+            Just me     <- getMe client
             let myid = userId me
             when (method == "notify_create_message") $ case objs of
                 M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                    Just (msg, aux@(Aux _ _ uid))
-                      | uid /= myid -> do
+                    Just (msg, aux@(Aux _ _ uid)) | uid /= myid -> do
                         echan <- findChannel client aux
                         case echan of
                             Just chan -> dispatch chan msg aux
-                            Nothing   -> directCreateMessageHandler config client msg aux
+                            Nothing ->
+                                directCreateMessageHandler config client msg aux
                     _ -> return ()
                 _ -> return ()
         , RPC.logger         = directLogger config
@@ -194,17 +198,19 @@ withClient config url pInfo action = do
 
 createSession :: Client -> IO ()
 createSession client = do
-    ersp <- RPC.call (clientRpcClient client)
-                     "create_session"
-                     [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo client
-                     , M.ObjectStr apiVersion
-                     , M.ObjectStr agentName
-                     ]
+    ersp <- RPC.call
+        (clientRpcClient client)
+        "create_session"
+        [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo
+            client
+        , M.ObjectStr apiVersion
+        , M.ObjectStr agentName
+        ]
     case ersp of
         Right rsp -> case fromCreateSession rsp of
             Just user -> setMe client user
             Nothing   -> return ()
-        _             -> return ()
+        _ -> return ()
 
 subscribeNotification :: Client -> IO ()
 subscribeNotification client = do
@@ -215,7 +221,9 @@ subscribeNotification client = do
     setDomains client $ fromGetDomains doms
     void $ rethrowingException $ RPC.call c "get_domain_invites" []
     void $ rethrowingException $ RPC.call c "get_account_control_requests" []
-    void $ rethrowingException $ RPC.call c "get_joined_account_control_group" []
+    void $ rethrowingException $ RPC.call c
+                                          "get_joined_account_control_group"
+                                          []
     void $ rethrowingException $ RPC.call c "get_announcement_statuses" []
     void $ rethrowingException $ RPC.call c "get_friends" []
     Right acq <- RPC.call c "get_acquaintances" []

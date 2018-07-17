@@ -42,19 +42,19 @@ main = join $ Opt.execParser optionsInfo
             $  Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
             <> Opt.command
                    "send"
-                   ( Opt.info
+                   (Opt.info
                        (   sendText
                        <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        )
-                       ( Opt.fullDesc <> Opt.progDesc
+                       (Opt.fullDesc <> Opt.progDesc
                            "Send a message from stdin as the logged-in user."
                        )
                    )
             <> Opt.command
                    "observe"
-                   ( Opt.info
+                   (Opt.info
                        (pure observe)
-                       ( Opt.fullDesc <> Opt.progDesc
+                       (Opt.fullDesc <> Opt.progDesc
                            "Observe all messages for the logged-in user."
                        )
                    )
@@ -104,7 +104,8 @@ login = do
     let url = directEndpointUrl e
     putStrLn $ "Parsed URL:" ++ show url
 
-    eclient <- D.login D.defaultConfig url (directEmailAddress e) (directPassword e)
+    let config = D.defaultConfig { D.directEndpointUrl = url }
+    eclient <- D.login config (directEmailAddress e) (directPassword e)
     case eclient of
         Left  _      -> putStrLn "Logged failed,"
         Right client -> do
@@ -125,8 +126,9 @@ sendText tid = do
     pInfo <-
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    let aux = D.defaultAux { D.auxTalkId = tid }
-    D.withClient D.defaultConfig url pInfo $ \client -> do
+    let aux    = D.defaultAux { D.auxTalkId = tid }
+        config = D.defaultConfig { D.directEndpointUrl = url }
+    D.withClient config pInfo $ \client -> do
         forM_ (TL.chunksOf 1024 txt)
             $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) aux
 
@@ -136,10 +138,10 @@ observe = do
         dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient
-        D.defaultConfig { D.directLogger    = putStrLn
-                        , D.directFormatter = showMsg
+        D.defaultConfig { D.directLogger      = putStrLn
+                        , D.directFormatter   = showMsg
+                        , D.directEndpointUrl = url
                         }
-        url
         pInfo
       -- `forever $ return ()` doesn't give up control flow to the receiver thread.
         (\_ -> forever $ threadDelay $ 10 * 1000)
