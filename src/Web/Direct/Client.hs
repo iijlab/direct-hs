@@ -48,7 +48,7 @@ type ChannelKey = (TalkId, UserId)
 
 data Channel = Channel (C.MVar (Either Control (Message, Aux))) (C.MVar ()) Client Aux
 
-data Control = Die Message
+newtype Control = Die Message
 
 ----------------------------------------------------------------
 
