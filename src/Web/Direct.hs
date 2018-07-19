@@ -268,12 +268,14 @@ sendMessage client req aux = do
 --   Then the third argument runs in a new thread with the channel.
 withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
 withChannel client aux body = do
-    chan <- newChannel client aux
-    void $ C.forkFinally (body chan) $ \_ -> freeChannel client aux
+    chan@(Channel _ fromWorker _ _) <- newChannel client aux
+    void $ C.forkFinally (body chan) $ \_ -> do
+        freeChannel client aux
+        C.putMVar fromWorker ()
 
 recv :: Channel -> IO (Message, Aux)
-recv (Channel var client aux) = do
-    cm <- C.takeMVar var
+recv (Channel toWorker _ client aux) = do
+    cm <- C.takeMVar toWorker
     case cm of
       Right msg -> return msg
       Left  (Die announce) -> do
@@ -281,10 +283,11 @@ recv (Channel var client aux) = do
           E.throwIO E.ThreadKilled
 
 send :: Channel -> Message -> IO MessageId
-send (Channel _ client aux) msg = sendMessage client msg aux
+send (Channel _ _ client aux) msg = sendMessage client msg aux
 
 shutdown :: Client -> Message -> IO ()
 shutdown client msg = do
     inactivate client
     chans <- allChannels client
     mapM_ (\chan -> control chan (Die msg)) chans
+    mapM_ wait chans

@@ -46,6 +46,7 @@ module Web.Direct.Types
   , allChannels
   , dispatch
   , control
+  , wait
   , findChannel
   , Control(..)
     --
@@ -416,15 +417,16 @@ type ChannelKey = (TalkId, UserId)
 
 data Control = Die Message
 
-data Channel = Channel (C.MVar (Either Control (Message, Aux))) Client Aux
+data Channel = Channel (C.MVar (Either Control (Message, Aux))) (C.MVar ()) Client Aux
 
 fromAux :: Aux -> ChannelKey
 fromAux (Aux tid _ uid) = (tid, uid)
 
 newChannel :: Client -> Aux -> IO Channel
 newChannel client aux = do
-    var <- C.newEmptyMVar
-    let chan = Channel var client aux
+    toWorker <- C.newEmptyMVar
+    fromWorker <- C.newEmptyMVar
+    let chan = Channel toWorker fromWorker client aux
     I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
     return chan
   where
@@ -443,10 +445,13 @@ allChannels client = HM.elems <$> I.readIORef ref
     ref = clientChannels client
 
 dispatch :: Channel -> Message -> Aux -> IO ()
-dispatch (Channel var _ _) msg aux = C.putMVar var $ Right (msg, aux)
+dispatch (Channel toWorker _ _ _) msg aux = C.putMVar toWorker $ Right (msg, aux)
 
 control :: Channel -> Control -> IO ()
-control (Channel var _ _) ctl = C.putMVar var $ Left ctl
+control (Channel toWorker _ _ _) ctl = C.putMVar toWorker $ Left ctl
+
+wait :: Channel -> IO ()
+wait (Channel _ fromWorker _ _) = C.takeMVar fromWorker
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
 findChannel client aux = HM.lookup key <$> I.readIORef ref
