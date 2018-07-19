@@ -2,7 +2,7 @@
 
 module Main (main) where
 
-import           Control.Concurrent     (threadDelay, forkIO)
+import           Control.Concurrent     (threadDelay)
 import           Control.Monad          (forever, void)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (find)
@@ -23,8 +23,7 @@ main = do
 
 handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
 handleCreateMessage client (D.Txt txt) aux
-  | "報告" `T.isInfixOf` txt =
-    void . forkIO $ D.withChannel client aux $ nippo client aux
+  | "報告" `T.isInfixOf` txt = D.withChannel client aux $ nippo client aux
 handleCreateMessage _client _msg _aux = return ()
 
 nippo :: D.Client -> D.Aux -> D.Channel -> IO ()
