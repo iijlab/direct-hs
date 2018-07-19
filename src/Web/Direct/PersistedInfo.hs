@@ -7,13 +7,12 @@ module Web.Direct.PersistedInfo (
   , deserializePersistedInfo
   ) where
 
-import           Data.Aeson                       (FromJSON, ToJSON,
-                                                   fieldLabelModifier)
-import qualified Data.Aeson                       as Json
-import qualified Data.ByteString.Lazy             as B
-import qualified Data.Char                        as Char
-import qualified Data.Text                        as T
-import           GHC.Generics                     (Generic)
+import           Data.Aeson           (FromJSON, ToJSON, fieldLabelModifier)
+import qualified Data.Aeson           as Json
+import qualified Data.ByteString.Lazy as B
+import qualified Data.Char            as Char
+import qualified Data.Text            as T
+import           GHC.Generics         (Generic)
 
 ----------------------------------------------------------------
 

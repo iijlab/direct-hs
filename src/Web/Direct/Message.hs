@@ -2,10 +2,10 @@
 
 module Web.Direct.Message where
 
-import           Data.List                        (elemIndex)
-import qualified Data.MessagePack                 as M
-import qualified Data.Text                        as T
-import           Data.Word                        (Word64)
+import           Data.List        (elemIndex)
+import qualified Data.MessagePack as M
+import qualified Data.Text        as T
+import           Data.Word        (Word64)
 
 import           Web.Direct.Types
 import           Web.Direct.Utils
@@ -39,9 +39,13 @@ defaultAux = Aux 0 0 0
 ----------------------------------------------------------------
 
 encodeMessage :: Message -> Aux -> [M.Object]
-encodeMessage (Txt text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+encodeMessage (Txt text) (Aux tid _ _) =
+    [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 encodeMessage (Location addr url) (Aux tid _ _) =
-    [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr (T.unlines ["今ココ：",addr,url])]
+    [ M.ObjectWord tid
+    , M.ObjectWord 1
+    , M.ObjectStr (T.unlines ["今ココ：", addr, url])
+    ]
 encodeMessage (Stamp set idx Nothing) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 2
@@ -56,7 +60,7 @@ encodeMessage (Stamp set idx (Just txt)) (Aux tid _ _) =
     , M.ObjectMap
         [ (M.ObjectStr "stamp_set"  , M.ObjectWord set)
         , (M.ObjectStr "stamp_index", M.ObjectWord idx)
-        , (M.ObjectStr "text", M.ObjectStr txt)
+        , (M.ObjectStr "text"       , M.ObjectStr txt)
         ]
     ]
 encodeMessage (YesNoQ qst) (Aux tid _ _) =
@@ -95,8 +99,7 @@ encodeMessage (SelectA qst opt ans) (Aux tid _ _) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-  where
-    Just idx = ans `elemIndex` opt -- fixme
+    where Just idx = ans `elemIndex` opt -- fixme
 encodeMessage (TaskQ ttl cls) (Aux tid _ _) =
     [ M.ObjectWord tid
     , M.ObjectWord 504
@@ -115,7 +118,8 @@ encodeMessage (TaskA ttl cls don) (Aux tid _ _) =
         ]
     ]
 
-encodeMessage (Other text) (Aux tid _ _) = [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+encodeMessage (Other text) (Aux tid _ _) =
+    [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 
 ----------------------------------------------------------------
 
@@ -125,17 +129,17 @@ decodeMessage rspinfo = do
     M.ObjectWord mid <- look "message_id" rspinfo
     M.ObjectWord uid <- look "user_id" rspinfo
     let aux = Aux tid mid uid
-    typ              <- look "type" rspinfo
+    typ <- look "type" rspinfo
     case typ of
         M.ObjectWord 1 -> do
             text <- look "content" rspinfo >>= M.fromObject
-            if "今ココ：" `T.isPrefixOf` text then
-                let ln = T.lines text
-                    addr = ln !! 1
-                    url  = ln !! 2
-                in Just (Location addr url, aux)
-              else
-                Just (Txt text, aux)
+            if "今ココ：" `T.isPrefixOf` text
+                then
+                    let ln   = T.lines text
+                        addr = ln !! 1
+                        url  = ln !! 2
+                    in  Just (Location addr url, aux)
+                else Just (Txt text, aux)
         M.ObjectWord 2 -> do
             set <- look "stamp_set" rspinfo >>= M.fromObject
             idx <- look "stamp_index" rspinfo >>= M.fromObject
