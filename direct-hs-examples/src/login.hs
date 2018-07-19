@@ -19,11 +19,11 @@ main = do
     hSetBuffering stdout NoBuffering
     hSetBuffering stderr NoBuffering
 
-    putStrLn $ "Parsed URL:" ++ show url
+    putStrLn $ "Parsed URL:" ++ show (D.directEndpointUrl D.defaultConfig)
 
     email <- getEmailAddress
     pwd <- getPassword
-    eclient <- D.login D.defaultConfig url email pwd
+    eclient <- D.login D.defaultConfig email pwd
     case eclient of
         Left _       -> putStrLn "Logged failed,"
         Right client -> do

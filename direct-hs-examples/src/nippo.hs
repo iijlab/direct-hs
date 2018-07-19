@@ -18,7 +18,6 @@ main = do
         D.defaultConfig { D.directLogger               = putStrLn
                         , D.directCreateMessageHandler = handleCreateMessage
                         }
-        url
         pInfo
         (\_ -> forever $ threadDelay $ 10 * 1000)
 

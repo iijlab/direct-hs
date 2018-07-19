@@ -1,17 +1,10 @@
 module Common (
-    url
-  , jsonFileName
+    jsonFileName
   , dieWhenLeft
   , exitError
   ) where
 
 import           System.Exit            (die)
-import qualified Web.Direct             as D
-
-----------------------------------------------------------------
-
-url :: D.URL
-url = "wss://api.direct4b.com/albero-app-server/api"
 
 ----------------------------------------------------------------
 
