@@ -28,9 +28,9 @@ module Web.Direct.Client (
   , recv
   ) where
 
-import           Control.Monad                            (void)
 import qualified Control.Concurrent                       as C
 import qualified Control.Exception                        as E
+import           Control.Monad                            (void)
 import qualified Data.HashMap.Strict                      as HM
 import qualified Data.IORef                               as I
 import qualified Data.MessagePack                         as M
@@ -66,12 +66,13 @@ data Client = Client {
 
 newClient :: PersistedInfo -> RPC.Client -> IO Client
 newClient pinfo rpcClient =
-    Client pinfo rpcClient <$> I.newIORef []
-                           <*> I.newIORef []
-                           <*> I.newIORef Nothing
-                           <*> I.newIORef []
-                           <*> I.newIORef HM.empty
-                           <*> I.newIORef Active
+    Client pinfo rpcClient
+        <$> I.newIORef []
+        <*> I.newIORef []
+        <*> I.newIORef Nothing
+        <*> I.newIORef []
+        <*> I.newIORef HM.empty
+        <*> I.newIORef Active
 
 ----------------------------------------------------------------
 
@@ -116,7 +117,7 @@ fromAux (Aux tid _ uid) = (tid, uid)
 
 newChannel :: Client -> Aux -> IO Channel
 newChannel client aux = do
-    toWorker <- C.newEmptyMVar
+    toWorker   <- C.newEmptyMVar
     fromWorker <- C.newEmptyMVar
     let chan = Channel toWorker fromWorker client aux
     I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
@@ -133,8 +134,7 @@ freeChannel client aux = I.atomicModifyIORef' ref $ \m -> (HM.delete key m, ())
 
 allChannels :: Client -> IO [Channel]
 allChannels client = HM.elems <$> I.readIORef ref
-  where
-    ref = clientChannels client
+    where ref = clientChannels client
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
 findChannel client aux = HM.lookup key <$> I.readIORef ref
@@ -145,7 +145,8 @@ findChannel client aux = HM.lookup key <$> I.readIORef ref
 ----------------------------------------------------------------
 
 dispatch :: Channel -> Message -> Aux -> IO ()
-dispatch (Channel toWorker _ _ _) msg aux = C.putMVar toWorker $ Right (msg, aux)
+dispatch (Channel toWorker _ _ _) msg aux =
+    C.putMVar toWorker $ Right (msg, aux)
 
 control :: Channel -> Control -> IO ()
 control (Channel toWorker _ _ _) ctl = C.putMVar toWorker $ Left ctl
@@ -174,17 +175,17 @@ withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
 withChannel client aux body = do
     chan@(Channel _ fromWorker _ _) <- newChannel client aux
     void $ C.forkFinally (body chan) $ \_ -> do
-        freeChannel client aux
-        C.putMVar fromWorker ()
+        freeChannel client     aux
+        C.putMVar   fromWorker ()
 
 recv :: Channel -> IO (Message, Aux)
 recv (Channel toWorker _ client aux) = do
     cm <- C.takeMVar toWorker
     case cm of
-      Right msg -> return msg
-      Left  (Die announce) -> do
-          void $ sendMessage client announce aux
-          E.throwIO E.ThreadKilled
+        Right msg            -> return msg
+        Left  (Die announce) -> do
+            void $ sendMessage client announce aux
+            E.throwIO E.ThreadKilled
 
 send :: Channel -> Message -> IO MessageId
 send (Channel _ _ client aux) msg = sendMessage client msg aux
@@ -194,4 +195,4 @@ shutdown client msg = do
     inactivate client
     chans <- allChannels client
     mapM_ (\chan -> control chan (Die msg)) chans
-    mapM_ wait chans
+    mapM_ wait                              chans

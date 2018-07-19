@@ -130,11 +130,11 @@ withClient config pInfo action = do
             -- sending ACK always
             sendAck rpcClient mid
             Just client <- I.readIORef ref
-            active <- isActive client
+            active      <- isActive client
             when active $ do
                 -- fixme: "notify_update_domain_users"
                 -- fixme: "notify_update_read_statuses"
-                Just me     <- getMe client
+                Just me <- getMe client
                 let myid = userId me
                 when (method == "notify_create_message") $ case objs of
                     M.ObjectMap rsp : _ -> case decodeMessage rsp of
@@ -142,8 +142,11 @@ withClient config pInfo action = do
                             echan <- findChannel client aux
                             case echan of
                                 Just chan -> dispatch chan msg aux
-                                Nothing ->
-                                    directCreateMessageHandler config client msg aux
+                                Nothing   -> directCreateMessageHandler
+                                    config
+                                    client
+                                    msg
+                                    aux
                         _ -> return ()
                     _ -> return ()
         , RPC.logger         = directLogger config

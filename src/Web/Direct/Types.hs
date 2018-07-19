@@ -1,10 +1,10 @@
 module Web.Direct.Types where
 
-import qualified Control.Exception                as E
-import qualified Data.MessagePack                 as M
-import qualified Data.Text                        as T
-import           Data.Typeable                    (Typeable)
-import           Data.Word                        (Word64)
+import qualified Control.Exception as E
+import qualified Data.MessagePack  as M
+import qualified Data.Text         as T
+import           Data.Typeable     (Typeable)
+import           Data.Word         (Word64)
 
 ----------------------------------------------------------------
 
