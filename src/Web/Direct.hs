@@ -175,7 +175,7 @@ withClient config pInfo action = do
   where
     rpcConfig ref = RPC.defaultConfig
         { RPC.requestHandler = \rpcClient mid method objs -> do
-             -- sending ACK always
+            -- sending ACK always
             sendAck rpcClient mid
             Just client <- I.readIORef ref
             -- fixme: "notify_update_domain_users"
