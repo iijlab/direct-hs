@@ -43,9 +43,11 @@ module Web.Direct.Types
   , Channel(..)
   , newChannel
   , freeChannel
+  , allChannels
   , dispatch
-  , recv
+  , control
   , findChannel
+  , Control(..)
     --
   , Exception(..)
   ) where
@@ -412,7 +414,9 @@ decodeTalkRoom _ = Nothing
 
 type ChannelKey = (TalkId, UserId)
 
-data Channel = Channel (C.MVar (Message, Aux)) Client Aux
+data Control = Die Message
+
+data Channel = Channel (C.MVar (Either Control (Message, Aux))) Client Aux
 
 fromAux :: Aux -> ChannelKey
 fromAux (Aux tid _ uid) = (tid, uid)
@@ -433,11 +437,16 @@ freeChannel client aux = I.atomicModifyIORef' ref $ \m -> (HM.delete key m, ())
     ref = clientChannels client
     key = fromAux aux
 
-dispatch :: Channel -> Message -> Aux -> IO ()
-dispatch (Channel var _ _) msg aux = C.putMVar var (msg, aux)
+allChannels :: Client -> IO [Channel]
+allChannels client = HM.elems <$> I.readIORef ref
+  where
+    ref = clientChannels client
 
-recv :: Channel -> IO (Message, Aux)
-recv (Channel var _ _) = C.takeMVar var
+dispatch :: Channel -> Message -> Aux -> IO ()
+dispatch (Channel var _ _) msg aux = C.putMVar var $ Right (msg, aux)
+
+control :: Channel -> Control -> IO ()
+control (Channel var _ _) ctl = C.putMVar var $ Left ctl
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
 findChannel client aux = HM.lookup key <$> I.readIORef ref

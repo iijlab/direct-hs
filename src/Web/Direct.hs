@@ -64,7 +64,7 @@ module Web.Direct
   , Exception(..)
   ) where
 
-import           Control.Concurrent                       (forkFinally)
+import qualified Control.Concurrent                       as C
 import           Control.Error                            (fmapL)
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void, when)
@@ -269,10 +269,22 @@ sendMessage client req aux = do
 withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
 withChannel client aux body = do
     chan <- newChannel client aux
-    void $ forkFinally (body chan) $ \_ -> freeChannel client aux
+    void $ C.forkFinally (body chan) $ \_ -> freeChannel client aux
+
+recv :: Channel -> IO (Message, Aux)
+recv (Channel var client aux) = do
+    cm <- C.takeMVar var
+    case cm of
+      Right msg -> return msg
+      Left  (Die announce) -> do
+          void $ sendMessage client announce aux
+          E.throwIO E.ThreadKilled
 
 send :: Channel -> Message -> IO MessageId
 send (Channel _ client aux) msg = sendMessage client msg aux
 
-shutdown :: Client -> IO ()
-shutdown client = inactivate client
+shutdown :: Client -> Message -> IO ()
+shutdown client msg = do
+    inactivate client
+    chans <- allChannels client
+    mapM_ (\chan -> control chan (Die msg)) chans
