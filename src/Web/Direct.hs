@@ -64,7 +64,6 @@ module Web.Direct
   , Exception(..)
   ) where
 
-import qualified Control.Concurrent                       as C
 import           Control.Error                            (fmapL)
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void, when)
@@ -73,9 +72,13 @@ import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
 import qualified Data.Text                                as T
 import qualified Data.UUID                                as Uuid
+import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import           Web.Direct.Client
+import           Web.Direct.Map
+import           Web.Direct.Message
+import           Web.Direct.PersistedInfo
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
@@ -248,46 +251,3 @@ rethrowingException action = do
 
 sendAck :: RPC.Client -> R.MessageId -> IO ()
 sendAck rpcClient mid = RPC.reply rpcClient mid $ Right $ M.ObjectBool True
-
-----------------------------------------------------------------
-
-sendMessage :: Client -> Message -> Aux -> IO MessageId
-sendMessage client req aux = do
-    let obj = encodeMessage req aux
-    ersp <- RPC.call (clientRpcClient client) "create_message" obj
-    case ersp of
-        Right (M.ObjectMap rsp) ->
-            case lookup (M.ObjectStr "message_id") rsp of
-                Just (M.ObjectWord x) -> return x
-                _                     -> error "sendMessage" -- fixme
-        _ -> error "sendMessage" -- fixme
-
-----------------------------------------------------------------
-
--- | A new channel is created according to the first and second arguments.
---   Then the third argument runs in a new thread with the channel.
-withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
-withChannel client aux body = do
-    chan@(Channel _ fromWorker _ _) <- newChannel client aux
-    void $ C.forkFinally (body chan) $ \_ -> do
-        freeChannel client aux
-        C.putMVar fromWorker ()
-
-recv :: Channel -> IO (Message, Aux)
-recv (Channel toWorker _ client aux) = do
-    cm <- C.takeMVar toWorker
-    case cm of
-      Right msg -> return msg
-      Left  (Die announce) -> do
-          void $ sendMessage client announce aux
-          E.throwIO E.ThreadKilled
-
-send :: Channel -> Message -> IO MessageId
-send (Channel _ _ client aux) msg = sendMessage client msg aux
-
-shutdown :: Client -> Message -> IO ()
-shutdown client msg = do
-    inactivate client
-    chans <- allChannels client
-    mapM_ (\chan -> control chan (Die msg)) chans
-    mapM_ wait chans
