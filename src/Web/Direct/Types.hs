@@ -13,6 +13,8 @@ module Web.Direct.Types
   , getMe
   , setUsers
   , getUsers
+  , isActive
+  , inactivate
     --
   , PersistedInfo(..)
   , serializePersistedInfo
@@ -78,7 +80,10 @@ data Client = Client {
   , clientMe            :: I.IORef (Maybe User)
   , clientUsers         :: I.IORef [User]
   , clientChannels      :: I.IORef (HM.HashMap ChannelKey Channel)
+  , clientStatus        :: I.IORef Status
   }
+
+data Status = Active | Inactive deriving Eq
 
 setDomains :: Client -> [Domain] -> IO ()
 setDomains client domains = I.writeIORef (clientDomains client) domains
@@ -111,6 +116,15 @@ newClient pinfo rpcClient =
                            <*> I.newIORef Nothing
                            <*> I.newIORef []
                            <*> I.newIORef HM.empty
+                           <*> I.newIORef Active
+
+isActive :: Client -> IO Bool
+isActive client = do
+    status <- I.readIORef $ clientStatus client
+    return $ status == Active
+
+inactivate :: Client -> IO ()
+inactivate client = I.writeIORef (clientStatus client) Inactive
 
 ----------------------------------------------------------------
 

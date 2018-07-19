@@ -58,6 +58,8 @@ module Web.Direct
   , withChannel
   , recv
   , send
+  -- * Terminating
+  , shutdown
   -- *Exceptions
   , Exception(..)
   ) where
@@ -179,20 +181,22 @@ withClient config pInfo action = do
             -- sending ACK always
             sendAck rpcClient mid
             Just client <- I.readIORef ref
-            -- fixme: "notify_update_domain_users"
-            -- fixme: "notify_update_read_statuses"
-            Just me     <- getMe client
-            let myid = userId me
-            when (method == "notify_create_message") $ case objs of
-                M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                    Just (msg, aux@(Aux _ _ uid)) | uid /= myid -> do
-                        echan <- findChannel client aux
-                        case echan of
-                            Just chan -> dispatch chan msg aux
-                            Nothing ->
-                                directCreateMessageHandler config client msg aux
+            active <- isActive client
+            when active $ do
+                -- fixme: "notify_update_domain_users"
+                -- fixme: "notify_update_read_statuses"
+                Just me     <- getMe client
+                let myid = userId me
+                when (method == "notify_create_message") $ case objs of
+                    M.ObjectMap rsp : _ -> case decodeMessage rsp of
+                        Just (msg, aux@(Aux _ _ uid)) | uid /= myid -> do
+                            echan <- findChannel client aux
+                            case echan of
+                                Just chan -> dispatch chan msg aux
+                                Nothing ->
+                                    directCreateMessageHandler config client msg aux
+                        _ -> return ()
                     _ -> return ()
-                _ -> return ()
         , RPC.logger         = directLogger config
         , RPC.formatter      = directFormatter config
         }
@@ -269,3 +273,6 @@ withChannel client aux body = do
 
 send :: Channel -> Message -> IO MessageId
 send (Channel _ client aux) msg = sendMessage client msg aux
+
+shutdown :: Client -> IO ()
+shutdown client = inactivate client
