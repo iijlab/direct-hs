@@ -62,6 +62,7 @@ module Web.Direct
   , Exception(..)
   ) where
 
+import           Control.Concurrent                       (forkFinally)
 import           Control.Error                            (fmapL)
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void, when)
@@ -259,11 +260,12 @@ sendMessage client req aux = do
 
 ----------------------------------------------------------------
 
+-- | A new channel is created according to the first and second arguments.
+--   Then the third argument runs in a new thread with the channel.
 withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
-withChannel client aux body = E.bracket register unregister body
-  where
-    register = newChannel client aux
-    unregister _ = freeChannel client aux
+withChannel client aux body = do
+    chan <- newChannel client aux
+    void $ forkFinally (body chan) $ \_ -> freeChannel client aux
 
 send :: Channel -> Message -> IO MessageId
 send (Channel _ client aux) msg = sendMessage client msg aux
