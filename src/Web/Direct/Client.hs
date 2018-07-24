@@ -46,7 +46,12 @@ data Status = Active | Inactive deriving Eq
 
 type ChannelKey = (TalkId, UserId)
 
-data Channel = Channel (C.MVar (Either Control (Message, Aux))) (C.MVar ()) Client Aux
+data Channel = Channel {
+      toWorker :: C.MVar (Either Control (Message, Aux))
+    , fromWorker :: C.MVar ()
+    , channelClient :: Client
+    , channelAux :: Aux
+    }
 
 newtype Control = Die Message
 
@@ -117,9 +122,14 @@ fromAux (Aux tid _ uid) = (tid, uid)
 
 newChannel :: Client -> Aux -> IO Channel
 newChannel client aux = do
-    toWorker   <- C.newEmptyMVar
-    fromWorker <- C.newEmptyMVar
-    let chan = Channel toWorker fromWorker client aux
+    mvar1 <- C.newEmptyMVar
+    mvar2 <- C.newEmptyMVar
+    let chan = Channel {
+            toWorker      = mvar1
+          , fromWorker    = mvar2
+          , channelClient = client
+          , channelAux    = aux
+          }
     I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
     return chan
   where
@@ -145,14 +155,13 @@ findChannel client aux = HM.lookup key <$> I.readIORef ref
 ----------------------------------------------------------------
 
 dispatch :: Channel -> Message -> Aux -> IO ()
-dispatch (Channel toWorker _ _ _) msg aux =
-    C.putMVar toWorker $ Right (msg, aux)
+dispatch chan msg aux = C.putMVar (toWorker chan) $ Right (msg, aux)
 
 control :: Channel -> Control -> IO ()
-control (Channel toWorker _ _ _) ctl = C.putMVar toWorker $ Left ctl
+control chan ctl = C.putMVar (toWorker chan) $ Left ctl
 
 wait :: Channel -> IO ()
-wait (Channel _ fromWorker _ _) = C.takeMVar fromWorker
+wait chan = C.takeMVar (fromWorker chan)
 
 ----------------------------------------------------------------
 
@@ -173,22 +182,22 @@ sendMessage client req aux = do
 --   Then the third argument runs in a new thread with the channel.
 withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
 withChannel client aux body = do
-    chan@(Channel _ fromWorker _ _) <- newChannel client aux
+    chan <- newChannel client aux
     void $ C.forkFinally (body chan) $ \_ -> do
-        freeChannel client     aux
-        C.putMVar   fromWorker ()
+        freeChannel client aux
+        C.putMVar (fromWorker chan) ()
 
 recv :: Channel -> IO (Message, Aux)
-recv (Channel toWorker _ client aux) = do
-    cm <- C.takeMVar toWorker
+recv chan = do
+    cm <- C.takeMVar $ (toWorker chan)
     case cm of
         Right msg            -> return msg
         Left  (Die announce) -> do
-            void $ sendMessage client announce aux
+            void $ sendMessage (channelClient chan) announce (channelAux chan)
             E.throwIO E.ThreadKilled
 
 send :: Channel -> Message -> IO MessageId
-send (Channel _ _ client aux) msg = sendMessage client msg aux
+send chan msg = sendMessage (channelClient chan) msg (channelAux chan)
 
 shutdown :: Client -> Message -> IO ()
 shutdown client msg = do
