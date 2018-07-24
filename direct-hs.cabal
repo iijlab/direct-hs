@@ -17,7 +17,13 @@ library
   hs-source-dirs:  src
   ghc-options:     -Wall
   exposed-modules: Web.Direct
-  other-modules:   Web.Direct.Types
+  other-modules:   Web.Direct.Api
+                   Web.Direct.Client
+                   Web.Direct.Map
+                   Web.Direct.Message
+                   Web.Direct.PersistedInfo
+                   Web.Direct.Types
+                   Web.Direct.Utils
   build-depends:
       base >= 4.7 && < 5
     , aeson
