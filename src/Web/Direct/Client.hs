@@ -47,10 +47,10 @@ data Status = Active | Inactive deriving Eq
 type ChannelKey = (TalkId, UserId)
 
 data Channel = Channel {
-      toWorker :: C.MVar (Either Control (Message, Aux))
-    , fromWorker :: C.MVar ()
+      toWorker      :: C.MVar (Either Control (Message, Aux))
+    , fromWorker    :: C.MVar ()
     , channelClient :: Client
-    , channelAux :: Aux
+    , channelAux    :: Aux
     }
 
 newtype Control = Die Message
@@ -124,12 +124,12 @@ newChannel :: Client -> Aux -> IO Channel
 newChannel client aux = do
     mvar1 <- C.newEmptyMVar
     mvar2 <- C.newEmptyMVar
-    let chan = Channel {
-            toWorker      = mvar1
-          , fromWorker    = mvar2
-          , channelClient = client
-          , channelAux    = aux
-          }
+    let chan = Channel
+            { toWorker      = mvar1
+            , fromWorker    = mvar2
+            , channelClient = client
+            , channelAux    = aux
+            }
     I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
     return chan
   where
@@ -184,8 +184,8 @@ withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
 withChannel client aux body = do
     chan <- newChannel client aux
     void $ C.forkFinally (body chan) $ \_ -> do
-        freeChannel client aux
-        C.putMVar (fromWorker chan) ()
+        freeChannel client            aux
+        C.putMVar   (fromWorker chan) ()
 
 recv :: Channel -> IO (Message, Aux)
 recv chan = do
