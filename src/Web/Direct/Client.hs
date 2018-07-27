@@ -189,7 +189,7 @@ withChannel client aux body = do
 
 recv :: Channel -> IO (Message, Aux)
 recv chan = do
-    cm <- C.takeMVar $ (toWorker chan)
+    cm <- C.takeMVar $ toWorker chan
     case cm of
         Right msg            -> return msg
         Left  (Die announce) -> do

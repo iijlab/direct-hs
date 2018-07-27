@@ -12,7 +12,7 @@ module Web.Direct.Api
 
 import           Control.Error                            (fmapL)
 import qualified Control.Exception                        as E
-import           Control.Monad                            (void, when)
+import           Control.Monad                            (mapM_, void, when)
 import qualified Data.IORef                               as I
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
@@ -163,11 +163,8 @@ createSession client = do
         , M.ObjectStr apiVersion
         , M.ObjectStr agentName
         ]
-    case ersp of
-        Right rsp -> case fromCreateSession rsp of
-            Just user -> setMe client user
-            Nothing   -> return ()
-        _ -> return ()
+
+    mapM_ (mapM_ (setMe client) . fromCreateSession) ersp
 
 subscribeNotification :: Client -> IO ()
 subscribeNotification client = do

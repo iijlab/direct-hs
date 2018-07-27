@@ -122,7 +122,7 @@ sendText tid = do
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let aux    = D.defaultAux { D.auxTalkId = tid }
         config = D.defaultConfig { D.directEndpointUrl = url }
-    D.withClient config pInfo $ \client -> do
+    D.withClient config pInfo $ \client ->
         forM_ (TL.chunksOf 1024 txt)
             $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) aux
 
