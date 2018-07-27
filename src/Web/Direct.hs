@@ -63,6 +63,7 @@ module Web.Direct
 
 import           Web.Direct.Api
 import           Web.Direct.Client
+import           Web.Direct.Exception
 import           Web.Direct.Message
 import           Web.Direct.PersistedInfo
 import           Web.Direct.Types
