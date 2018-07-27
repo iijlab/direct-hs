@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Web.Direct.Api
@@ -10,9 +9,8 @@ module Web.Direct.Api
   , withClient
   ) where
 
-import           Control.Error                            (fmapL)
 import qualified Control.Exception                        as E
-import           Control.Monad                            (mapM_, void, when)
+import           Control.Monad                            (void, when)
 import qualified Data.IORef                               as I
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
@@ -22,6 +20,7 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
 import           Web.Direct.Client
+import           Web.Direct.Exception
 import           Web.Direct.Map
 import           Web.Direct.Message
 import           Web.Direct.PersistedInfo
@@ -61,19 +60,20 @@ login config email pass =
         idfv <- genIdfv
 
         let magicConstant = M.ObjectStr ""
+            methodName = "create_access_token"
         res <- RPC.call
             rpcClient
-            "create_access_token"
+            methodName
             [ M.ObjectStr email
             , M.ObjectStr pass
             , M.ObjectStr idfv
             , M.ObjectStr agentName
             , magicConstant
             ]
-        case extractResult res of
+        case resultToObjectOrException methodName res of
             Right (M.ObjectStr token) ->
                 Right <$> newClient (PersistedInfo token idfv) rpcClient
-            Right other -> return $ Left $ UnexpectedReponse other
+            Right other -> return $ Left $ UnexpectedReponse methodName other
             Left  e     -> return $ Left e
   where
     rpcConfig = RPC.defaultConfig
@@ -83,16 +83,6 @@ login config email pass =
         , RPC.logger         = directLogger config
         , RPC.formatter      = directFormatter config
         }
-
-extractResult :: RPC.Result -> Either Exception M.Object
-extractResult = fmapL $ \case
-    err@(M.ObjectMap errorMap) ->
-        let isInvalidEP = lookup (M.ObjectStr "message") errorMap
-                == Just (M.ObjectStr "invalid email or password")
-        in  if isInvalidEP
-                then InvalidEmailOrPassword
-                else UnexpectedReponse err
-    other -> UnexpectedReponse other
 
 ----------------------------------------------------------------
 
@@ -155,43 +145,39 @@ withClient config pInfo action = do
 
 createSession :: Client -> IO ()
 createSession client = do
-    ersp <- RPC.call
+    let methodName = "create_session"
+    rsp <- callRpcThrow
         (clientRpcClient client)
-        "create_session"
+        methodName
         [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo
             client
         , M.ObjectStr apiVersion
         , M.ObjectStr agentName
         ]
 
-    mapM_ (mapM_ (setMe client) . fromCreateSession) ersp
+    case fromCreateSession rsp of
+        Just user -> setMe client user
+        _         -> E.throwIO $ UnexpectedReponse methodName rsp
 
 subscribeNotification :: Client -> IO ()
 subscribeNotification client = do
     let c = clientRpcClient client
-    void $ rethrowingException $ RPC.call c "reset_notification" []
-    void $ rethrowingException $ RPC.call c "start_notification" []
-    Right doms <- RPC.call c "get_domains" []
+    void $ callRpcThrow c "reset_notification" []
+    void $ callRpcThrow c "start_notification" []
+    doms <- callRpcThrow c "get_domains" []
     setDomains client $ fromGetDomains doms
-    void $ rethrowingException $ RPC.call c "get_domain_invites" []
-    void $ rethrowingException $ RPC.call c "get_account_control_requests" []
-    void $ rethrowingException $ RPC.call c
+    void $ callRpcThrow c "get_domain_invites" []
+    void $ callRpcThrow c "get_account_control_requests" []
+    void $ callRpcThrow c
                                           "get_joined_account_control_group"
                                           []
-    void $ rethrowingException $ RPC.call c "get_announcement_statuses" []
-    void $ rethrowingException $ RPC.call c "get_friends" []
-    Right acq <- RPC.call c "get_acquaintances" []
+    void $ callRpcThrow c "get_announcement_statuses" []
+    void $ callRpcThrow c "get_friends" []
+    acq <- callRpcThrow c "get_acquaintances" []
     setUsers client $ fromGetAcquaintances acq
-    Right talks <- RPC.call c "get_talks" []
+    talks <- callRpcThrow c "get_talks" []
     setTalkRooms client $ fromGetTalks talks
-    void $ rethrowingException $ RPC.call c "get_talk_statuses" []
-
-rethrowingException :: IO (Either M.Object M.Object) -> IO M.Object
-rethrowingException action = do
-    res <- action
-    case extractResult res of
-        Right obj -> return obj
-        Left  e   -> E.throwIO e
+    void $ callRpcThrow c "get_talk_statuses" []
 
 ----------------------------------------------------------------
 
