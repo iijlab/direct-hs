@@ -60,7 +60,7 @@ login config email pass =
         idfv <- genIdfv
 
         let magicConstant = M.ObjectStr ""
-            methodName = "create_access_token"
+            methodName    = "create_access_token"
         res <- RPC.call
             rpcClient
             methodName
@@ -168,9 +168,7 @@ subscribeNotification client = do
     setDomains client $ fromGetDomains doms
     void $ callRpcThrow c "get_domain_invites" []
     void $ callRpcThrow c "get_account_control_requests" []
-    void $ callRpcThrow c
-                                          "get_joined_account_control_group"
-                                          []
+    void $ callRpcThrow c "get_joined_account_control_group" []
     void $ callRpcThrow c "get_announcement_statuses" []
     void $ callRpcThrow c "get_friends" []
     acq <- callRpcThrow c "get_acquaintances" []
