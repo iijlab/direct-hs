@@ -170,14 +170,16 @@ sendMessage :: Client -> Message -> Aux -> IO (Either Exception MessageId)
 sendMessage client req aux = do
     let obj        = encodeMessage req aux
         methodName = "create_message"
-    ersp <- RPC.call (clientRpcClient client) methodName obj
+    ersp <-
+        resultToObjectOrException methodName
+            <$> RPC.call (clientRpcClient client) methodName obj
     case ersp of
         Right rsp@(M.ObjectMap rspMap) ->
             case lookup (M.ObjectStr "message_id") rspMap of
                 Just (M.ObjectWord x) -> return $ Right x
                 _ -> return $ Left $ UnexpectedReponse methodName rsp
         Right other -> return $ Left $ UnexpectedReponse methodName other
-        Left  other -> return $ Left $ UnexpectedReponse methodName other
+        Left  other -> return $ Left other
 
 ----------------------------------------------------------------
 
