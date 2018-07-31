@@ -36,6 +36,7 @@ import qualified Data.IORef                               as I
 import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
+import           Web.Direct.Exception
 import           Web.Direct.Message
 import           Web.Direct.PersistedInfo
 import           Web.Direct.Types
@@ -165,16 +166,20 @@ wait chan = C.takeMVar (fromWorker chan)
 
 ----------------------------------------------------------------
 
-sendMessage :: Client -> Message -> Aux -> IO MessageId
+sendMessage :: Client -> Message -> Aux -> IO (Either Exception MessageId)
 sendMessage client req aux = do
-    let obj = encodeMessage req aux
-    ersp <- RPC.call (clientRpcClient client) "create_message" obj
+    let obj        = encodeMessage req aux
+        methodName = "create_message"
+    ersp <-
+        resultToObjectOrException methodName
+            <$> RPC.call (clientRpcClient client) methodName obj
     case ersp of
-        Right (M.ObjectMap rsp) ->
-            case lookup (M.ObjectStr "message_id") rsp of
-                Just (M.ObjectWord x) -> return x
-                _                     -> error "sendMessage" -- fixme
-        _ -> error "sendMessage" -- fixme
+        Right rsp@(M.ObjectMap rspMap) ->
+            case lookup (M.ObjectStr "message_id") rspMap of
+                Just (M.ObjectWord x) -> return $ Right x
+                _ -> return $ Left $ UnexpectedReponse methodName rsp
+        Right other -> return $ Left $ UnexpectedReponse methodName other
+        Left  other -> return $ Left other
 
 ----------------------------------------------------------------
 
@@ -196,7 +201,7 @@ recv chan = do
             void $ sendMessage (channelClient chan) announce (channelAux chan)
             E.throwIO E.ThreadKilled
 
-send :: Channel -> Message -> IO MessageId
+send :: Channel -> Message -> IO (Either Exception MessageId)
 send chan msg = sendMessage (channelClient chan) msg (channelAux chan)
 
 shutdown :: Client -> Message -> IO ()
