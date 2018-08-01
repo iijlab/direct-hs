@@ -17,7 +17,7 @@ data User = User {
   , displayName                  :: !T.Text
   , canonicalDisplayName         :: !T.Text
   , phoneticDisplayName          :: !T.Text
-  , canonicalPhoneticIisplayName :: !T.Text
+  , canonicalPhoneticDisplayName :: !T.Text
   }
 
 data Domain = Domain {

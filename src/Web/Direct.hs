@@ -41,7 +41,7 @@ module Web.Direct
   , displayName
   , canonicalDisplayName
   , phoneticDisplayName
-  , canonicalPhoneticIisplayName
+  , canonicalPhoneticDisplayName
   , Message(..)
   , Aux
   , auxMessageId
