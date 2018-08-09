@@ -56,7 +56,7 @@ login
     :: Config
     -> T.Text -- ^ Login email address for direct.
     -> T.Text -- ^ Login password for direct.
-    -> IO (Either Exception LoginInfo)
+    -> IO (Either Exception LoginInfo) -- ^ This should be passed to 'withClient'.
 login config email pass =
     RPC.withClient (directEndpointUrl config) rpcConfig $ \rpcClient -> do
         idfv <- genIdfv
