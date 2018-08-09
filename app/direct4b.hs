@@ -109,27 +109,23 @@ login = do
         =<< D.login config (directEmailAddress e) (directPassword e)
     putStrLn "Successfully logged in."
 
-    B.writeFile jsonFileName $ D.serializeLoginInfo $ D.clientLoginInfo
-        client
+    B.writeFile jsonFileName $ D.serializeLoginInfo $ D.clientLoginInfo client
     cd <- Dir.getCurrentDirectory
     putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
 sendText :: D.TalkId -> IO ()
 sendText tid = do
-    txt   <- TL.stripEnd <$> TL.getContents
-    pInfo <-
-        dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    txt <- TL.stripEnd <$> TL.getContents
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let aux    = D.defaultAux { D.auxTalkId = tid }
         config = D.defaultConfig { D.directEndpointUrl = url }
-    D.withClient config pInfo $ \client ->
-        forM_ (TL.chunksOf 1024 txt)
-            $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) aux
+    D.withClient config pInfo $ \client -> forM_ (TL.chunksOf 1024 txt)
+        $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) aux
 
 observe :: IO ()
 observe = do
-    pInfo <-
-        dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient
         D.defaultConfig { D.directLogger      = putStrLn

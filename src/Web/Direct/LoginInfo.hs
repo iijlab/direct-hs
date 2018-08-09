@@ -1,11 +1,12 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Direct.LoginInfo (
-    LoginInfo(..)
-  , serializeLoginInfo
-  , deserializeLoginInfo
-  ) where
+module Web.Direct.LoginInfo
+    ( LoginInfo(..)
+    , serializeLoginInfo
+    , deserializeLoginInfo
+    )
+where
 
 import           Data.Aeson           (FromJSON, ToJSON, fieldLabelModifier)
 import qualified Data.Aeson           as Json

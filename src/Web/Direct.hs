@@ -1,75 +1,75 @@
 -- | Client library for Direct.
 module Web.Direct
-  (
-    Config(..)
-  , defaultConfig
+    ( Config(..)
+    , defaultConfig
   -- * Login
-  , login
-  , URL
+    , login
+    , URL
   -- * Client
-  , Client
-  , withClient
-  , clientLoginInfo
-  , setDomains
-  , getDomains
-  , setTalkRooms
-  , getTalkRooms
-  , setMe
-  , getMe
-  , setUsers
-  , getUsers
+    , Client
+    , withClient
+    , clientLoginInfo
+    , setDomains
+    , getDomains
+    , setTalkRooms
+    , getTalkRooms
+    , setMe
+    , getMe
+    , setUsers
+    , getUsers
   -- ** Login information
-  , LoginInfo(..)
-  , serializeLoginInfo
-  , deserializeLoginInfo
+    , LoginInfo(..)
+    , serializeLoginInfo
+    , deserializeLoginInfo
   -- * Message
   -- ** Ids
-  , DomainId
-  , TalkId
-  , UserId
-  , MessageId
+    , DomainId
+    , TalkId
+    , UserId
+    , MessageId
   -- ** Abstract types
   -- *** Domain
-  , Domain
-  , domainId
-  , domainName
+    , Domain
+    , domainId
+    , domainName
   -- *** Talk room
-  , TalkType(..)
-  , TalkRoom
-  , talkId
-  , talkType
-  , talkUsers
+    , TalkType(..)
+    , TalkRoom
+    , talkId
+    , talkType
+    , talkUsers
   -- *** User
-  , User
-  , userId
-  , displayName
-  , canonicalDisplayName
-  , phoneticDisplayName
-  , canonicalPhoneticDisplayName
+    , User
+    , userId
+    , displayName
+    , canonicalDisplayName
+    , phoneticDisplayName
+    , canonicalPhoneticDisplayName
   -- *** Auxiliary data
-  , Aux
-  , auxMessageId
-  , auxTalkId
-  , auxUserId
-  , defaultAux
+    , Aux
+    , auxMessageId
+    , auxTalkId
+    , auxUserId
+    , defaultAux
   -- ** Message
-  , Message(..)
+    , Message(..)
   -- * Sending
-  , sendMessage
+    , sendMessage
   -- * Channel
-  , Channel
-  , withChannel
-  , recv
-  , send
+    , Channel
+    , withChannel
+    , recv
+    , send
   -- * Terminating
-  , shutdown
+    , shutdown
   -- *Exceptions
-  , Exception(..)
-  ) where
+    , Exception(..)
+    )
+where
 
 import           Web.Direct.Api
 import           Web.Direct.Client
 import           Web.Direct.Exception
-import           Web.Direct.Message
 import           Web.Direct.LoginInfo
+import           Web.Direct.Message
 import           Web.Direct.Types
