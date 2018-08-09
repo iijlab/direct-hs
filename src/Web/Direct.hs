@@ -1,3 +1,4 @@
+-- | Client library for Direct.
 module Web.Direct
   (
     Config(..)
