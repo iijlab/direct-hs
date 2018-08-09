@@ -56,7 +56,7 @@ login
     :: Config
     -> T.Text -- ^ Login email address for direct.
     -> T.Text -- ^ Login password for direct.
-    -> IO (Either Exception Client)
+    -> IO (Either Exception LoginInfo)
 login config email pass =
     RPC.withClient (directEndpointUrl config) rpcConfig $ \rpcClient -> do
         idfv <- genIdfv
@@ -73,8 +73,7 @@ login config email pass =
             , magicConstant
             ]
         case resultToObjectOrException methodName res of
-            Right (M.ObjectStr token) ->
-                Right <$> newClient (LoginInfo token idfv) rpcClient
+            Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
             Right other -> return $ Left $ UnexpectedReponse methodName other
             Left  e     -> return $ Left e
   where

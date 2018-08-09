@@ -105,11 +105,11 @@ login = do
     putStrLn $ "Parsed URL:" ++ show url
 
     let config = D.defaultConfig { D.directEndpointUrl = url }
-    client <- either E.throwIO return
+    loginInfo <- either E.throwIO return
         =<< D.login config (directEmailAddress e) (directPassword e)
     putStrLn "Successfully logged in."
 
-    B.writeFile jsonFileName $ D.serializeLoginInfo $ D.clientLoginInfo client
+    B.writeFile jsonFileName $ D.serializeLoginInfo loginInfo
     cd <- Dir.getCurrentDirectory
     putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
