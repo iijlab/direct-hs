@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Web.Direct.Api
-  (
-    Config(..)
-  , defaultConfig
-  , login
-  , RPC.URL
-  , withClient
-  ) where
+    ( Config(..)
+    , defaultConfig
+    , login
+    , RPC.URL
+    , withClient
+    )
+where
 
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void, when)
@@ -21,9 +21,9 @@ import qualified System.Random.MWC                        as Random
 
 import           Web.Direct.Client
 import           Web.Direct.Exception
+import           Web.Direct.LoginInfo
 import           Web.Direct.Map
 import           Web.Direct.Message
-import           Web.Direct.PersistedInfo
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
@@ -46,7 +46,7 @@ defaultConfig = Config
     { directCreateMessageHandler = \_ _ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
-    , directEndpointUrl          = "wss://api.direct4b.com/albero-app-server/api"
+    , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
     }
 
 ----------------------------------------------------------------
@@ -74,14 +74,14 @@ login config email pass =
             ]
         case resultToObjectOrException methodName res of
             Right (M.ObjectStr token) ->
-                Right <$> newClient (PersistedInfo token idfv) rpcClient
+                Right <$> newClient (LoginInfo token idfv) rpcClient
             Right other -> return $ Left $ UnexpectedReponse methodName other
             Left  e     -> return $ Left e
   where
     rpcConfig = RPC.defaultConfig
         { RPC.requestHandler = \rpcClient mid _method _objs ->
              -- sending ACK always
-            sendAck rpcClient mid
+                                   sendAck rpcClient mid
         , RPC.logger         = directLogger config
         , RPC.formatter      = directFormatter config
         }
@@ -107,7 +107,7 @@ apiVersion = "1.91"
 
 ----------------------------------------------------------------
 
-withClient :: Config -> PersistedInfo -> (Client -> IO a) -> IO a
+withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
 withClient config pInfo action = do
     ref <- I.newIORef Nothing
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
@@ -118,29 +118,30 @@ withClient config pInfo action = do
         action client
   where
     rpcConfig ref = RPC.defaultConfig
-        { RPC.requestHandler = \rpcClient mid method objs -> do
+        { RPC.requestHandler =
+            \rpcClient mid method objs -> do
             -- sending ACK always
-            sendAck rpcClient mid
-            Just client <- I.readIORef ref
-            active      <- isActive client
-            when active $ do
-                -- fixme: "notify_update_domain_users"
-                -- fixme: "notify_update_read_statuses"
-                Just me <- getMe client
-                let myid = userId me
-                when (method == "notify_create_message") $ case objs of
-                    M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                        Just (msg, aux@(Aux _ _ uid)) | uid /= myid -> do
-                            echan <- findChannel client aux
-                            case echan of
-                                Just chan -> dispatch chan msg aux
-                                Nothing   -> directCreateMessageHandler
-                                    config
-                                    client
-                                    msg
-                                    aux
+                sendAck rpcClient mid
+                Just client <- I.readIORef ref
+                active      <- isActive client
+                when active $ do
+                    -- fixme: "notify_update_domain_users"
+                    -- fixme: "notify_update_read_statuses"
+                    Just me <- getMe client
+                    let myid = userId me
+                    when (method == "notify_create_message") $ case objs of
+                        M.ObjectMap rsp : _ -> case decodeMessage rsp of
+                            Just (msg, aux@(Aux _ _ uid)) | uid /= myid -> do
+                                echan <- findChannel client aux
+                                case echan of
+                                    Just chan -> dispatch chan msg aux
+                                    Nothing   -> directCreateMessageHandler
+                                        config
+                                        client
+                                        msg
+                                        aux
+                            _ -> return ()
                         _ -> return ()
-                    _ -> return ()
         , RPC.logger         = directLogger config
         , RPC.formatter      = directFormatter config
         }
@@ -151,8 +152,7 @@ createSession client = do
     rsp <- callRpcThrow
         (clientRpcClient client)
         methodName
-        [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo
-            client
+        [ M.ObjectStr $ loginInfoDirectAccessToken $ clientLoginInfo client
         , M.ObjectStr apiVersion
         , M.ObjectStr agentName
         ]

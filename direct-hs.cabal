@@ -20,9 +20,9 @@ library
   other-modules:   Web.Direct.Api
                    Web.Direct.Exception
                    Web.Direct.Client
+                   Web.Direct.LoginInfo
                    Web.Direct.Map
                    Web.Direct.Message
-                   Web.Direct.PersistedInfo
                    Web.Direct.Types
                    Web.Direct.Utils
   build-depends:

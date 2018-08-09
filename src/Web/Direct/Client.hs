@@ -1,28 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Direct.Client (
-    Client
-  , clientRpcClient
-  , clientPersistedInfo
-  , newClient
-  , setDomains
-  , getDomains
-  , setTalkRooms
-  , getTalkRooms
-  , setMe
-  , getMe
-  , setUsers
-  , getUsers
-  , isActive
-  , Channel
-  , withChannel
-  , findChannel
-  , dispatch
-  , shutdown
-  , sendMessage
-  , send
-  , recv
-  ) where
+module Web.Direct.Client
+    ( Client
+    , clientRpcClient
+    , clientLoginInfo
+    , newClient
+    , setDomains
+    , getDomains
+    , setTalkRooms
+    , getTalkRooms
+    , setMe
+    , getMe
+    , setUsers
+    , getUsers
+    , isActive
+    , Channel
+    , withChannel
+    , findChannel
+    , dispatch
+    , shutdown
+    , sendMessage
+    , send
+    , recv
+    )
+where
 
 import qualified Control.Concurrent                       as C
 import qualified Control.Concurrent.STM                   as S
@@ -34,8 +35,8 @@ import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Exception
+import           Web.Direct.LoginInfo
 import           Web.Direct.Message
-import           Web.Direct.PersistedInfo
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
@@ -58,17 +59,17 @@ newtype Control = Die Message
 
 -- | Direct client.
 data Client = Client {
-    clientPersistedInfo :: !PersistedInfo
-  , clientRpcClient     :: !RPC.Client
-  , clientDomains       :: I.IORef [Domain]
-  , clientTalkRooms     :: I.IORef [TalkRoom]
-  , clientMe            :: I.IORef (Maybe User)
-  , clientUsers         :: I.IORef [User]
-  , clientChannels      :: S.TVar (HM.HashMap ChannelKey Channel)
-  , clientStatus        :: S.TVar Status
+    clientLoginInfo :: !LoginInfo
+  , clientRpcClient :: !RPC.Client
+  , clientDomains   :: I.IORef [Domain]
+  , clientTalkRooms :: I.IORef [TalkRoom]
+  , clientMe        :: I.IORef (Maybe User)
+  , clientUsers     :: I.IORef [User]
+  , clientChannels  :: S.TVar (HM.HashMap ChannelKey Channel)
+  , clientStatus    :: S.TVar Status
   }
 
-newClient :: PersistedInfo -> RPC.Client -> IO Client
+newClient :: LoginInfo -> RPC.Client -> IO Client
 newClient pinfo rpcClient =
     Client pinfo rpcClient
         <$> I.newIORef []
@@ -125,39 +126,34 @@ fromAux (Aux tid _ uid) = (tid, uid)
 newChannel :: Client -> Aux -> IO (Maybe Channel)
 newChannel client aux = do
     mvar <- C.newEmptyMVar
-    let chan = Channel
-            { toWorker      = mvar
-            , channelClient = client
-            , channelAux    = aux
-            }
+    let chan =
+            Channel {toWorker = mvar, channelClient = client, channelAux = aux}
     S.atomically $ do
         active <- isActiveSTM client
-        if active then do
-          S.modifyTVar' chanDB $ HM.insert key chan
-          return $ Just chan
-        else
-          return Nothing
+        if active
+            then do
+                S.modifyTVar' chanDB $ HM.insert key chan
+                return $ Just chan
+            else return Nothing
   where
     chanDB = clientChannels client
-    key = fromAux aux
+    key    = fromAux aux
 
 freeChannel :: Client -> Aux -> IO ()
-freeChannel client aux = S.atomically $
-    S.modifyTVar' chanDB $ HM.delete key
+freeChannel client aux = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
   where
     chanDB = clientChannels client
-    key = fromAux aux
+    key    = fromAux aux
 
 allChannels :: Client -> IO [Channel]
 allChannels client = HM.elems <$> S.atomically (S.readTVar chanDB)
-  where
-    chanDB = clientChannels client
+    where chanDB = clientChannels client
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
 findChannel client aux = HM.lookup key <$> S.atomically (S.readTVar chanDB)
   where
     chanDB = clientChannels client
-    key = fromAux aux
+    key    = fromAux aux
 
 ----------------------------------------------------------------
 
@@ -171,8 +167,7 @@ wait :: Client -> IO ()
 wait client = S.atomically $ do
     db <- S.readTVar chanDB
     S.check $ HM.null db
-  where
-    chanDB = clientChannels client
+    where chanDB = clientChannels client
 
 ----------------------------------------------------------------
 
@@ -205,11 +200,10 @@ withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO Bool
 withChannel client aux body = do
     mchan <- newChannel client aux
     case mchan of
-      Nothing   -> return False
-      Just chan -> do
-          void $ C.forkFinally (body chan) $ \_ ->
-              freeChannel client aux
-          return True
+        Nothing   -> return False
+        Just chan -> do
+            void $ C.forkFinally (body chan) $ \_ -> freeChannel client aux
+            return True
 
 -- | Receiving a message from the channel.
 recv :: Channel -> IO (Message, Aux)
