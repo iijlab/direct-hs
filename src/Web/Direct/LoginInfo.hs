@@ -1,10 +1,10 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Direct.PersistedInfo (
-    PersistedInfo(..)
-  , serializePersistedInfo
-  , deserializePersistedInfo
+module Web.Direct.LoginInfo (
+    LoginInfo(..)
+  , serializeLoginInfo
+  , deserializeLoginInfo
   ) where
 
 import           Data.Aeson           (FromJSON, ToJSON, fieldLabelModifier)
@@ -16,27 +16,27 @@ import           GHC.Generics         (Generic)
 
 ----------------------------------------------------------------
 
-data PersistedInfo = PersistedInfo {
-    persistedInfoDirectAccessToken :: !T.Text
-  , persistedInfoIdfv              :: !T.Text
+data LoginInfo = LoginInfo {
+    loginInfoDirectAccessToken :: !T.Text
+  , loginInfoIdfv              :: !T.Text
   } deriving (Eq, Show, Generic)
 
-instance FromJSON PersistedInfo where
+instance FromJSON LoginInfo where
   parseJSON = Json.genericParseJSON deriveJsonOptions
 
-instance ToJSON PersistedInfo where
+instance ToJSON LoginInfo where
   toJSON = Json.genericToJSON deriveJsonOptions
   toEncoding = Json.genericToEncoding deriveJsonOptions
 
-serializePersistedInfo :: PersistedInfo -> B.ByteString
-serializePersistedInfo = Json.encode
+serializeLoginInfo :: LoginInfo -> B.ByteString
+serializeLoginInfo = Json.encode
 
-deserializePersistedInfo :: B.ByteString -> Either String PersistedInfo
-deserializePersistedInfo = Json.eitherDecode
+deserializeLoginInfo :: B.ByteString -> Either String LoginInfo
+deserializeLoginInfo = Json.eitherDecode
 
 deriveJsonOptions :: Json.Options
 deriveJsonOptions = Json.defaultOptions
-    { fieldLabelModifier = firstLower . drop (T.length "PersistedInfo")
+    { fieldLabelModifier = firstLower . drop (T.length "LoginInfo")
     }
 
 firstLower :: String -> String

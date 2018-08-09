@@ -3,7 +3,7 @@
 module Web.Direct.Client (
     Client
   , clientRpcClient
-  , clientPersistedInfo
+  , clientLoginInfo
   , newClient
   , setDomains
   , getDomains
@@ -35,7 +35,7 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Exception
 import           Web.Direct.Message
-import           Web.Direct.PersistedInfo
+import           Web.Direct.LoginInfo
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
@@ -58,17 +58,17 @@ newtype Control = Die Message
 
 -- | Direct client.
 data Client = Client {
-    clientPersistedInfo :: !PersistedInfo
-  , clientRpcClient     :: !RPC.Client
-  , clientDomains       :: I.IORef [Domain]
-  , clientTalkRooms     :: I.IORef [TalkRoom]
-  , clientMe            :: I.IORef (Maybe User)
-  , clientUsers         :: I.IORef [User]
-  , clientChannels      :: S.TVar (HM.HashMap ChannelKey Channel)
-  , clientStatus        :: S.TVar Status
+    clientLoginInfo :: !LoginInfo
+  , clientRpcClient :: !RPC.Client
+  , clientDomains   :: I.IORef [Domain]
+  , clientTalkRooms :: I.IORef [TalkRoom]
+  , clientMe        :: I.IORef (Maybe User)
+  , clientUsers     :: I.IORef [User]
+  , clientChannels  :: S.TVar (HM.HashMap ChannelKey Channel)
+  , clientStatus    :: S.TVar Status
   }
 
-newClient :: PersistedInfo -> RPC.Client -> IO Client
+newClient :: LoginInfo -> RPC.Client -> IO Client
 newClient pinfo rpcClient =
     Client pinfo rpcClient
         <$> I.newIORef []

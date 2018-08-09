@@ -9,7 +9,7 @@ module Web.Direct
   -- * Client
   , Client
   , withClient
-  , clientPersistedInfo
+  , clientLoginInfo
   , setDomains
   , getDomains
   , setTalkRooms
@@ -18,10 +18,10 @@ module Web.Direct
   , getMe
   , setUsers
   , getUsers
-  -- ** Persisted information
-  , PersistedInfo(..)
-  , serializePersistedInfo
-  , deserializePersistedInfo
+  -- ** Login information
+  , LoginInfo(..)
+  , serializeLoginInfo
+  , deserializeLoginInfo
   -- * Message
   -- ** Ids
   , DomainId
@@ -71,5 +71,5 @@ import           Web.Direct.Api
 import           Web.Direct.Client
 import           Web.Direct.Exception
 import           Web.Direct.Message
-import           Web.Direct.PersistedInfo
+import           Web.Direct.LoginInfo
 import           Web.Direct.Types

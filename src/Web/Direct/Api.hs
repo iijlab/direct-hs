@@ -23,7 +23,7 @@ import           Web.Direct.Client
 import           Web.Direct.Exception
 import           Web.Direct.Map
 import           Web.Direct.Message
-import           Web.Direct.PersistedInfo
+import           Web.Direct.LoginInfo
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
@@ -74,7 +74,7 @@ login config email pass =
             ]
         case resultToObjectOrException methodName res of
             Right (M.ObjectStr token) ->
-                Right <$> newClient (PersistedInfo token idfv) rpcClient
+                Right <$> newClient (LoginInfo token idfv) rpcClient
             Right other -> return $ Left $ UnexpectedReponse methodName other
             Left  e     -> return $ Left e
   where
@@ -107,7 +107,7 @@ apiVersion = "1.91"
 
 ----------------------------------------------------------------
 
-withClient :: Config -> PersistedInfo -> (Client -> IO a) -> IO a
+withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
 withClient config pInfo action = do
     ref <- I.newIORef Nothing
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
@@ -151,7 +151,7 @@ createSession client = do
     rsp <- callRpcThrow
         (clientRpcClient client)
         methodName
-        [ M.ObjectStr $ persistedInfoDirectAccessToken $ clientPersistedInfo
+        [ M.ObjectStr $ loginInfoDirectAccessToken $ clientLoginInfo
             client
         , M.ObjectStr apiVersion
         , M.ObjectStr agentName
