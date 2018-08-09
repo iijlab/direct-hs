@@ -37,16 +37,16 @@ data Config = Config {
   }
 
 -- | The default configuration.
---   'RequestHandler' automatically replies ACK.
---   'NotificationHandler' and 'logger' do nothing.
---   'formatter' is 'show'.
---   'endpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
+--
+--   * 'directCreateMessageHandler' and 'directLogger' do nothing.
+--   * 'directFormatter' is 'show'.
+--   * 'directEndpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
 defaultConfig :: Config
 defaultConfig = Config
     { directCreateMessageHandler = \_ _ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
-    , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
+    , directEndpointUrl          = "wss://api.direct4b.com/albero-app-server/api"
     }
 
 ----------------------------------------------------------------
