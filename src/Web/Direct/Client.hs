@@ -44,6 +44,8 @@ data Status = Active | Inactive deriving Eq
 
 type ChannelKey = (TalkId, UserId)
 
+-- | A virtual communication channel based on
+--   a pair of talk room ID and user ID.
 data Channel = Channel {
       toWorker      :: C.MVar (Either Control (Message, Aux))
     , channelClient :: Client
@@ -174,6 +176,9 @@ wait client = S.atomically $ do
 
 ----------------------------------------------------------------
 
+-- | Sending a message in the main 'IO' or 'directCreateMessageHandler'.
+--   In the main 'IO', 'defaultAux' should be used
+--   to specify a talk room ID.
 sendMessage :: Client -> Message -> Aux -> IO (Either Exception MessageId)
 sendMessage client req aux = do
     let obj        = encodeMessage req aux
@@ -206,6 +211,7 @@ withChannel client aux body = do
               freeChannel client aux
           return True
 
+-- | Receiving a message from the channel.
 recv :: Channel -> IO (Message, Aux)
 recv chan = do
     cm <- C.takeMVar $ toWorker chan
@@ -215,10 +221,11 @@ recv chan = do
             void $ sendMessage (channelClient chan) announce (channelAux chan)
             E.throwIO E.ThreadKilled
 
+-- | Sending a message to the channel.
 send :: Channel -> Message -> IO (Either Exception MessageId)
 send chan msg = sendMessage (channelClient chan) msg (channelAux chan)
 
--- | This function lets the handler to not accept any message,
+-- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,
 --   and finnaly waits that all channels are closed.
 shutdown :: Client -> Message -> IO ()

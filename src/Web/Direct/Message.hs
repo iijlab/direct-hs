@@ -12,6 +12,7 @@ import           Web.Direct.Utils
 
 ----------------------------------------------------------------
 
+-- | Type for Direct messages.
 data Message =
     Txt       !T.Text
   | Location  !T.Text !T.Text -- Address, GoogleMap URL

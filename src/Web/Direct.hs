@@ -27,7 +27,7 @@ module Web.Direct
   , TalkId
   , UserId
   , MessageId
-  -- ** Main types
+  -- ** Abstract types
   , Domain
   , domainId
   , domainName
@@ -42,12 +42,13 @@ module Web.Direct
   , canonicalDisplayName
   , phoneticDisplayName
   , canonicalPhoneticDisplayName
-  , Message(..)
   , Aux
   , auxMessageId
   , auxTalkId
   , auxUserId
   , defaultAux
+  -- ** Message
+  , Message(..)
   -- * Sending
   , sendMessage
   -- * Channel

@@ -28,6 +28,7 @@ import           Web.Direct.Types
 
 ----------------------------------------------------------------
 
+-- | Type for client configuration.
 data Config = Config {
     directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
   , directLogger               :: RPC.Logger
@@ -50,6 +51,7 @@ defaultConfig = Config
 
 ----------------------------------------------------------------
 
+-- | Logging in the Direct cloud.
 login
     :: Config
     -> T.Text -- ^ Login email address for direct.
