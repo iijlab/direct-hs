@@ -8,7 +8,6 @@ module Web.Direct
   -- * Client
     , Client
     , withClient
-    , clientLoginInfo
     , setDomains
     , getDomains
     , setTalkRooms
