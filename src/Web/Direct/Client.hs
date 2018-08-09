@@ -14,12 +14,8 @@ module Web.Direct.Client (
   , setUsers
   , getUsers
   , isActive
-  , inactivate
   , Channel
   , withChannel
-  , newChannel
-  , freeChannel
-  , allChannels
   , findChannel
   , dispatch
   , shutdown
@@ -29,6 +25,7 @@ module Web.Direct.Client (
   ) where
 
 import qualified Control.Concurrent                       as C
+import qualified Control.Concurrent.STM                   as S
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
 import qualified Data.HashMap.Strict                      as HM
@@ -49,7 +46,6 @@ type ChannelKey = (TalkId, UserId)
 
 data Channel = Channel {
       toWorker      :: C.MVar (Either Control (Message, Aux))
-    , fromWorker    :: C.MVar ()
     , channelClient :: Client
     , channelAux    :: Aux
     }
@@ -66,8 +62,8 @@ data Client = Client {
   , clientTalkRooms     :: I.IORef [TalkRoom]
   , clientMe            :: I.IORef (Maybe User)
   , clientUsers         :: I.IORef [User]
-  , clientChannels      :: I.IORef (HM.HashMap ChannelKey Channel)
-  , clientStatus        :: I.IORef Status
+  , clientChannels      :: S.TVar (HM.HashMap ChannelKey Channel)
+  , clientStatus        :: S.TVar Status
   }
 
 newClient :: PersistedInfo -> RPC.Client -> IO Client
@@ -77,8 +73,8 @@ newClient pinfo rpcClient =
         <*> I.newIORef []
         <*> I.newIORef Nothing
         <*> I.newIORef []
-        <*> I.newIORef HM.empty
-        <*> I.newIORef Active
+        <*> S.newTVarIO HM.empty
+        <*> S.newTVarIO Active
 
 ----------------------------------------------------------------
 
@@ -109,48 +105,56 @@ getUsers client = I.readIORef (clientUsers client)
 ----------------------------------------------------------------
 
 isActive :: Client -> IO Bool
-isActive client = do
-    status <- I.readIORef $ clientStatus client
-    return $ status == Active
+isActive client = S.atomically $ isActiveSTM client
+
+isActiveSTM :: Client -> S.STM Bool
+isActiveSTM client = (== Active) <$> S.readTVar (clientStatus client)
 
 inactivate :: Client -> IO ()
-inactivate client = I.writeIORef (clientStatus client) Inactive
+inactivate client = S.atomically $ S.writeTVar (clientStatus client) Inactive
 
 ----------------------------------------------------------------
 
 fromAux :: Aux -> ChannelKey
 fromAux (Aux tid _ uid) = (tid, uid)
 
-newChannel :: Client -> Aux -> IO Channel
+-- | Creating a new channel.
+--   This returns 'Nothing' after 'shutdown'.
+newChannel :: Client -> Aux -> IO (Maybe Channel)
 newChannel client aux = do
-    mvar1 <- C.newEmptyMVar
-    mvar2 <- C.newEmptyMVar
+    mvar <- C.newEmptyMVar
     let chan = Channel
-            { toWorker      = mvar1
-            , fromWorker    = mvar2
+            { toWorker      = mvar
             , channelClient = client
             , channelAux    = aux
             }
-    I.atomicModifyIORef' ref $ \m -> (HM.insert key chan m, ())
-    return chan
+    S.atomically $ do
+        active <- isActiveSTM client
+        if active then do
+          S.modifyTVar' chanDB $ HM.insert key chan
+          return $ Just chan
+        else
+          return Nothing
   where
-    ref = clientChannels client
+    chanDB = clientChannels client
     key = fromAux aux
 
 freeChannel :: Client -> Aux -> IO ()
-freeChannel client aux = I.atomicModifyIORef' ref $ \m -> (HM.delete key m, ())
+freeChannel client aux = S.atomically $
+    S.modifyTVar' chanDB $ HM.delete key
   where
-    ref = clientChannels client
+    chanDB = clientChannels client
     key = fromAux aux
 
 allChannels :: Client -> IO [Channel]
-allChannels client = HM.elems <$> I.readIORef ref
-    where ref = clientChannels client
+allChannels client = HM.elems <$> S.atomically (S.readTVar chanDB)
+  where
+    chanDB = clientChannels client
 
 findChannel :: Client -> Aux -> IO (Maybe Channel)
-findChannel client aux = HM.lookup key <$> I.readIORef ref
+findChannel client aux = HM.lookup key <$> S.atomically (S.readTVar chanDB)
   where
-    ref = clientChannels client
+    chanDB = clientChannels client
     key = fromAux aux
 
 ----------------------------------------------------------------
@@ -161,8 +165,12 @@ dispatch chan msg aux = C.putMVar (toWorker chan) $ Right (msg, aux)
 control :: Channel -> Control -> IO ()
 control chan ctl = C.putMVar (toWorker chan) $ Left ctl
 
-wait :: Channel -> IO ()
-wait chan = C.takeMVar (fromWorker chan)
+wait :: Client -> IO ()
+wait client = S.atomically $ do
+    db <- S.readTVar chanDB
+    S.check $ HM.null db
+  where
+    chanDB = clientChannels client
 
 ----------------------------------------------------------------
 
@@ -185,12 +193,18 @@ sendMessage client req aux = do
 
 -- | A new channel is created according to the first and second arguments.
 --   Then the third argument runs in a new thread with the channel.
-withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO ()
+--   In this case, 'True' is returned.
+--   If 'shutdown' is already called, a new thread is not spawned
+--   and 'False' is returned.
+withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO Bool
 withChannel client aux body = do
-    chan <- newChannel client aux
-    void $ C.forkFinally (body chan) $ \_ -> do
-        freeChannel client            aux
-        C.putMVar   (fromWorker chan) ()
+    mchan <- newChannel client aux
+    case mchan of
+      Nothing   -> return False
+      Just chan -> do
+          void $ C.forkFinally (body chan) $ \_ ->
+              freeChannel client aux
+          return True
 
 recv :: Channel -> IO (Message, Aux)
 recv chan = do
@@ -204,9 +218,12 @@ recv chan = do
 send :: Channel -> Message -> IO (Either Exception MessageId)
 send chan msg = sendMessage (channelClient chan) msg (channelAux chan)
 
+-- | This function lets the handler to not accept any message,
+--   then sends the maintenance message to all channels,
+--   and finnaly waits that all channels are closed.
 shutdown :: Client -> Message -> IO ()
 shutdown client msg = do
     inactivate client
     chans <- allChannels client
     mapM_ (\chan -> control chan (Die msg)) chans
-    mapM_ wait                              chans
+    wait client

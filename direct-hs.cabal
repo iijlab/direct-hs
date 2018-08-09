@@ -34,6 +34,7 @@ library
     , network-messagepack-rpc
     , network-messagepack-rpc-websocket
     , mwc-random
+    , stm
     , text
     , unordered-containers
     , uuid
