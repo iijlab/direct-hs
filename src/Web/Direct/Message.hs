@@ -34,6 +34,10 @@ data Aux = Aux {
   , auxUserId    :: !UserId
   }
 
+-- | The default 'Aux'.
+--   This can be used in the main 'IO' where 'Aux' is not available.
+--   To use 'sendMessage' in the main 'IO', set talk room ID to
+--   'defaultAux'.
 defaultAux :: Aux
 defaultAux = Aux 0 0 0
 
