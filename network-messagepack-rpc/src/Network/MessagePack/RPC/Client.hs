@@ -21,11 +21,11 @@ module Network.MessagePack.RPC.Client
   , reply
   ) where
 
-import           Control.Concurrent      (forkIO, killThread)
+import           Control.Concurrent      (forkIO, forkFinally, killThread)
 import           Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
 import qualified Control.Exception.Safe  as E
-import           Control.Monad           (forever, void)
+import           Control.Monad           (forever, void, when)
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as BL
 import           Data.HashMap.Strict     (HashMap)
@@ -80,6 +80,7 @@ data Config = Config {
     --   Until exiting from the block of 'withClient', the receiver thread
     --   indefinitely waits for frames via 'backendRecv'.
   , formatter           :: Formatter
+  , waitRequestHandler  :: Bool
   }
 
 -- | The default configuration.
@@ -92,6 +93,7 @@ defaultConfig = Config
     , logger              = \_ -> return ()
     , exceptionHandlers   = [E.Handler $ \(E.SomeException _) -> return ()]
     , formatter           = show
+    , waitRequestHandler  = False
     }
 
 -- | Backend IO functions.
@@ -174,11 +176,13 @@ initSessionState =
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
     ss <- initSessionState
+    wait <- MVar.newEmptyMVar
     let client = Client ss backend (logger config) (formatter config)
-    tid <- forkIO $ receiverThread client config
-    takeAction client `E.finally` killThread tid
+    tid <- forkFinally (receiverThread client config) $ \_ -> MVar.putMVar wait ()
+    takeAction client wait `E.finally` killThread tid
   where
-    takeAction client = do
+    takeAction client wait = do
         returned <- action client
         backendClose backend
+        when (waitRequestHandler config) $ MVar.takeMVar wait
         return returned
