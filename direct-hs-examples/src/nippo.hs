@@ -13,7 +13,7 @@ import           Common
 
 main :: IO ()
 main = do
-    pInfo <- dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     D.withClient
         D.defaultConfig { D.directLogger               = putStrLn
                         , D.directCreateMessageHandler = handleCreateMessage
@@ -23,7 +23,7 @@ main = do
 
 handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
 handleCreateMessage client (D.Txt txt) aux
-  | "報告" `T.isInfixOf` txt = D.withChannel client aux $ nippo client aux
+  | "報告" `T.isInfixOf` txt = void $ D.withChannel client aux $ nippo client aux
 handleCreateMessage _client _msg _aux = return ()
 
 nippo :: D.Client -> D.Aux -> D.Channel -> IO ()

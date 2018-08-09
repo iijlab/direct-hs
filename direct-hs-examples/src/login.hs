@@ -23,15 +23,12 @@ main = do
 
     email <- getEmailAddress
     pwd <- getPassword
-    eclient <- D.login D.defaultConfig email pwd
-    case eclient of
+    eLoginInfo <- D.login D.defaultConfig email pwd
+    case eLoginInfo of
         Left _       -> putStrLn "Logged failed,"
-        Right client -> do
+        Right loginInfo -> do
             putStrLn "Successfully logged in."
-
-            B.writeFile jsonFileName
-                $ D.serializePersistedInfo
-                $ D.clientPersistedInfo client
+            B.writeFile jsonFileName $ D.serializeLoginInfo $ loginInfo
             cd <- Dir.getCurrentDirectory
             putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 

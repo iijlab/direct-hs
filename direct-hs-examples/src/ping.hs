@@ -12,7 +12,7 @@ import           Common
 
 main :: IO ()
 main = do
-    pInfo <- dieWhenLeft . D.deserializePersistedInfo =<< B.readFile jsonFileName
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     D.withClient
         D.defaultConfig { D.directLogger               = putStrLn
                         , D.directCreateMessageHandler = handleCreateMessage
