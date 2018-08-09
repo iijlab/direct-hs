@@ -83,6 +83,7 @@ login config email pass =
                                    sendAck rpcClient mid
         , RPC.logger         = directLogger config
         , RPC.formatter      = directFormatter config
+        , RPC.waitRequestHandler = False
         }
 
 ----------------------------------------------------------------
@@ -143,6 +144,7 @@ withClient config pInfo action = do
                         _ -> return ()
         , RPC.logger         = directLogger config
         , RPC.formatter      = directFormatter config
+        , RPC.waitRequestHandler = True
         }
 
 createSession :: Client -> IO ()

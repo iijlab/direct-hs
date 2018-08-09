@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Applicative    ((<**>), (<|>))
-import           Control.Concurrent     (threadDelay)
 import qualified Control.Exception      as E
-import           Control.Monad          (forM_, forever, join)
+import           Control.Monad          (forM_, join)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (intercalate)
@@ -133,8 +132,7 @@ observe = do
                         , D.directEndpointUrl = url
                         }
         pInfo
-      -- `forever $ return ()` doesn't give up control flow to the receiver thread.
-        (\_ -> forever $ threadDelay $ 10 * 1000)
+        (\_ -> return ())
 
 dieWhenLeft :: Either String a -> IO a
 dieWhenLeft = either exitError return
