@@ -29,20 +29,24 @@ module Web.Direct
   , UserId
   , MessageId
   -- ** Abstract types
+  -- *** Domain
   , Domain
   , domainId
   , domainName
+  -- *** Talk room
   , TalkType(..)
   , TalkRoom
   , talkId
   , talkType
   , talkUsers
+  -- *** User
   , User
   , userId
   , displayName
   , canonicalDisplayName
   , phoneticDisplayName
   , canonicalPhoneticDisplayName
+  -- *** Auxiliary data
   , Aux
   , auxMessageId
   , auxTalkId
