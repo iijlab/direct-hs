@@ -27,6 +27,7 @@ data Message =
 
 ----------------------------------------------------------------
 
+-- | Auxiliary data to identify communication.
 data Aux = Aux {
     auxTalkId    :: !TalkId
   , auxMessageId :: !MessageId
