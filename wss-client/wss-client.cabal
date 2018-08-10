@@ -2,7 +2,7 @@ name:                wss-client
 version:             0.2.1.1
 synopsis:            A-little-higher-level WebSocket client.
 description:         A-little-higher-level WebSocket client. Based on http-client and http-client-tls.
-homepage:            https://github.com/iij-ii/wss-client
+homepage:            https://github.com/iij-ii/direct-hs/tree/master/wss-client
 license:             BSD3
 license-file:        LICENSE
 author:              Yuji Yamamoto
@@ -59,4 +59,4 @@ test-suite wss-client-test
 
 source-repository head
   type:     git
-  location: https://github.com/iij-ii/wss-client
+  location: https://github.com/iij-ii/direct-hs

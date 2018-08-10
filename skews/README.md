@@ -5,4 +5,4 @@ YOU SHOULD NOT USE THIS FOR PRODUCTION!!
 
 ## Examples
 
-See [the spec file](https://github.com/iij-ii/skews/blob/master/test/Network/WebSockets/SkewsSpec.hs).
+See [the spec file](test/Network/WebSockets/SkewsSpec.hs).
