@@ -183,6 +183,6 @@ withClient config backend action = do
   where
     takeAction client wait = do
         returned <- action client
-        backendClose backend
         when (waitRequestHandler config) $ MVar.takeMVar wait
+        backendClose backend
         return returned
