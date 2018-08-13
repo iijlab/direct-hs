@@ -6,6 +6,7 @@ import           Control.Monad          (forever, void)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (find)
 import qualified Data.Text              as T
+import qualified System.Signal          as S
 import qualified Web.Direct             as D
 
 import           Common
@@ -18,7 +19,11 @@ main = do
                         , D.directCreateMessageHandler = handleCreateMessage
                         }
         pInfo
-        (\_ -> return ())
+        body
+  where
+    body client = do
+        S.installHandler S.sigTERM $ \_ ->
+          D.shutdown client $ D.Txt "BOTが終了します。\nこの作業は後からやり直してください。"
 
 handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
 handleCreateMessage client (D.Txt txt) aux

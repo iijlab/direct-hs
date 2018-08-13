@@ -45,6 +45,7 @@ executable nippo
       base >=4.7 && <5
     , bytestring
     , direct-hs
+    , signal
     , text
   default-language: Haskell2010
   other-modules: Common
