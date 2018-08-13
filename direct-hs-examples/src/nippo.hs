@@ -2,7 +2,6 @@
 
 module Main (main) where
 
-import           Control.Concurrent     (threadDelay)
 import           Control.Monad          (forever, void)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (find)
@@ -19,7 +18,7 @@ main = do
                         , D.directCreateMessageHandler = handleCreateMessage
                         }
         pInfo
-        (\_ -> forever $ threadDelay $ 10 * 1000)
+        (\_ -> return ())
 
 handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
 handleCreateMessage client (D.Txt txt) aux
