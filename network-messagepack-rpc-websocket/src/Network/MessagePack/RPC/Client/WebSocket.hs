@@ -15,6 +15,7 @@ module Network.MessagePack.RPC.Client.WebSocket (
   , URL
   , Client
   , withClient
+  , shutdown
     -- * Call and reply
   , Result
   , call
