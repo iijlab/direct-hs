@@ -2,10 +2,10 @@
 
 module Main (main) where
 
-import           Control.Monad          (forever, void)
-import qualified Data.ByteString.Lazy   as B
-import qualified Data.Text              as T
-import qualified Web.Direct             as D
+import           Control.Monad        (void)
+import qualified Data.ByteString.Lazy as B
+import qualified Data.Text            as T
+import qualified Web.Direct           as D
 
 import           Common
 

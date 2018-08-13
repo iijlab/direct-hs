@@ -5,7 +5,7 @@ module Main
     )
 where
 
-import           Control.Monad        (forever, void)
+import           Control.Monad        (void)
 import qualified Data.ByteString.Lazy as B
 import           Data.List            (find)
 import qualified Data.Text            as T
