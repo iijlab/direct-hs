@@ -194,6 +194,8 @@ withClient config backend action = do
         backendClose backend
         return returned
 
+-- | This function cleans up the internal states including
+--   the termination of internal threads.
 shutdown :: Client -> IO ()
 shutdown client = do
     mtid <- IORef.readIORef $ clientHandlerTid client
