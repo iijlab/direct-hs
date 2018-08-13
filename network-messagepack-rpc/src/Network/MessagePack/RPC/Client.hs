@@ -2,26 +2,29 @@
 
 -- | Backend-free MessagePack RPC Client.
 module Network.MessagePack.RPC.Client
-  (
+    (
     -- * Config
-    Config(..)
-  , NotificationHandler
-  , RequestHandler
-  , Logger
-  , Formatter
-  , defaultConfig
+      Config(..)
+    , NotificationHandler
+    , RequestHandler
+    , Logger
+    , Formatter
+    , defaultConfig
     -- * Backend
-  , Backend(..)
+    , Backend(..)
     -- * Client
-  , Client
-  , withClient
+    , Client
+    , withClient
+    , shutdown
     -- * Call and reply
-  , Result
-  , call
-  , reply
-  ) where
+    , Result
+    , call
+    , reply
+    )
+where
 
-import           Control.Concurrent      (forkIO, forkFinally, killThread)
+import           Control.Concurrent      (ThreadId, forkFinally, forkIO,
+                                          killThread)
 import           Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
 import qualified Control.Exception.Safe  as E
@@ -44,6 +47,7 @@ data Client = Client {
   , clientBackend      :: !Backend
   , clientLog          :: Logger
   , clientFormat       :: Formatter
+  , clientHandlerTid   :: IORef (Maybe ThreadId)
   }
 
 data SessionState = SessionState {
@@ -175,10 +179,13 @@ initSessionState =
 -- | Executing the action in the 3rd argument with a 'Client'.
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
-    ss <- initSessionState
-    wait <- MVar.newEmptyMVar
-    let client = Client ss backend (logger config) (formatter config)
-    tid <- forkFinally (receiverThread client config) $ \_ -> MVar.putMVar wait ()
+    ss     <- initSessionState
+    wait   <- MVar.newEmptyMVar
+    tidref <- IORef.newIORef Nothing
+    let client = Client ss backend (logger config) (formatter config) tidref
+    tid <- forkFinally (receiverThread client config)
+        $ \_ -> MVar.putMVar wait ()
+    IORef.writeIORef tidref $ Just tid
     takeAction client wait `E.finally` killThread tid
   where
     takeAction client wait = do
@@ -186,3 +193,10 @@ withClient config backend action = do
         when (waitRequestHandler config) $ MVar.takeMVar wait
         backendClose backend
         return returned
+
+shutdown :: Client -> IO ()
+shutdown client = do
+    mtid <- IORef.readIORef $ clientHandlerTid client
+    case mtid of
+        Nothing  -> return ()
+        Just tid -> killThread tid

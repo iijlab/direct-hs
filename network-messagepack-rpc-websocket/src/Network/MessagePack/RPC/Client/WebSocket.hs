@@ -1,28 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | MessagePack RPC Client based on WebSocket.
-module Network.MessagePack.RPC.Client.WebSocket (
+module Network.MessagePack.RPC.Client.WebSocket
+    (
     -- * Config
-    Config(..)
-  , NotificationHandler
-  , RequestHandler
-  , Logger
-  , Formatter
-  , defaultConfig
+      Config(..)
+    , NotificationHandler
+    , RequestHandler
+    , Logger
+    , Formatter
+    , defaultConfig
     -- * Backend
-  , Backend(..)
+    , Backend(..)
     -- * Client
-  , URL
-  , Client
-  , withClient
+    , URL
+    , Client
+    , withClient
+    , shutdown
     -- * Call and reply
-  , Result
-  , call
-  , reply
-  ) where
+    , Result
+    , call
+    , reply
+    )
+where
 
-import qualified Data.Text                        as T
-import qualified Network.WebSockets.Client        as Ws
+import qualified Data.Text                      as T
+import qualified Network.WebSockets.Client      as Ws
 
 import           Network.MessagePack.RPC.Client hiding (withClient)
 import qualified Network.MessagePack.RPC.Client as RPC (withClient)
