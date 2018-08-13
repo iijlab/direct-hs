@@ -228,3 +228,4 @@ shutdown client msg = do
     chans <- allChannels client
     mapM_ (\chan -> control chan (Die msg)) chans
     wait client
+    RPC.shutdown $ clientRpcClient client
