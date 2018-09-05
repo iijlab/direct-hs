@@ -33,7 +33,7 @@ data Aux = Aux {
     auxTalkId    :: !TalkId
   , auxMessageId :: !MessageId
   , auxUserId    :: !UserId
-  }
+  } deriving (Eq, Show)
 
 -- | The default 'Aux'.
 --   This can be used in the main 'IO' where 'Aux' is not available.
