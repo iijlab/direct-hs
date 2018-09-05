@@ -148,8 +148,8 @@ decodeMessage rspinfo = do
                 else Just (Txt text, aux)
         M.ObjectWord 2 -> do
             M.ObjectMap m <- look "content" rspinfo
-            set <- look "stamp_set" m >>= M.fromObject
-            idx <- look "stamp_index" m >>= M.fromObject
+            set           <- look "stamp_set" m >>= M.fromObject
+            idx           <- look "stamp_index" m >>= M.fromObject
             let txt = look "text" m >>= M.fromObject
             Just (Stamp set idx txt, aux)
         M.ObjectWord 500 -> do
