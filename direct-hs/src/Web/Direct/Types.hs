@@ -23,13 +23,13 @@ data User = User {
   , canonicalDisplayName         :: !T.Text
   , phoneticDisplayName          :: !T.Text
   , canonicalPhoneticDisplayName :: !T.Text
-  }
+  } deriving (Eq, Show)
 
 -- | Type for domains.
 data Domain = Domain {
     domainId   :: !DomainId
   , domainName :: !T.Text
-  }
+  } deriving (Eq, Show)
 
 -- | Talk room types.
 data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show)
@@ -39,4 +39,4 @@ data TalkRoom = TalkRoom {
     talkId    :: !TalkId
   , talkType  :: !TalkType
   , talkUsers :: [UserId]
-  }
+  } deriving (Eq, Show)
