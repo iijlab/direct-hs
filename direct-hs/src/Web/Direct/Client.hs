@@ -22,6 +22,7 @@ module Web.Direct.Client
     , sendMessage
     , send
     , recv
+    , currentTalkRoom
     )
 where
 
@@ -31,6 +32,7 @@ import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
 import qualified Data.HashMap.Strict                      as HM
 import qualified Data.IORef                               as I
+import qualified Data.List                                as L
 import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
@@ -54,6 +56,15 @@ data Channel = Channel {
     }
 
 newtype Control = Die Message
+
+currentTalkRoom :: Channel -> IO TalkRoom
+currentTalkRoom (Channel _ client aux) = do
+    rooms <- getTalkRooms client
+    -- fixme: should throw an appropriate exception?
+    let Just talkroom = L.find (\room -> talkId room == tid) rooms
+    return talkroom
+  where
+    tid = auxTalkId aux
 
 ----------------------------------------------------------------
 
