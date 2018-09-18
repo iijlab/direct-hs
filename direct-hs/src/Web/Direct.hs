@@ -16,6 +16,8 @@ module Web.Direct
     , getMe
     , setUsers
     , getUsers
+    , findUser
+    , findPairTalkRoom
   -- ** Login information
     , LoginInfo(..)
     , serializeLoginInfo
