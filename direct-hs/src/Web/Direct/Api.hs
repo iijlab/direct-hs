@@ -75,14 +75,14 @@ login config email pass =
         case resultToObjectOrException methodName res of
             Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
             Right other -> return $ Left $ UnexpectedReponse methodName other
-            Left  e     -> return $ Left e
+            Left e -> return $ Left e
   where
     rpcConfig = RPC.defaultConfig
-        { RPC.requestHandler = \rpcClient mid _method _objs ->
+        { RPC.requestHandler     = \rpcClient mid _method _objs ->
              -- sending ACK always
-                                   sendAck rpcClient mid
-        , RPC.logger         = directLogger config
-        , RPC.formatter      = directFormatter config
+                                       sendAck rpcClient mid
+        , RPC.logger             = directLogger config
+        , RPC.formatter          = directFormatter config
         , RPC.waitRequestHandler = False
         }
 
@@ -118,7 +118,7 @@ withClient config pInfo action = do
         action client
   where
     rpcConfig ref = RPC.defaultConfig
-        { RPC.requestHandler =
+        { RPC.requestHandler     =
             \rpcClient mid method objs -> do
             -- sending ACK always
                 sendAck rpcClient mid
@@ -136,19 +136,20 @@ withClient config pInfo action = do
                                 case echan of
                                     Just chan -> dispatch chan msg aux
                                     Nothing   -> do
-                                        echan' <- findChannelByTalkId client (auxTalkId aux)
+                                        echan' <- findChannelByTalkId
+                                            client
+                                            (auxTalkId aux)
                                         case echan' of
-                                                Just chan -> dispatch chan msg aux
-                                                _ ->
-                                                    directCreateMessageHandler
-                                                        config
-                                                        client
-                                                        msg
-                                                        aux
+                                            Just chan -> dispatch chan msg aux
+                                            _ -> directCreateMessageHandler
+                                                config
+                                                client
+                                                msg
+                                                aux
                             _ -> return ()
                         _ -> return ()
-        , RPC.logger         = directLogger config
-        , RPC.formatter      = directFormatter config
+        , RPC.logger             = directLogger config
+        , RPC.formatter          = directFormatter config
         , RPC.waitRequestHandler = True
         }
 

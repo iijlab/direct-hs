@@ -66,8 +66,7 @@ currentTalkRoom (Channel _ client aux) = do
     rooms <- getTalkRooms client
     let talkroom = L.find (\room -> talkId room == tid) rooms
     return talkroom
-  where
-    tid = auxTalkId aux
+    where tid = auxTalkId aux
 
 ----------------------------------------------------------------
 
@@ -129,7 +128,9 @@ findUser uid client = do
 findPairTalkRoom :: UserId -> Client -> IO (Maybe TalkRoom)
 findPairTalkRoom uid client = do
     rooms <- getTalkRooms client
-    return $ L.find (\room -> talkType room == PairTalk && uid `elem` talkUserIds room) rooms
+    return $ L.find
+        (\room -> talkType room == PairTalk && uid `elem` talkUserIds room)
+        rooms
 
 ----------------------------------------------------------------
 
@@ -183,7 +184,8 @@ findChannel client aux = HM.lookup key <$> S.atomically (S.readTVar chanDB)
     key    = fromAux aux
 
 findChannelByTalkId :: Client -> TalkId -> IO (Maybe Channel)
-findChannelByTalkId client tid = HM.lookup key <$> S.atomically (S.readTVar chanDB)
+findChannelByTalkId client tid = HM.lookup key
+    <$> S.atomically (S.readTVar chanDB)
   where
     chanDB = clientChannels client
     key    = (tid, Nothing)
