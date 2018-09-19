@@ -139,8 +139,7 @@ newChannel key client aux = do
                 S.modifyTVar' chanDB $ HM.insert key chan
                 return $ Just chan
             else return Nothing
-  where
-    chanDB = clientChannels client
+    where chanDB = clientChannels client
 
 freeChannel :: Client -> Aux -> IO ()
 freeChannel client aux = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
