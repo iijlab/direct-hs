@@ -59,6 +59,7 @@ module Web.Direct
   -- * Channel
     , Channel
     , withChannel
+    , withChannelOnTalkId
     , recv
     , send
     , currentTalkRoom
