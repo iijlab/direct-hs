@@ -59,11 +59,10 @@ data Channel = Channel {
 
 newtype Control = Die Message
 
-currentTalkRoom :: Channel -> IO TalkRoom
+currentTalkRoom :: Channel -> IO (Maybe TalkRoom)
 currentTalkRoom (Channel _ client aux) = do
     rooms <- getTalkRooms client
-    -- fixme: should throw an appropriate exception?
-    let Just talkroom = L.find (\room -> talkId room == tid) rooms
+    let talkroom = L.find (\room -> talkId room == tid) rooms
     return talkroom
   where
     tid = auxTalkId aux
