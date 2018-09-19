@@ -16,6 +16,7 @@ module Web.Direct.Client
     , isActive
     , Channel
     , withChannel
+    , withChannelOnTalkId
     , findChannel
     , dispatch
     , shutdown
@@ -43,7 +44,7 @@ import           Web.Direct.Types
 
 data Status = Active | Inactive deriving Eq
 
-type ChannelKey = (TalkId, UserId)
+type ChannelKey = (TalkId, Maybe UserId)
 
 -- | A virtual communication channel based on
 --   a pair of talk room ID and user ID.
@@ -119,12 +120,15 @@ inactivate client = S.atomically $ S.writeTVar (clientStatus client) Inactive
 ----------------------------------------------------------------
 
 fromAux :: Aux -> ChannelKey
-fromAux (Aux tid _ uid) = (tid, uid)
+fromAux (Aux tid _ uid) = (tid, Just uid)
+
+fromAuxOnlyTalkId :: Aux -> ChannelKey
+fromAuxOnlyTalkId (Aux tid _ _) = (tid, Nothing)
 
 -- | Creating a new channel.
 --   This returns 'Nothing' after 'shutdown'.
-newChannel :: Client -> Aux -> IO (Maybe Channel)
-newChannel client aux = do
+newChannel :: ChannelKey -> Client -> Aux -> IO (Maybe Channel)
+newChannel key client aux = do
     mvar <- C.newEmptyMVar
     let chan =
             Channel {toWorker = mvar, channelClient = client, channelAux = aux}
@@ -137,7 +141,6 @@ newChannel client aux = do
             else return Nothing
   where
     chanDB = clientChannels client
-    key    = fromAux aux
 
 freeChannel :: Client -> Aux -> IO ()
 freeChannel client aux = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
@@ -198,7 +201,16 @@ sendMessage client req aux = do
 --   and 'False' is returned.
 withChannel :: Client -> Aux -> (Channel -> IO ()) -> IO Bool
 withChannel client aux body = do
-    mchan <- newChannel client aux
+    mchan <- newChannel (fromAux aux) client aux
+    case mchan of
+        Nothing   -> return False
+        Just chan -> do
+            void $ C.forkFinally (body chan) $ \_ -> freeChannel client aux
+            return True
+
+withChannelOnTalkId :: Client -> Aux -> (Channel -> IO ()) -> IO Bool
+withChannelOnTalkId client aux body = do
+    mchan <- newChannel (fromAuxOnlyTalkId aux) client aux
     case mchan of
         Nothing   -> return False
         Just chan -> do
