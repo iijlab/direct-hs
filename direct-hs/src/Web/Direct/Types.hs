@@ -36,7 +36,7 @@ data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show)
 
 -- | Type for talk rooms.
 data TalkRoom = TalkRoom {
-    talkId    :: !TalkId
-  , talkType  :: !TalkType
-  , talkUsers :: [UserId]
+    talkId      :: !TalkId
+  , talkType    :: !TalkType
+  , talkUserIds :: [UserId]
   } deriving (Eq, Show)

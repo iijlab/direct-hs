@@ -127,7 +127,7 @@ findUser uid client = do
 findPairTalkRoom :: UserId -> Client -> IO (Maybe TalkRoom)
 findPairTalkRoom uid client = do
     rooms <- getTalkRooms client
-    return $ L.find (\room -> talkType room == PairTalk && uid `elem` talkUsers room) rooms
+    return $ L.find (\room -> talkType room == PairTalk && uid `elem` talkUserIds room) rooms
 
 ----------------------------------------------------------------
 
