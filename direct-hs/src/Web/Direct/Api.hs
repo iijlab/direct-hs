@@ -135,11 +135,16 @@ withClient config pInfo action = do
                                 echan <- findChannel client aux
                                 case echan of
                                     Just chan -> dispatch chan msg aux
-                                    Nothing   -> directCreateMessageHandler
-                                        config
-                                        client
-                                        msg
-                                        aux
+                                    Nothing   -> do
+                                        echan' <- findChannelByTalkId client (auxTalkId aux)
+                                        case echan' of
+                                                Just chan -> dispatch chan msg aux
+                                                _ ->
+                                                    directCreateMessageHandler
+                                                        config
+                                                        client
+                                                        msg
+                                                        aux
                             _ -> return ()
                         _ -> return ()
         , RPC.logger         = directLogger config

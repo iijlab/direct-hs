@@ -18,6 +18,7 @@ module Web.Direct.Client
     , withChannel
     , withChannelOnTalkId
     , findChannel
+    , findChannelByTalkId
     , dispatch
     , shutdown
     , sendMessage
@@ -180,6 +181,12 @@ findChannel client aux = HM.lookup key <$> S.atomically (S.readTVar chanDB)
   where
     chanDB = clientChannels client
     key    = fromAux aux
+
+findChannelByTalkId :: Client -> TalkId -> IO (Maybe Channel)
+findChannelByTalkId client tid = HM.lookup key <$> S.atomically (S.readTVar chanDB)
+  where
+    chanDB = clientChannels client
+    key    = (tid, Nothing)
 
 ----------------------------------------------------------------
 
