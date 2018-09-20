@@ -46,12 +46,8 @@ module Web.Direct
     , canonicalDisplayName
     , phoneticDisplayName
     , canonicalPhoneticDisplayName
-  -- *** Auxiliary data
-    , Aux
-    , auxMessageId
-    , auxTalkId
-    , auxUserId
-    , defaultAux
+  -- *** Talk
+    , Talk(..)
   -- ** Message
     , Message(..)
   -- * Sending
@@ -59,7 +55,6 @@ module Web.Direct
   -- * Channel
     , Channel
     , withChannel
-    , withChannelOnTalkId
     , recv
     , send
     , currentTalkRoom

@@ -30,7 +30,7 @@ import           Web.Direct.Types
 
 -- | Type for client configuration.
 data Config = Config {
-    directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
+    directCreateMessageHandler :: Client -> (Message,MessageId,TalkId,UserId) -> IO ()
   , directLogger               :: RPC.Logger
   , directFormatter            :: RPC.Formatter
   , directEndpointUrl          :: RPC.URL -- Endpoint URL for direct WebSocket API.
@@ -43,7 +43,7 @@ data Config = Config {
 --   * 'directEndpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
 defaultConfig :: Config
 defaultConfig = Config
-    { directCreateMessageHandler = \_ _ _ -> return ()
+    { directCreateMessageHandler = \_ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
     , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
@@ -131,21 +131,18 @@ withClient config pInfo action = do
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, aux@(Aux tid _ uid)) | uid /= myid -> do
-                                echan <- findChannel client aux
-                                case echan of
-                                    Just chan -> dispatch chan msg aux
-                                    Nothing   -> do
-                                        echan' <- findChannelByTalkId
-                                            client
-                                            tid
-                                        case echan' of
-                                            Just chan -> dispatch chan msg aux
-                                            _ -> directCreateMessageHandler
-                                                config
-                                                client
-                                                msg
-                                                aux
+                            Just (msg, msgid, tid, uid) | uid /= myid -> do
+                                mchan <- findChannel client (Pair tid uid)
+                                case mchan of
+                                    Just chan -> dispatch chan msg msgid
+                                    Nothing -> do
+                                        mchan' <- findChannel client (Group tid)
+                                        case mchan' of
+                                          Just chan' -> dispatch chan' msg msgid
+                                          Nothing -> directCreateMessageHandler
+                                               config
+                                               client
+                                               (msg,msgid,tid,uid)
                             _ -> return ()
                         _ -> return ()
         , RPC.logger             = directLogger config
