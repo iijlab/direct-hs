@@ -181,9 +181,10 @@ subscribeNotification client = do
     void $ callRpcThrow c "get_announcement_statuses" []
     void $ callRpcThrow c "get_friends" []
     acq <- callRpcThrow c "get_acquaintances" []
-    setUsers client $ fromGetAcquaintances acq
+    let users = fromGetAcquaintances acq
+    setUsers client users
     talks <- callRpcThrow c "get_talks" []
-    setTalkRooms client $ fromGetTalks talks
+    setTalkRooms client $ fromGetTalks talks users
     void $ callRpcThrow c "get_talk_statuses" []
 
 ----------------------------------------------------------------

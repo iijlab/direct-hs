@@ -38,7 +38,7 @@ module Web.Direct
     , TalkRoom
     , talkId
     , talkType
-    , talkUserIds
+    , talkUsers
   -- *** User
     , User
     , userId
