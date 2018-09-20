@@ -46,16 +46,15 @@ module Web.Direct
     , canonicalDisplayName
     , phoneticDisplayName
     , canonicalPhoneticDisplayName
-  -- *** Talk
-    , Talk
-    , pairTalk
-    , roomTalk
   -- ** Message
     , Message(..)
   -- * Sending
     , sendMessage
   -- * Channel
     , Channel
+    , Talk
+    , pairTalk
+    , roomTalk
     , withChannel
     , recv
     , send
