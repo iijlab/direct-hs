@@ -131,14 +131,14 @@ withClient config pInfo action = do
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, aux@(Aux _ _ uid)) | uid /= myid -> do
+                            Just (msg, aux@(Aux tid _ uid)) | uid /= myid -> do
                                 echan <- findChannel client aux
                                 case echan of
                                     Just chan -> dispatch chan msg aux
                                     Nothing   -> do
                                         echan' <- findChannelByTalkId
                                             client
-                                            (auxTalkId aux)
+                                            tid
                                         case echan' of
                                             Just chan -> dispatch chan msg aux
                                             _ -> directCreateMessageHandler
