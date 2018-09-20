@@ -27,6 +27,8 @@ module Web.Direct.Client
     , findTalkRoom
     , findPairTalkRoom
     , Talk(..)
+    , pairTalk
+    , roomTalk
     )
 where
 
@@ -56,6 +58,12 @@ data Talk = Pair !TalkId !UserId
 talkTalkId :: Talk -> TalkId
 talkTalkId (Pair tid _) = tid
 talkTalkId (Group tid)  = tid
+
+roomTalk :: TalkRoom -> Talk
+roomTalk room = Group (talkId room)
+
+pairTalk :: TalkRoom -> User -> Talk
+pairTalk room user = Pair (talkId room) (userId user)
 
 type ChannelKey = Talk
 

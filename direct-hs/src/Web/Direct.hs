@@ -47,7 +47,9 @@ module Web.Direct
     , phoneticDisplayName
     , canonicalPhoneticDisplayName
   -- *** Talk
-    , Talk(..)
+    , Talk
+    , pairTalk
+    , roomTalk
   -- ** Message
     , Message(..)
   -- * Sending
