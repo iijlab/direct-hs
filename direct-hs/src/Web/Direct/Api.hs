@@ -30,7 +30,7 @@ import           Web.Direct.Types
 
 -- | Type for client configuration.
 data Config = Config {
-    directCreateMessageHandler :: Client -> (Message,MessageId,TalkId,UserId) -> IO ()
+    directCreateMessageHandler :: Client -> (Message,MessageId,TalkRoom,User) -> IO ()
   , directLogger               :: RPC.Logger
   , directFormatter            :: RPC.Formatter
   , directEndpointUrl          :: RPC.URL -- Endpoint URL for direct WebSocket API.
@@ -139,10 +139,13 @@ withClient config pInfo action = do
                                         mchan' <- findChannel client (Group tid)
                                         case mchan' of
                                           Just chan' -> dispatch chan' msg msgid
-                                          Nothing -> directCreateMessageHandler
-                                               config
-                                               client
-                                               (msg,msgid,tid,uid)
+                                          Nothing -> do
+                                              Just user <- findUser uid client
+                                              Just room <- findTalkRoom tid client
+                                              directCreateMessageHandler
+                                                  config
+                                                  client
+                                                  (msg,msgid,room,user)
                             _ -> return ()
                         _ -> return ()
         , RPC.logger             = directLogger config

@@ -24,6 +24,7 @@ module Web.Direct.Client
     , recv
     , currentTalkRoom
     , findUser
+    , findTalkRoom
     , findPairTalkRoom
     , Talk(..)
     )
@@ -131,7 +132,12 @@ getUsers client = I.readIORef (clientUsers client)
 findUser :: UserId -> Client -> IO (Maybe User)
 findUser uid client = do
     users <- getUsers client
-    return $ L.find (\x -> userId x == uid) users
+    return $ L.find (\u -> userId u == uid) users
+
+findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
+findTalkRoom tid client = do
+    rooms <- getTalkRooms client
+    return $ L.find (\r -> talkId r == tid) rooms
 
 findPairTalkRoom :: UserId -> Client -> IO (Maybe TalkRoom)
 findPairTalkRoom uid client = do
