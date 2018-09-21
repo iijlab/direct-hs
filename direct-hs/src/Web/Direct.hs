@@ -54,7 +54,7 @@ module Web.Direct
     , Channel
     , Talk
     , pairTalk
-    , roomTalk
+    , groupTalk
     , withChannel
     , recv
     , send
