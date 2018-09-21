@@ -28,6 +28,7 @@ library
                    Web.Direct.LoginInfo
                    Web.Direct.Message
                    Web.Direct.Types
+                   Web.Direct.Upload
                    Web.Direct.Utils
   build-depends:
       base >= 4.7 && < 5
@@ -36,9 +37,12 @@ library
     , containers
     , data-msgpack
     , errors
+    , http-client
+    , http-types
+    , mtl
+    , mwc-random
     , network-messagepack-rpc
     , network-messagepack-rpc-websocket
-    , mwc-random
     , stm
     , text
     , unordered-containers

@@ -57,6 +57,17 @@ main = join $ Opt.execParser optionsInfo
                            "Observe all messages for the logged-in user."
                        )
                    )
+            <> Opt.command
+                   "upload"
+                   (Opt.info
+                       (   uploadFile
+                       <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       <*> Opt.argument Opt.auto (Opt.metavar "FILE_PATH")
+                       )
+                       (Opt.fullDesc <> Opt.progDesc
+                           "Send a message from stdin as the logged-in user."
+                       )
+                   )
 
 
 newtype EndpointUrl = EndpointUrl { getEndpointUrl :: String } deriving Show
@@ -166,3 +177,14 @@ showMsg (Msg.ResponseMessage _ (Left  obj)) = "response error " ++ showObj obj
 showMsg (Msg.ResponseMessage _ (Right obj)) = "response " ++ showObj obj
 showMsg (Msg.NotificationMessage method objs) =
     "notification " ++ T.unpack method ++ " " ++ showObjs objs
+
+
+uploadFile :: D.TalkId -> FilePath -> IO ()
+uploadFile tid path = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let aux    = D.defaultAux { D.auxTalkId = tid }
+        config = D.defaultConfig { D.directEndpointUrl = url }
+    D.withClient config pInfo $ \client -> do
+        upf <- D.readToUpload Nothing path
+        either E.throwIO return =<< D.uploadFile client upf aux

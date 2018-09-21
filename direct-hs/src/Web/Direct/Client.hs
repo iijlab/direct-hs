@@ -5,6 +5,7 @@ module Web.Direct.Client
     , clientRpcClient
     , clientLoginInfo
     , sendMessage
+    , uploadFile
     , newClient
     , setDomains
     , getDomains
@@ -34,8 +35,13 @@ module Web.Direct.Client
 where
 
 import qualified Control.Concurrent.STM                   as S
+import           Control.Error                            (hoistEither)
+import           Control.Monad.Except                     (ExceptT (ExceptT),
+                                                           runExceptT,
+                                                           throwError)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
+import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -45,6 +51,7 @@ import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
 import           Web.Direct.Types
+import           Web.Direct.Upload
 
 ----------------------------------------------------------------
 
@@ -114,6 +121,24 @@ findTalkRoom tid client = do
 -- | Sending a message in the main 'IO' or 'directCreateMessageHandler'.
 sendMessage :: Client -> Message -> TalkId -> IO (Either Exception MessageId)
 sendMessage client req tid = createMessage (clientRpcClient client) req tid
+
+----------------------------------------------------------------
+
+uploadFile :: Client -> UploadFile -> Aux -> IO (Either Exception ())
+uploadFile client upf aux = runExceptT $ do
+    let methodName = "create_upload_auth"
+        obj = toCreateUploadAuth upf
+    rsp <-
+        ExceptT
+            (   resultToObjectOrException methodName
+            <$> RPC.call (clientRpcClient client) methodName obj
+            )
+    case rsp of
+        M.ObjectMap rspMap -> do
+            ua <- hoistEither $ decodeUploadAuth methodName rsp rspMap
+            ExceptT $ runUploadFile upf ua
+            error "TODO: sendMessage as Files"
+        other -> throwError $ UnexpectedReponse methodName other
 
 isActive :: Client -> IO Bool
 isActive client = S.atomically $ isActiveSTM $ clientStatus client

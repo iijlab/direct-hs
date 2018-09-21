@@ -15,6 +15,7 @@ import qualified Control.Exception                        as E
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as RPC
 import           Data.Typeable                            (Typeable)
+import           Network.HTTP.Types.Status                (Status)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 
@@ -22,6 +23,7 @@ data Exception =
       InvalidEmailOrPassword
     | InvalidTalkId
     | InvalidWsUrl !String
+    | UnexpectedReponseWhenUpload Status
     | UnexpectedReponse !RPC.MethodName !M.Object
   deriving (Eq, Show, Typeable)
 
