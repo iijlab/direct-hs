@@ -13,6 +13,8 @@ type TalkId    = Word64
 type UserId    = Word64
 -- | Mesage ID.
 type MessageId = Word64
+-- | (Uploaded) File ID.
+type FileId    = Word64
 
 ----------------------------------------------------------------
 
