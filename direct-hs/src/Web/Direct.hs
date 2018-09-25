@@ -58,7 +58,6 @@ module Web.Direct
     , withChannel
     , recv
     , send
-    , currentTalkRoom
   -- * Terminating
     , shutdown
   -- *Exceptions

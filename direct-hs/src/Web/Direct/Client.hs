@@ -22,7 +22,6 @@ module Web.Direct.Client
     , sendMessage
     , send
     , recv
-    , currentTalkRoom
     , findUser
     , findTalkRoom
     , findPairTalkRoom
@@ -76,14 +75,6 @@ data Channel = Channel {
     }
 
 newtype Control = Die Message
-
-currentTalkRoom :: Channel -> IO (Maybe TalkRoom)
-currentTalkRoom (Channel _ client ctyp) = do
-    rooms <- getTalkRooms client
-    let talkroom = L.find (\room -> talkId room == tid) rooms
-    return talkroom
-  where
-    tid = channelTalkId ctyp
 
 ----------------------------------------------------------------
 
