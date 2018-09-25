@@ -12,6 +12,7 @@ where
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void, when)
 import qualified Data.IORef                               as I
+import qualified Data.List                                as L
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
 import qualified Data.Text                                as T
@@ -113,8 +114,8 @@ withClient config pInfo action = do
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
-        createSession client
-        subscribeNotification client
+        me <- createSession client
+        subscribeNotification client me
         action client
   where
     rpcConfig ref = RPC.defaultConfig
@@ -153,7 +154,7 @@ withClient config pInfo action = do
         , RPC.waitRequestHandler = True
         }
 
-createSession :: Client -> IO ()
+createSession :: Client -> IO User
 createSession client = do
     let methodName = "create_session"
     rsp <- callRpcThrow
@@ -165,11 +166,11 @@ createSession client = do
         ]
 
     case fromCreateSession rsp of
-        Just user -> setMe client user
+        Just user -> setMe client user >> return user
         _         -> E.throwIO $ UnexpectedReponse methodName rsp
 
-subscribeNotification :: Client -> IO ()
-subscribeNotification client = do
+subscribeNotification :: Client -> User -> IO ()
+subscribeNotification client me = do
     let c = clientRpcClient client
     void $ callRpcThrow c "reset_notification" []
     void $ callRpcThrow c "start_notification" []
@@ -181,7 +182,9 @@ subscribeNotification client = do
     void $ callRpcThrow c "get_announcement_statuses" []
     void $ callRpcThrow c "get_friends" []
     acq <- callRpcThrow c "get_acquaintances" []
-    let users = fromGetAcquaintances acq
+    -- Me comes first
+    let users0 = fromGetAcquaintances acq
+        users  = me : (me `L.delete` users0)
     setUsers client users
     talks <- callRpcThrow c "get_talks" []
     setTalkRooms client $ fromGetTalks talks users
