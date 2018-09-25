@@ -50,6 +50,7 @@ import           Web.Direct.Types
 
 data Status = Active | Inactive deriving Eq
 
+-- | Type of channel.
 data ChannelType = Pair !TalkId !UserId
                  | Group !TalkId
                  deriving (Eq, Ord, Show)
@@ -58,16 +59,17 @@ channelTalkId :: ChannelType -> TalkId
 channelTalkId (Pair tid _) = tid
 channelTalkId (Group tid)  = tid
 
+-- | Group channel based on 'TalkRoom'.
 groupChannel :: TalkRoom -> ChannelType
 groupChannel room = Group (talkId room)
 
+-- | Pair channel based on 'TalkRoom' and 'User'.
 pairChannel :: TalkRoom -> User -> ChannelType
 pairChannel room user = Pair (talkId room) (userId user)
 
 type ChannelKey = ChannelType
 
--- | A virtual communication channel based on
---   a pair of talk room ID and user ID.
+-- | A virtual communication channel.
 data Channel = Channel {
       toWorker      :: C.MVar (Either Control (Message, MessageId))
     , channelClient :: Client

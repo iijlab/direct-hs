@@ -51,11 +51,14 @@ module Web.Direct
   -- * Sending
     , sendMessage
   -- * Channel
-    , Channel
+  -- ** Channel type
     , ChannelType
     , pairChannel
     , groupChannel
+  -- ** Creating channel
+    , Channel
     , withChannel
+  -- ** Channel IO
     , recv
     , send
   -- * Terminating
