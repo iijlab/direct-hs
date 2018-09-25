@@ -57,7 +57,7 @@ decodeTalkRoom users (M.ObjectMap m) = do
             | tp == 1 = PairTalk
             | tp == 2 = case look "talk_name" m of
                 Just (M.ObjectStr tname) -> GroupTalk tname
-                _                        -> error "decodeTalkRoom"
+                _                        -> GroupTalk ""
             | otherwise = UnknownTalk
     M.ObjectArray uids <- look "user_ids" m
     let userIds = mapMaybe extract uids
