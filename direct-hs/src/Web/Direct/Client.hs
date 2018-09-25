@@ -169,8 +169,8 @@ inactivate client = S.atomically $ S.writeTVar (clientStatus client) Inactive
 
 -- | Creating a new channel.
 --   This returns 'Nothing' after 'shutdown'.
-newChannel :: ChannelType -> Client -> IO (Maybe Channel)
-newChannel ctyp client = do
+newChannel :: Client -> ChannelType -> IO (Maybe Channel)
+newChannel client ctyp = do
     mvar <- C.newEmptyMVar
     let key = ctyp
     let chan =
@@ -241,7 +241,7 @@ sendMessage client req tid = do
 --   and 'False' is returned.
 withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
 withChannel client ctyp body = do
-    mchan <- newChannel ctyp client
+    mchan <- newChannel client ctyp
     case mchan of
         Nothing   -> return False
         Just chan -> do
