@@ -29,7 +29,7 @@ main = do
 
 handleCreateMessage :: D.Client -> (D.Message,D.MessageId,D.TalkRoom,D.User) -> IO ()
 handleCreateMessage client (D.Txt txt,_,room,user) | "報告" `T.isInfixOf` txt =
-    void $ D.withChannel client (D.pairTalk room user) $ nippo user
+    void $ D.withChannel client (D.pairChannel room user) $ nippo user
 handleCreateMessage _client _ = return ()
 
 nippo :: D.User -> D.Channel -> IO ()

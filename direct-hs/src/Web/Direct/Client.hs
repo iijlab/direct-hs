@@ -26,9 +26,9 @@ module Web.Direct.Client
     , findUser
     , findTalkRoom
     , findPairTalkRoom
-    , Talk(..)
-    , pairTalk
-    , groupTalk
+    , ChannelType(..)
+    , pairChannel
+    , groupChannel
     )
 where
 
@@ -51,39 +51,39 @@ import           Web.Direct.Types
 
 data Status = Active | Inactive deriving Eq
 
-data Talk = Pair !TalkId !UserId
-          | Group !TalkId
-          deriving (Eq, Ord, Show)
+data ChannelType = Pair !TalkId !UserId
+                 | Group !TalkId
+                 deriving (Eq, Ord, Show)
 
-talkTalkId :: Talk -> TalkId
-talkTalkId (Pair tid _) = tid
-talkTalkId (Group tid)  = tid
+channelTalkId :: ChannelType -> TalkId
+channelTalkId (Pair tid _) = tid
+channelTalkId (Group tid)  = tid
 
-groupTalk :: TalkRoom -> Talk
-groupTalk room = Group (talkId room)
+groupChannel :: TalkRoom -> ChannelType
+groupChannel room = Group (talkId room)
 
-pairTalk :: TalkRoom -> User -> Talk
-pairTalk room user = Pair (talkId room) (userId user)
+pairChannel :: TalkRoom -> User -> ChannelType
+pairChannel room user = Pair (talkId room) (userId user)
 
-type ChannelKey = Talk
+type ChannelKey = ChannelType
 
 -- | A virtual communication channel based on
 --   a pair of talk room ID and user ID.
 data Channel = Channel {
       toWorker      :: C.MVar (Either Control (Message, MessageId))
     , channelClient :: Client
-    , channelTalk   :: Talk
+    , channelType   :: ChannelType
     }
 
 newtype Control = Die Message
 
 currentTalkRoom :: Channel -> IO (Maybe TalkRoom)
-currentTalkRoom (Channel _ client talk) = do
+currentTalkRoom (Channel _ client ctyp) = do
     rooms <- getTalkRooms client
     let talkroom = L.find (\room -> talkId room == tid) rooms
     return talkroom
   where
-    tid = talkTalkId talk
+    tid = channelTalkId ctyp
 
 ----------------------------------------------------------------
 
@@ -169,12 +169,12 @@ inactivate client = S.atomically $ S.writeTVar (clientStatus client) Inactive
 
 -- | Creating a new channel.
 --   This returns 'Nothing' after 'shutdown'.
-newChannel :: Talk -> Client -> IO (Maybe Channel)
-newChannel talk client = do
+newChannel :: ChannelType -> Client -> IO (Maybe Channel)
+newChannel ctyp client = do
     mvar <- C.newEmptyMVar
-    let key = talk
+    let key = ctyp
     let chan =
-            Channel {toWorker = mvar, channelClient = client, channelTalk = talk}
+            Channel {toWorker = mvar, channelClient = client, channelType = ctyp}
     S.atomically $ do
         active <- isActiveSTM client
         if active
@@ -184,21 +184,21 @@ newChannel talk client = do
             else return Nothing
     where chanDB = clientChannels client
 
-freeChannel :: Client -> Talk -> IO ()
-freeChannel client talk = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
+freeChannel :: Client -> ChannelType -> IO ()
+freeChannel client ctyp = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
   where
     chanDB = clientChannels client
-    key    = talk
+    key    = ctyp
 
 allChannels :: Client -> IO [Channel]
 allChannels client = HM.elems <$> S.atomically (S.readTVar chanDB)
     where chanDB = clientChannels client
 
-findChannel :: Client -> Talk -> IO (Maybe Channel)
-findChannel client talk = HM.lookup key <$> S.atomically (S.readTVar chanDB)
+findChannel :: Client -> ChannelType -> IO (Maybe Channel)
+findChannel client ctyp = HM.lookup key <$> S.atomically (S.readTVar chanDB)
   where
     chanDB = clientChannels client
-    key    = talk
+    key    = ctyp
 
 ----------------------------------------------------------------
 
@@ -239,13 +239,13 @@ sendMessage client req tid = do
 --   In this case, 'True' is returned.
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
-withChannel :: Client -> Talk -> (Channel -> IO ()) -> IO Bool
-withChannel client talk body = do
-    mchan <- newChannel talk client
+withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
+withChannel client ctyp body = do
+    mchan <- newChannel ctyp client
     case mchan of
         Nothing   -> return False
         Just chan -> do
-            void $ C.forkFinally (body chan) $ \_ -> freeChannel client talk
+            void $ C.forkFinally (body chan) $ \_ -> freeChannel client ctyp
             return True
 
 -- | Receiving a message from the channel.
@@ -255,12 +255,15 @@ recv chan = do
     case cm of
         Right msg            -> return msg
         Left  (Die announce) -> do
-            void $ sendMessage (channelClient chan) announce (talkTalkId $ channelTalk chan)
+            let tid = channelTalkId $ channelType chan
+            void $ sendMessage (channelClient chan) announce tid
             E.throwIO E.ThreadKilled
 
 -- | Sending a message to the channel.
 send :: Channel -> Message -> IO (Either Exception MessageId)
-send chan msg = sendMessage (channelClient chan) msg (talkTalkId $ channelTalk chan)
+send chan msg = sendMessage (channelClient chan) msg tid
+  where
+    tid = channelTalkId $ channelType chan
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,

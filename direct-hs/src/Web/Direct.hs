@@ -52,9 +52,9 @@ module Web.Direct
     , sendMessage
   -- * Channel
     , Channel
-    , Talk
-    , pairTalk
-    , groupTalk
+    , ChannelType
+    , pairChannel
+    , groupChannel
     , withChannel
     , recv
     , send
