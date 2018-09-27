@@ -19,6 +19,7 @@ library
   exposed-modules: Web.Direct
   other-modules:   Web.Direct.Api
                    Web.Direct.Exception
+                   Web.Direct.Channel
                    Web.Direct.Client
                    Web.Direct.LoginInfo
                    Web.Direct.Map
