@@ -136,17 +136,20 @@ withClient config pInfo action = do
                                 mchan <- findChannel client (Pair tid uid)
                                 case mchan of
                                     Just chan -> dispatch chan msg msgid
-                                    Nothing -> do
+                                    Nothing   -> do
                                         mchan' <- findChannel client (Group tid)
                                         case mchan' of
-                                          Just chan' -> dispatch chan' msg msgid
-                                          Nothing -> do
-                                              Just user <- findUser uid client
-                                              Just room <- findTalkRoom tid client
-                                              directCreateMessageHandler
-                                                  config
-                                                  client
-                                                  (msg,msgid,room,user)
+                                            Just chan' ->
+                                                dispatch chan' msg msgid
+                                            Nothing -> do
+                                                Just user <- findUser uid client
+                                                Just room <- findTalkRoom
+                                                    tid
+                                                    client
+                                                directCreateMessageHandler
+                                                    config
+                                                    client
+                                                    (msg, msgid, room, user)
                             _ -> return ()
                         _ -> return ()
         , RPC.logger             = directLogger config

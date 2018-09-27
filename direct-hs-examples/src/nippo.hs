@@ -27,8 +27,9 @@ main = do
         S.installHandler S.sigTERM $ \_ ->
             D.shutdown client $ D.Txt "BOTが終了します。\nこの作業は後からやり直してください。"
 
-handleCreateMessage :: D.Client -> (D.Message,D.MessageId,D.TalkRoom,D.User) -> IO ()
-handleCreateMessage client (D.Txt txt,_,room,user) | "報告" `T.isInfixOf` txt =
+handleCreateMessage
+    :: D.Client -> (D.Message, D.MessageId, D.TalkRoom, D.User) -> IO ()
+handleCreateMessage client (D.Txt txt, _, room, user) | "報告" `T.isInfixOf` txt =
     void $ D.withChannel client (D.pairChannel room user) $ nippo user
 handleCreateMessage _client _ = return ()
 
