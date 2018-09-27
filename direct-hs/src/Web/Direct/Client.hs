@@ -40,7 +40,7 @@ import qualified Data.Map.Strict                          as HM
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Channel
-import           Web.Direct.DirectRPC
+import           Web.Direct.DirectRPC hiding (getDomains)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message

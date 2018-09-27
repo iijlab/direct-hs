@@ -2,8 +2,9 @@
 
 module Web.Direct.DirectRPC where
 
+import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
-import           Data.Text (Text)
+import           Data.Text                                (Text)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Exception
@@ -41,3 +42,45 @@ createAccessToken rpcclient email pass idfv agentName = do
        Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
        Right other -> return $ Left $ UnexpectedReponse methodName other
        Left e -> return $ Left e
+
+resetNotification :: RPC.Client -> IO ()
+resetNotification rpcclient =
+    void $ callRpcThrow rpcclient "reset_notification" []
+
+startNotification :: RPC.Client -> IO ()
+startNotification rpcclient =
+    void $ callRpcThrow rpcclient "start_notification" []
+
+getDomains :: RPC.Client -> IO M.Object
+getDomains rpcclient =
+    callRpcThrow rpcclient "get_domains" []
+
+getDomainInvites :: RPC.Client -> IO ()
+getDomainInvites rpcclient =
+    void $ callRpcThrow rpcclient "get_domain_invites" []
+
+getAccountControlRequests :: RPC.Client -> IO ()
+getAccountControlRequests rpcclient =
+    void $ callRpcThrow rpcclient "get_account_control_requests" []
+
+getJoinedAccountControlGroup :: RPC.Client -> IO ()
+getJoinedAccountControlGroup rpcclient =
+    void $ callRpcThrow rpcclient "get_joined_account_control_group" []
+
+getAnnouncementStatuses :: RPC.Client -> IO ()
+getAnnouncementStatuses rpcclient =
+    void $ callRpcThrow rpcclient "get_announcement_statuses" []
+
+getFriends :: RPC.Client -> IO ()
+getFriends rpcclient =
+    void $ callRpcThrow rpcclient "get_friends" []
+
+getAcquaintances :: RPC.Client -> IO M.Object
+getAcquaintances rpcclient = callRpcThrow rpcclient "get_acquaintances" []
+
+getTalks :: RPC.Client -> IO M.Object
+getTalks rpcclient = callRpcThrow rpcclient "get_talks" []
+
+getTalkStatuses :: RPC.Client -> IO ()
+getTalkStatuses rpcclient =
+    void $ callRpcThrow rpcclient "get_talk_statuses" []

@@ -10,7 +10,7 @@ module Web.Direct.Api
 where
 
 import qualified Control.Exception                        as E
-import           Control.Monad                            (void, when)
+import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import qualified Data.MessagePack                         as M
@@ -20,7 +20,7 @@ import qualified Data.UUID                                as Uuid
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
-import           Web.Direct.Client
+import           Web.Direct.Client hiding (getDomains)
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
@@ -160,24 +160,24 @@ createSession client = do
 
 subscribeNotification :: Client -> User -> IO ()
 subscribeNotification client me = do
-    let c = clientRpcClient client
-    void $ callRpcThrow c "reset_notification" []
-    void $ callRpcThrow c "start_notification" []
-    doms <- callRpcThrow c "get_domains" []
+    let rpcclient = clientRpcClient client
+    resetNotification rpcclient
+    startNotification rpcclient
+    doms <- getDomains rpcclient
     setDomains client $ fromGetDomains doms
-    void $ callRpcThrow c "get_domain_invites" []
-    void $ callRpcThrow c "get_account_control_requests" []
-    void $ callRpcThrow c "get_joined_account_control_group" []
-    void $ callRpcThrow c "get_announcement_statuses" []
-    void $ callRpcThrow c "get_friends" []
-    acq <- callRpcThrow c "get_acquaintances" []
+    getDomainInvites rpcclient
+    getAccountControlRequests rpcclient
+    getJoinedAccountControlGroup rpcclient
+    getAnnouncementStatuses rpcclient
+    getFriends rpcclient
+    acq <- getAcquaintances rpcclient
     -- Me comes first
     let users0 = fromGetAcquaintances acq
         users  = me : (me `L.delete` users0)
     setUsers client users
-    talks <- callRpcThrow c "get_talks" []
+    talks <- getTalks rpcclient
     setTalkRooms client $ fromGetTalks talks users
-    void $ callRpcThrow c "get_talk_statuses" []
+    getTalkStatuses rpcclient
 
 ----------------------------------------------------------------
 
