@@ -2,6 +2,7 @@
 
 module Web.Direct.Map where
 
+import qualified Data.List        as L
 import           Data.Maybe       (mapMaybe)
 import qualified Data.MessagePack as M
 
@@ -44,25 +45,27 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: M.Object -> [TalkRoom]
-fromGetTalks (M.ObjectArray arr) = mapMaybe decodeTalkRoom arr
-fromGetTalks _                   = []
+fromGetTalks :: M.Object -> [User] -> [TalkRoom]
+fromGetTalks (M.ObjectArray arr) users = mapMaybe (decodeTalkRoom users) arr
+fromGetTalks _                   _     = []
 
-decodeTalkRoom :: M.Object -> Maybe TalkRoom
-decodeTalkRoom (M.ObjectMap m) = do
+decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
+decodeTalkRoom users (M.ObjectMap m) = do
     M.ObjectWord tid <- look "talk_id" m
     M.ObjectWord tp  <- look "type" m
     let typ
             | tp == 1 = PairTalk
             | tp == 2 = case look "talk_name" m of
                 Just (M.ObjectStr tname) -> GroupTalk tname
-                _                        -> error "decodeTalkRoom"
+                _                        -> GroupTalk ""
             | otherwise = UnknownTalk
     M.ObjectArray uids <- look "user_ids" m
     let userIds = mapMaybe extract uids
-    Just $ TalkRoom tid typ userIds
+        roomUsers =
+            mapMaybe (\uid -> L.find (\u -> uid == userId u) users) userIds
+    Just $ TalkRoom tid typ roomUsers
   where
     extract (M.ObjectWord uid) = Just uid
     extract _                  = Nothing
-decodeTalkRoom _ = Nothing
+decodeTalkRoom _ _ = Nothing
 

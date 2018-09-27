@@ -12,6 +12,7 @@ where
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void, when)
 import qualified Data.IORef                               as I
+import qualified Data.List                                as L
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
 import qualified Data.Text                                as T
@@ -30,7 +31,7 @@ import           Web.Direct.Types
 
 -- | Type for client configuration.
 data Config = Config {
-    directCreateMessageHandler :: Client -> Message -> Aux -> IO ()
+    directCreateMessageHandler :: Client -> (Message,MessageId,TalkRoom,User) -> IO ()
   , directLogger               :: RPC.Logger
   , directFormatter            :: RPC.Formatter
   , directEndpointUrl          :: RPC.URL -- Endpoint URL for direct WebSocket API.
@@ -43,7 +44,7 @@ data Config = Config {
 --   * 'directEndpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
 defaultConfig :: Config
 defaultConfig = Config
-    { directCreateMessageHandler = \_ _ _ -> return ()
+    { directCreateMessageHandler = \_ _ -> return ()
     , directLogger               = \_ -> return ()
     , directFormatter            = show
     , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
@@ -113,8 +114,8 @@ withClient config pInfo action = do
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
-        createSession client
-        subscribeNotification client
+        me <- createSession client
+        subscribeNotification client me
         action client
   where
     rpcConfig ref = RPC.defaultConfig
@@ -131,21 +132,24 @@ withClient config pInfo action = do
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, aux@(Aux tid _ uid)) | uid /= myid -> do
-                                echan <- findChannel client aux
-                                case echan of
-                                    Just chan -> dispatch chan msg aux
+                            Just (msg, msgid, tid, uid) | uid /= myid -> do
+                                mchan <- findChannel client (Pair tid uid)
+                                case mchan of
+                                    Just chan -> dispatch chan msg msgid
                                     Nothing   -> do
-                                        echan' <- findChannelByTalkId
-                                            client
-                                            tid
-                                        case echan' of
-                                            Just chan -> dispatch chan msg aux
-                                            _ -> directCreateMessageHandler
-                                                config
-                                                client
-                                                msg
-                                                aux
+                                        mchan' <- findChannel client (Group tid)
+                                        case mchan' of
+                                            Just chan' ->
+                                                dispatch chan' msg msgid
+                                            Nothing -> do
+                                                Just user <- findUser uid client
+                                                Just room <- findTalkRoom
+                                                    tid
+                                                    client
+                                                directCreateMessageHandler
+                                                    config
+                                                    client
+                                                    (msg, msgid, room, user)
                             _ -> return ()
                         _ -> return ()
         , RPC.logger             = directLogger config
@@ -153,7 +157,7 @@ withClient config pInfo action = do
         , RPC.waitRequestHandler = True
         }
 
-createSession :: Client -> IO ()
+createSession :: Client -> IO User
 createSession client = do
     let methodName = "create_session"
     rsp <- callRpcThrow
@@ -165,11 +169,11 @@ createSession client = do
         ]
 
     case fromCreateSession rsp of
-        Just user -> setMe client user
+        Just user -> setMe client user >> return user
         _         -> E.throwIO $ UnexpectedReponse methodName rsp
 
-subscribeNotification :: Client -> IO ()
-subscribeNotification client = do
+subscribeNotification :: Client -> User -> IO ()
+subscribeNotification client me = do
     let c = clientRpcClient client
     void $ callRpcThrow c "reset_notification" []
     void $ callRpcThrow c "start_notification" []
@@ -181,9 +185,12 @@ subscribeNotification client = do
     void $ callRpcThrow c "get_announcement_statuses" []
     void $ callRpcThrow c "get_friends" []
     acq <- callRpcThrow c "get_acquaintances" []
-    setUsers client $ fromGetAcquaintances acq
+    -- Me comes first
+    let users0 = fromGetAcquaintances acq
+        users  = me : (me `L.delete` users0)
+    setUsers client users
     talks <- callRpcThrow c "get_talks" []
-    setTalkRooms client $ fromGetTalks talks
+    setTalkRooms client $ fromGetTalks talks users
     void $ callRpcThrow c "get_talk_statuses" []
 
 ----------------------------------------------------------------

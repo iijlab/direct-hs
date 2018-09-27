@@ -117,10 +117,9 @@ sendText tid = do
     txt <- TL.stripEnd <$> TL.getContents
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    let aux    = D.defaultAux { D.auxTalkId = tid }
-        config = D.defaultConfig { D.directEndpointUrl = url }
+    let config = D.defaultConfig { D.directEndpointUrl = url }
     D.withClient config pInfo $ \client -> forM_ (TL.chunksOf 1024 txt)
-        $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) aux
+        $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) tid
 
 observe :: IO ()
 observe = do

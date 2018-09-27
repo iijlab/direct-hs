@@ -28,31 +28,15 @@ data Message =
 
 ----------------------------------------------------------------
 
--- | Auxiliary data to identify communication.
-data Aux = Aux {
-    auxTalkId    :: !TalkId
-  , auxMessageId :: !MessageId
-  , auxUserId    :: !UserId
-  } deriving (Eq, Show)
-
--- | The default 'Aux'.
---   This can be used in the main 'IO' where 'Aux' is not available.
---   To use 'sendMessage' in the main 'IO', set talk room ID to
---   'defaultAux'.
-defaultAux :: Aux
-defaultAux = Aux 0 0 0
-
-----------------------------------------------------------------
-
-encodeMessage :: Message -> Aux -> [M.Object]
-encodeMessage (Txt text) (Aux tid _ _) =
+encodeMessage :: Message -> TalkId -> [M.Object]
+encodeMessage (Txt text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
-encodeMessage (Location addr url) (Aux tid _ _) =
+encodeMessage (Location addr url) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 1
     , M.ObjectStr (T.unlines ["今ココ：", addr, url])
     ]
-encodeMessage (Stamp set idx Nothing) (Aux tid _ _) =
+encodeMessage (Stamp set idx Nothing) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 2
     , M.ObjectMap
@@ -60,7 +44,7 @@ encodeMessage (Stamp set idx Nothing) (Aux tid _ _) =
         , (M.ObjectStr "stamp_index", M.ObjectWord idx)
         ]
     ]
-encodeMessage (Stamp set idx (Just txt)) (Aux tid _ _) =
+encodeMessage (Stamp set idx (Just txt)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 2
     , M.ObjectMap
@@ -69,7 +53,7 @@ encodeMessage (Stamp set idx (Just txt)) (Aux tid _ _) =
         , (M.ObjectStr "text"       , M.ObjectStr txt)
         ]
     ]
-encodeMessage (YesNoQ qst) (Aux tid _ _) =
+encodeMessage (YesNoQ qst) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 500
     , M.ObjectMap
@@ -77,7 +61,7 @@ encodeMessage (YesNoQ qst) (Aux tid _ _) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (YesNoA qst ans) (Aux tid _ _) =
+encodeMessage (YesNoA qst ans) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 501
     , M.ObjectMap
@@ -86,7 +70,7 @@ encodeMessage (YesNoA qst ans) (Aux tid _ _) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (SelectQ qst opt) (Aux tid _ _) =
+encodeMessage (SelectQ qst opt) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 502
     , M.ObjectMap
@@ -95,7 +79,7 @@ encodeMessage (SelectQ qst opt) (Aux tid _ _) =
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (SelectA qst opt ans) (Aux tid _ _) =
+encodeMessage (SelectA qst opt ans) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 503
     , M.ObjectMap
@@ -106,7 +90,7 @@ encodeMessage (SelectA qst opt ans) (Aux tid _ _) =
         ]
     ]
     where Just idx = ans `elemIndex` opt -- fixme
-encodeMessage (TaskQ ttl cls) (Aux tid _ _) =
+encodeMessage (TaskQ ttl cls) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 504
     , M.ObjectMap
@@ -114,7 +98,7 @@ encodeMessage (TaskQ ttl cls) (Aux tid _ _) =
         , (M.ObjectStr "closing_type", M.ObjectWord (if cls then 1 else 0))
         ]
     ]
-encodeMessage (TaskA ttl cls don) (Aux tid _ _) =
+encodeMessage (TaskA ttl cls don) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 505
     , M.ObjectMap
@@ -124,66 +108,70 @@ encodeMessage (TaskA ttl cls don) (Aux tid _ _) =
         ]
     ]
 
-encodeMessage (Other text) (Aux tid _ _) =
+encodeMessage (Other text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 
 ----------------------------------------------------------------
 
-decodeMessage :: [(M.Object, M.Object)] -> Maybe (Message, Aux)
+decodeMessage
+    :: [(M.Object, M.Object)] -> Maybe (Message, MessageId, TalkId, UserId)
 decodeMessage rspinfo = do
     M.ObjectWord tid <- look "talk_id" rspinfo
     M.ObjectWord mid <- look "message_id" rspinfo
     M.ObjectWord uid <- look "user_id" rspinfo
-    let aux = Aux tid mid uid
-    typ <- look "type" rspinfo
-    case typ of
-        M.ObjectWord 1 -> do
-            text <- look "content" rspinfo >>= M.fromObject
-            if "今ココ：" `T.isPrefixOf` text
-                then
-                    let ln   = T.lines text
-                        addr = ln !! 1
-                        url  = ln !! 2
-                    in  Just (Location addr url, aux)
-                else Just (Txt text, aux)
-        M.ObjectWord 2 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            set           <- look "stamp_set" m >>= M.fromObject
-            idx           <- look "stamp_index" m >>= M.fromObject
-            let txt = look "text" m >>= M.fromObject
-            Just (Stamp set idx txt, aux)
-        M.ObjectWord 500 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            qst           <- look "question" m >>= M.fromObject
-            Just (YesNoQ qst, aux)
-        M.ObjectWord 501 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            qst           <- look "question" m >>= M.fromObject
-            ans           <- look "response" m >>= M.fromObject
-            Just (YesNoA qst ans, aux)
-        M.ObjectWord 502 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            qst           <- look "question" m >>= M.fromObject
-            opt           <- look "options" m >>= M.fromObject
-            Just (SelectQ qst opt, aux)
-        M.ObjectWord 503 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            qst           <- look "question" m >>= M.fromObject
-            opt           <- look "options" m >>= M.fromObject
-            idx           <- look "response" m >>= M.fromObject
-            let ans = opt !! fromIntegral (idx :: Word64)
-            Just (SelectA qst opt ans, aux)
-        M.ObjectWord 504 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            ttl           <- look "title" m >>= M.fromObject
-            cls'          <- look "closing_type" m >>= M.fromObject
-            let cls = cls' == (1 :: Word64)
-            Just (TaskQ ttl cls, aux)
-        M.ObjectWord 505 -> do
-            M.ObjectMap m <- look "content" rspinfo
-            ttl           <- look "title" m >>= M.fromObject
-            cls'          <- look "closing_type" m >>= M.fromObject
-            don           <- look "done" m >>= M.fromObject
-            let cls = cls' == (1 :: Word64)
-            Just (TaskA ttl cls don, aux)
-        _ -> Just (Other $ T.pack $ show rspinfo, aux)
+    msg              <- getMessage
+    return (msg, mid, tid, uid)
+  where
+    getMessage = do
+        typ <- look "type" rspinfo
+        case typ of
+            M.ObjectWord 1 -> do
+                text <- look "content" rspinfo >>= M.fromObject
+                if "今ココ：" `T.isPrefixOf` text
+                    then
+                        let ln   = T.lines text
+                            addr = ln !! 1
+                            url  = ln !! 2
+                        in  return (Location addr url)
+                    else return (Txt text)
+            M.ObjectWord 2 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                set           <- look "stamp_set" m >>= M.fromObject
+                idx           <- look "stamp_index" m >>= M.fromObject
+                let txt = look "text" m >>= M.fromObject
+                return (Stamp set idx txt)
+            M.ObjectWord 500 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                qst           <- look "question" m >>= M.fromObject
+                return (YesNoQ qst)
+            M.ObjectWord 501 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                qst           <- look "question" m >>= M.fromObject
+                ans           <- look "response" m >>= M.fromObject
+                return (YesNoA qst ans)
+            M.ObjectWord 502 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                qst           <- look "question" m >>= M.fromObject
+                opt           <- look "options" m >>= M.fromObject
+                return (SelectQ qst opt)
+            M.ObjectWord 503 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                qst           <- look "question" m >>= M.fromObject
+                opt           <- look "options" m >>= M.fromObject
+                idx           <- look "response" m >>= M.fromObject
+                let ans = opt !! fromIntegral (idx :: Word64)
+                return (SelectA qst opt ans)
+            M.ObjectWord 504 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                ttl           <- look "title" m >>= M.fromObject
+                cls'          <- look "closing_type" m >>= M.fromObject
+                let cls = cls' == (1 :: Word64)
+                return (TaskQ ttl cls)
+            M.ObjectWord 505 -> do
+                M.ObjectMap m <- look "content" rspinfo
+                ttl           <- look "title" m >>= M.fromObject
+                cls'          <- look "closing_type" m >>= M.fromObject
+                don           <- look "done" m >>= M.fromObject
+                let cls = cls' == (1 :: Word64)
+                return (TaskA ttl cls don)
+            _ -> return (Other $ T.pack $ show rspinfo)

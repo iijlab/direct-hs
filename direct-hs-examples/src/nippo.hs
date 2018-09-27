@@ -7,7 +7,6 @@ where
 
 import           Control.Monad        (void)
 import qualified Data.ByteString.Lazy as B
-import           Data.List            (find)
 import qualified Data.Text            as T
 import qualified System.Signal        as S
 import qualified Web.Direct           as D
@@ -28,28 +27,26 @@ main = do
         S.installHandler S.sigTERM $ \_ ->
             D.shutdown client $ D.Txt "BOTが終了します。\nこの作業は後からやり直してください。"
 
-handleCreateMessage :: D.Client -> D.Message -> D.Aux -> IO ()
-handleCreateMessage client (D.Txt txt) aux | "報告" `T.isInfixOf` txt =
-    void $ D.withChannel client aux $ nippo client aux
-handleCreateMessage _client _msg _aux = return ()
+handleCreateMessage
+    :: D.Client -> (D.Message, D.MessageId, D.TalkRoom, D.User) -> IO ()
+handleCreateMessage client (D.Txt txt, _, room, user) | "報告" `T.isInfixOf` txt =
+    void $ D.withChannel client (D.pairChannel room user) $ nippo user
+handleCreateMessage _client _ = return ()
 
-nippo :: D.Client -> D.Aux -> D.Channel -> IO ()
-nippo client aux0 chan = do
+nippo :: D.User -> D.Channel -> IO ()
+nippo peer chan = do
     greeting
     _jobs <- askJobs []
     _eval <- askEvaluation
     bye
   where
     greeting = do
-        let peerId = D.auxUserId aux0
-        users <- D.getUsers client
-        let Just peer = find (\x -> D.userId x == peerId) users
-            msg =
+        let msg =
                 D.displayName peer
                     `T.append` "さん、\nお疲れ様です。\n今日はどんな業務をしましたか？\n1件1メッセージでお願いします。"
         void $ D.send chan (D.Txt msg)
     askJobs jobs = do
-        (msg, _aux) <- D.recv chan
+        (msg, _msgid) <- D.recv chan
         case msg of
             D.Txt "。" -> return jobs
             D.Txt job -> do

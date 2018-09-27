@@ -38,7 +38,7 @@ module Web.Direct
     , TalkRoom
     , talkId
     , talkType
-    , talkUserIds
+    , talkUsers
   -- *** User
     , User
     , userId
@@ -46,23 +46,21 @@ module Web.Direct
     , canonicalDisplayName
     , phoneticDisplayName
     , canonicalPhoneticDisplayName
-  -- *** Auxiliary data
-    , Aux
-    , auxMessageId
-    , auxTalkId
-    , auxUserId
-    , defaultAux
   -- ** Message
     , Message(..)
   -- * Sending
     , sendMessage
   -- * Channel
+  -- ** Channel type
+    , ChannelType
+    , pairChannel
+    , groupChannel
+  -- ** Creating channel
     , Channel
     , withChannel
-    , withChannelOnTalkId
+  -- ** Channel IO
     , recv
     , send
-    , currentTalkRoom
   -- * Terminating
     , shutdown
   -- *Exceptions
