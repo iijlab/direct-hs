@@ -40,6 +40,7 @@ import qualified Data.Map.Strict                          as HM
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Channel
+import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
@@ -181,7 +182,7 @@ wait client = S.atomically $ do
 
 -- | Sending a message in the main 'IO' or 'directCreateMessageHandler'.
 sendMessage :: Client -> Message -> TalkId -> IO (Either Exception MessageId)
-sendMessage client req tid = sendMsg (clientRpcClient client) req tid
+sendMessage client req tid = createMessage (clientRpcClient client) req tid
 
 ----------------------------------------------------------------
 

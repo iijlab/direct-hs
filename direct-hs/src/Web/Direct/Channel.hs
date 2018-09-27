@@ -1,11 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Web.Direct.Channel (
       Channel
     , newChannel
     , dispatch
     , die
-    , sendMsg
     , send
     , recv
     , ChannelType(..)
@@ -17,9 +14,9 @@ where
 import qualified Control.Concurrent                       as C
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
-import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
+import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.Message
 import           Web.Direct.Types
@@ -58,23 +55,6 @@ control chan ctl = C.putMVar (toWorker chan) $ Left ctl
 die :: Message -> Channel -> IO ()
 die msg chan = control chan (Die msg)
 
-----------------------------------------------------------------
-
-sendMsg :: RPC.Client -> Message -> TalkId -> IO (Either Exception MessageId)
-sendMsg rpcclient req tid = do
-    let obj        = encodeMessage req tid
-        methodName = "create_message"
-    ersp <-
-        resultToObjectOrException methodName
-            <$> RPC.call rpcclient methodName obj
-    case ersp of
-        Right rsp@(M.ObjectMap rspMap) ->
-            case lookup (M.ObjectStr "message_id") rspMap of
-                Just (M.ObjectWord x) -> return $ Right x
-                _ -> return $ Left $ UnexpectedReponse methodName rsp
-        Right other -> return $ Left $ UnexpectedReponse methodName other
-        Left  other -> return $ Left other
-
 -- | Receiving a message from the channel.
 recv :: Channel -> IO (Message, MessageId)
 recv chan = do
@@ -83,12 +63,12 @@ recv chan = do
         Right msg            -> return msg
         Left  (Die announce) -> do
             let tid = channelTalkId $ channelType chan
-            void $ sendMsg (channelRPCClient chan) announce tid
+            void $ createMessage (channelRPCClient chan) announce tid
             E.throwIO E.ThreadKilled
 
 -- | Sending a message to the channel.
 send :: Channel -> Message -> IO (Either Exception MessageId)
-send chan msg = sendMsg (channelRPCClient chan) msg tid
+send chan msg = createMessage (channelRPCClient chan) msg tid
     where tid = channelTalkId $ channelType chan
 
 ----------------------------------------------------------------
