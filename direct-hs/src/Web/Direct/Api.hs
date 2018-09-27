@@ -9,7 +9,6 @@ module Web.Direct.Api
     )
 where
 
-import qualified Control.Exception                        as E
 import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
@@ -86,12 +85,6 @@ genIdfv = do
             <*> Random.uniform g
             )
 
-agentName :: T.Text
-agentName = "bot"
-
-apiVersion :: T.Text
-apiVersion = "1.91"
-
 ----------------------------------------------------------------
 
 withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
@@ -100,7 +93,8 @@ withClient config pInfo action = do
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
-        me <- createSession client
+        me <- createSession (clientRpcClient client) (loginInfoDirectAccessToken $ clientLoginInfo client)
+        setMe client me
         subscribeNotification client me
         action client
   where
@@ -142,21 +136,6 @@ withClient config pInfo action = do
         , RPC.formatter          = directFormatter config
         , RPC.waitRequestHandler = True
         }
-
-createSession :: Client -> IO User
-createSession client = do
-    let methodName = "create_session"
-    rsp <- callRpcThrow
-        (clientRpcClient client)
-        methodName
-        [ M.ObjectStr $ loginInfoDirectAccessToken $ clientLoginInfo client
-        , M.ObjectStr apiVersion
-        , M.ObjectStr agentName
-        ]
-
-    case fromCreateSession rsp of
-        Just user -> setMe client user >> return user
-        _         -> E.throwIO $ UnexpectedReponse methodName rsp
 
 subscribeNotification :: Client -> User -> IO ()
 subscribeNotification client me = do

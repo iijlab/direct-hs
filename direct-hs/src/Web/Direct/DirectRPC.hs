@@ -2,6 +2,7 @@
 
 module Web.Direct.DirectRPC where
 
+import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
 import           Data.Text                                (Text)
@@ -9,6 +10,7 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
+import           Web.Direct.Map
 import           Web.Direct.Message
 import           Web.Direct.Types
 
@@ -26,7 +28,7 @@ createMessage rpcclient req tid = do
         Left  other -> return $ Left other
 
 createAccessToken :: RPC.Client -> Text -> Text -> Text -> Text -> IO (Either Exception LoginInfo)
-createAccessToken rpcclient email pass idfv agentName = do
+createAccessToken rpcclient email pass idfv agntnm = do
     let methodName    = "create_access_token"
         magicConstant = M.ObjectStr ""
     rsp <- RPC.call
@@ -35,13 +37,33 @@ createAccessToken rpcclient email pass idfv agentName = do
         [ M.ObjectStr email
         , M.ObjectStr pass
         , M.ObjectStr idfv
-        , M.ObjectStr agentName
+        , M.ObjectStr agntnm
         , magicConstant
         ]
     case resultToObjectOrException methodName rsp of
        Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
        Right other -> return $ Left $ UnexpectedReponse methodName other
        Left e -> return $ Left e
+
+agentName :: Text
+agentName = "bot"
+
+apiVersion :: Text
+apiVersion = "1.91"
+
+createSession :: RPC.Client -> Text -> IO User
+createSession rpcclient info = do
+    let methodName = "create_session"
+    rsp <- callRpcThrow
+        rpcclient
+        methodName
+        [ M.ObjectStr info
+        , M.ObjectStr apiVersion
+        , M.ObjectStr agentName
+        ]
+    case fromCreateSession rsp of
+      Just user -> return user
+      Nothing   -> E.throwIO $ UnexpectedReponse methodName rsp
 
 resetNotification :: RPC.Client -> IO ()
 resetNotification rpcclient =
