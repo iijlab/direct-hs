@@ -132,7 +132,7 @@ withClient config pInfo action = do
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, msgid, tid, uid) | uid /= myid -> do
+                            Just (msg, msgid, tid, uid) | uid /= myid && uid /= 0 -> do
                                 mchan <- findChannel client (Pair tid uid)
                                 case mchan of
                                     Just chan -> dispatch chan msg msgid
