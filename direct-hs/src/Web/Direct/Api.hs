@@ -21,6 +21,7 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
 import           Web.Direct.Client
+import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Map
@@ -61,22 +62,7 @@ login
 login config email pass =
     RPC.withClient (directEndpointUrl config) rpcConfig $ \rpcClient -> do
         idfv <- genIdfv
-
-        let magicConstant = M.ObjectStr ""
-            methodName    = "create_access_token"
-        res <- RPC.call
-            rpcClient
-            methodName
-            [ M.ObjectStr email
-            , M.ObjectStr pass
-            , M.ObjectStr idfv
-            , M.ObjectStr agentName
-            , magicConstant
-            ]
-        case resultToObjectOrException methodName res of
-            Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
-            Right other -> return $ Left $ UnexpectedReponse methodName other
-            Left e -> return $ Left e
+        createAccessToken rpcClient email pass idfv agentName
   where
     rpcConfig = RPC.defaultConfig
         { RPC.requestHandler     = \rpcClient mid _method _objs ->
