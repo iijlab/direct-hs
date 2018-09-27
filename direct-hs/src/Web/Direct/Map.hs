@@ -45,7 +45,7 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: M.Object -> [User] ->  [TalkRoom]
+fromGetTalks :: M.Object -> [User] -> [TalkRoom]
 fromGetTalks (M.ObjectArray arr) users = mapMaybe (decodeTalkRoom users) arr
 fromGetTalks _                   _     = []
 
@@ -61,7 +61,8 @@ decodeTalkRoom users (M.ObjectMap m) = do
             | otherwise = UnknownTalk
     M.ObjectArray uids <- look "user_ids" m
     let userIds = mapMaybe extract uids
-        roomUsers = mapMaybe (\uid -> L.find (\u -> uid == userId u) users) userIds
+        roomUsers =
+            mapMaybe (\uid -> L.find (\u -> uid == userId u) users) userIds
     Just $ TalkRoom tid typ roomUsers
   where
     extract (M.ObjectWord uid) = Just uid

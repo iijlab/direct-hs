@@ -35,9 +35,9 @@ import qualified Control.Concurrent                       as C
 import qualified Control.Concurrent.STM                   as S
 import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
-import qualified Data.Map.Strict                          as HM
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
+import qualified Data.Map.Strict                          as HM
 import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
@@ -57,7 +57,7 @@ data ChannelType = Pair !TalkId !UserId
 
 channelTalkId :: ChannelType -> TalkId
 channelTalkId (Pair tid _) = tid
-channelTalkId (Group tid)  = tid
+channelTalkId (Group tid ) = tid
 
 -- | Group channel based on 'TalkRoom'.
 groupChannel :: TalkRoom -> ChannelType
@@ -144,7 +144,12 @@ findPairTalkRoom :: UserId -> Client -> IO (Maybe TalkRoom)
 findPairTalkRoom uid client = do
     rooms <- getTalkRooms client
     return $ L.find
-        (\room -> talkType room == PairTalk && uid `elem` (map userId $ talkUsers room))
+        (\room ->
+            talkType room
+                ==     PairTalk
+                &&     uid
+                `elem` (map userId $ talkUsers room)
+        )
         rooms
 
 ----------------------------------------------------------------
@@ -166,8 +171,12 @@ newChannel :: Client -> ChannelType -> IO (Maybe Channel)
 newChannel client ctyp = do
     mvar <- C.newEmptyMVar
     let key = ctyp
-    let chan =
-            Channel {toWorker = mvar, channelClient = client, channelType = ctyp}
+    let
+        chan = Channel
+            { toWorker      = mvar
+            , channelClient = client
+            , channelType   = ctyp
+            }
     S.atomically $ do
         active <- isActiveSTM client
         if active
@@ -255,8 +264,7 @@ recv chan = do
 -- | Sending a message to the channel.
 send :: Channel -> Message -> IO (Either Exception MessageId)
 send chan msg = sendMessage (channelClient chan) msg tid
-  where
-    tid = channelTalkId $ channelType chan
+    where tid = channelTalkId $ channelType chan
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,

@@ -113,12 +113,13 @@ encodeMessage (Other text) tid =
 
 ----------------------------------------------------------------
 
-decodeMessage :: [(M.Object, M.Object)] -> Maybe (Message, MessageId, TalkId, UserId)
+decodeMessage
+    :: [(M.Object, M.Object)] -> Maybe (Message, MessageId, TalkId, UserId)
 decodeMessage rspinfo = do
     M.ObjectWord tid <- look "talk_id" rspinfo
     M.ObjectWord mid <- look "message_id" rspinfo
     M.ObjectWord uid <- look "user_id" rspinfo
-    msg <- getMessage
+    msg              <- getMessage
     return (msg, mid, tid, uid)
   where
     getMessage = do
