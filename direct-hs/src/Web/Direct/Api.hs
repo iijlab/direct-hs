@@ -23,7 +23,6 @@ import           Web.Direct.Client hiding (getDomains)
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Map
 import           Web.Direct.Message
 import           Web.Direct.Types
 
@@ -142,20 +141,18 @@ subscribeNotification client me = do
     let rpcclient = clientRpcClient client
     resetNotification rpcclient
     startNotification rpcclient
-    doms <- getDomains rpcclient
-    setDomains client $ fromGetDomains doms
+    getDomains rpcclient >>= setDomains client
     getDomainInvites rpcclient
     getAccountControlRequests rpcclient
     getJoinedAccountControlGroup rpcclient
     getAnnouncementStatuses rpcclient
     getFriends rpcclient
-    acq <- getAcquaintances rpcclient
-    -- Me comes first
-    let users0 = fromGetAcquaintances acq
-        users  = me : (me `L.delete` users0)
+
+    users0 <- getAcquaintances rpcclient
+    let users  = me : (me `L.delete` users0)
     setUsers client users
-    talks <- getTalks rpcclient
-    setTalkRooms client $ fromGetTalks talks users
+
+    getTalks rpcclient users >>= setTalkRooms client
     getTalkStatuses rpcclient
 
 ----------------------------------------------------------------

@@ -2,7 +2,6 @@
 
 module Web.Direct.DirectRPC where
 
-import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
 import           Data.Text                                (Text)
@@ -18,29 +17,26 @@ createMessage :: RPC.Client -> Message -> TalkId -> IO (Either Exception Message
 createMessage rpcclient req tid = do
     let methodName = "create_message"
         obj        = encodeMessage req tid
-    rsp <- RPC.call rpcclient methodName obj
-    case resultToObjectOrException methodName rsp of
-        Right rs@(M.ObjectMap rspMap) ->
-            case lookup (M.ObjectStr "message_id") rspMap of
-                Just (M.ObjectWord x) -> return $ Right x
-                _ -> return $ Left $ UnexpectedReponse methodName rs
-        Right other -> return $ Left $ UnexpectedReponse methodName other
-        Left  other -> return $ Left other
+    eres <- callRpc rpcclient methodName obj
+    case eres of
+      Right rs@(M.ObjectMap rspMap) -> case lookup (M.ObjectStr "message_id") rspMap of
+        Just (M.ObjectWord x) -> return $ Right x
+        _         -> return $ Left $ UnexpectedReponse methodName rs
+      Right other -> return $ Left $ UnexpectedReponse methodName other
+      Left e -> return $ Left e
 
 createAccessToken :: RPC.Client -> Text -> Text -> Text -> Text -> IO (Either Exception LoginInfo)
 createAccessToken rpcclient email pass idfv agntnm = do
     let methodName    = "create_access_token"
+        obj           = [ M.ObjectStr email
+                        , M.ObjectStr pass
+                        , M.ObjectStr idfv
+                        , M.ObjectStr agntnm
+                        , magicConstant
+                        ]
         magicConstant = M.ObjectStr ""
-    rsp <- RPC.call
-        rpcclient
-        methodName
-        [ M.ObjectStr email
-        , M.ObjectStr pass
-        , M.ObjectStr idfv
-        , M.ObjectStr agntnm
-        , magicConstant
-        ]
-    case resultToObjectOrException methodName rsp of
+    eres <- callRpc rpcclient methodName obj
+    case eres of
        Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
        Right other -> return $ Left $ UnexpectedReponse methodName other
        Left e -> return $ Left e
@@ -54,16 +50,12 @@ apiVersion = "1.91"
 createSession :: RPC.Client -> Text -> IO User
 createSession rpcclient info = do
     let methodName = "create_session"
-    rsp <- callRpcThrow
-        rpcclient
-        methodName
-        [ M.ObjectStr info
-        , M.ObjectStr apiVersion
-        , M.ObjectStr agentName
-        ]
-    case fromCreateSession rsp of
-      Just user -> return user
-      Nothing   -> E.throwIO $ UnexpectedReponse methodName rsp
+        obj        = [ M.ObjectStr info
+                     , M.ObjectStr apiVersion
+                     , M.ObjectStr agentName
+                     ]
+    rsp <- callRpcThrow rpcclient methodName obj
+    convertOrThrow methodName fromCreateSession rsp
 
 resetNotification :: RPC.Client -> IO ()
 resetNotification rpcclient =
@@ -73,9 +65,9 @@ startNotification :: RPC.Client -> IO ()
 startNotification rpcclient =
     void $ callRpcThrow rpcclient "start_notification" []
 
-getDomains :: RPC.Client -> IO M.Object
+getDomains :: RPC.Client -> IO [Domain]
 getDomains rpcclient =
-    callRpcThrow rpcclient "get_domains" []
+    fromGetDomains <$> callRpcThrow rpcclient "get_domains" []
 
 getDomainInvites :: RPC.Client -> IO ()
 getDomainInvites rpcclient =
@@ -97,11 +89,13 @@ getFriends :: RPC.Client -> IO ()
 getFriends rpcclient =
     void $ callRpcThrow rpcclient "get_friends" []
 
-getAcquaintances :: RPC.Client -> IO M.Object
-getAcquaintances rpcclient = callRpcThrow rpcclient "get_acquaintances" []
+getAcquaintances :: RPC.Client -> IO [User]
+getAcquaintances rpcclient =
+    fromGetAcquaintances <$> callRpcThrow rpcclient "get_acquaintances" []
 
-getTalks :: RPC.Client -> IO M.Object
-getTalks rpcclient = callRpcThrow rpcclient "get_talks" []
+getTalks :: RPC.Client -> [User] -> IO [TalkRoom]
+getTalks rpcclient users =
+    fromGetTalks users <$> callRpcThrow rpcclient "get_talks" []
 
 getTalkStatuses :: RPC.Client -> IO ()
 getTalkStatuses rpcclient =

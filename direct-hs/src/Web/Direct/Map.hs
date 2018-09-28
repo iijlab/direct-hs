@@ -45,9 +45,9 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: M.Object -> [User] -> [TalkRoom]
-fromGetTalks (M.ObjectArray arr) users = mapMaybe (decodeTalkRoom users) arr
-fromGetTalks _                   _     = []
+fromGetTalks :: [User] -> M.Object -> [TalkRoom]
+fromGetTalks users (M.ObjectArray arr) = mapMaybe (decodeTalkRoom users) arr
+fromGetTalks _     _                   = []
 
 decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
 decodeTalkRoom users (M.ObjectMap m) = do
