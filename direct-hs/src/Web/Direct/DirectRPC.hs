@@ -106,3 +106,11 @@ getTalks rpcclient = callRpcThrow rpcclient "get_talks" []
 getTalkStatuses :: RPC.Client -> IO ()
 getTalkStatuses rpcclient =
     void $ callRpcThrow rpcclient "get_talk_statuses" []
+
+createPairTalk :: RPC.Client -> Domain -> User -> IO ()
+createPairTalk rpcclient dom peer = do
+    let methodName = "create_pair_talk"
+        did = domainId dom
+        uid = userId peer
+        dat = [M.ObjectWord did, M.ObjectWord uid]
+    void $ callRpcThrow rpcclient methodName dat
