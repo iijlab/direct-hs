@@ -25,8 +25,9 @@ module Web.Direct.Client
     , findUser
     , findTalkRoom
     , findPairTalkRoom
-    , ChannelType(..)
+    , ChannelType
     , pairChannel
+    , pinPointChannel
     , groupChannel
     )
 where
@@ -49,8 +50,6 @@ import           Web.Direct.Types
 ----------------------------------------------------------------
 
 data Status = Active | Inactive deriving Eq
-
-type ChannelKey = ChannelType
 
 ----------------------------------------------------------------
 
@@ -143,7 +142,7 @@ inactivate client = S.atomically $ S.writeTVar (clientStatus client) Inactive
 --   This returns 'Nothing' after 'shutdown'.
 allocateChannel :: Client -> ChannelType -> IO (Maybe Channel)
 allocateChannel client ctyp = do
-    let key = ctyp
+    let key = channelKey ctyp
     chan <- newChannel (clientRpcClient client) ctyp
     S.atomically $ do
         active <- isActiveSTM client
@@ -158,17 +157,16 @@ freeChannel :: Client -> ChannelType -> IO ()
 freeChannel client ctyp = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
   where
     chanDB = clientChannels client
-    key    = ctyp
+    key    = channelKey ctyp
 
 allChannels :: Client -> IO [Channel]
 allChannels client = HM.elems <$> S.atomically (S.readTVar chanDB)
     where chanDB = clientChannels client
 
-findChannel :: Client -> ChannelType -> IO (Maybe Channel)
-findChannel client ctyp = HM.lookup key <$> S.atomically (S.readTVar chanDB)
+findChannel :: Client -> ChannelKey -> IO (Maybe Channel)
+findChannel client key = HM.lookup key <$> S.atomically (S.readTVar chanDB)
   where
     chanDB = clientChannels client
-    key    = ctyp
 
 ----------------------------------------------------------------
 

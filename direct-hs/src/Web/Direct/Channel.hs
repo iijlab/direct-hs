@@ -5,9 +5,12 @@ module Web.Direct.Channel (
     , die
     , send
     , recv
-    , ChannelType(..)
+    , ChannelType
     , pairChannel
+    , pinPointChannel
     , groupChannel
+    , ChannelKey
+    , channelKey
     )
 where
 
@@ -62,30 +65,48 @@ recv chan = do
     case cm of
         Right msg            -> return msg
         Left  (Die announce) -> do
-            let tid = channelTalkId $ channelType chan
+            let tid = talkId $ channelTypeTalkRoom $ channelType chan
             void $ createMessage (channelRPCClient chan) announce tid
             E.throwIO E.ThreadKilled
 
 -- | Sending a message to the channel.
 send :: Channel -> Message -> IO (Either Exception MessageId)
 send chan msg = createMessage (channelRPCClient chan) msg tid
-    where tid = channelTalkId $ channelType chan
+    where tid = talkId $ channelTypeTalkRoom $ channelType chan
 
 ----------------------------------------------------------------
 
 -- | Type of channel.
-data ChannelType = Pair !TalkId !UserId
-                 | Group !TalkId
-                 deriving (Eq, Ord, Show)
+data ChannelType = Pair     !TalkRoom !User
+                 | PinPoint !TalkRoom !User
+                 | Group    !TalkRoom
+                 deriving (Eq, Show)
 
-channelTalkId :: ChannelType -> TalkId
-channelTalkId (Pair tid _) = tid
-channelTalkId (Group tid ) = tid
+channelTypeTalkRoom :: ChannelType -> TalkRoom
+channelTypeTalkRoom (Pair     room _) = room
+channelTypeTalkRoom (PinPoint room _) = room
+channelTypeTalkRoom (Group    room)   = room
 
--- | Group channel based on 'TalkRoom'.
+-- | Pair channel with the user.
+--   A pair talk room is created if necessary.
+--   The conversation is NOT seen by other users.
+pairChannel :: User -> IO ChannelType
+pairChannel user = do
+    room <- undefined -- createPairTalk
+    return $ Pair room user
+
+-- | One-to-one channel with the user in the talk room.
+--   The conversation is seen by other users.
+pinPointChannel :: TalkRoom -> User -> ChannelType
+pinPointChannel room user = PinPoint room user
+
+-- | Group channel in the talk room.
 groupChannel :: TalkRoom -> ChannelType
-groupChannel room = Group (talkId room)
+groupChannel room = Group room
 
--- | Pair channel based on 'TalkRoom' and 'User'.
-pairChannel :: TalkRoom -> User -> ChannelType
-pairChannel room user = Pair (talkId room) (userId user)
+type ChannelKey = (TalkId, Maybe UserId)
+
+channelKey :: ChannelType -> ChannelKey
+channelKey (Pair     room user) = (talkId room, Just (userId user))
+channelKey (PinPoint room user) = (talkId room, Just (userId user))
+channelKey (Group    room)      = (talkId room, Nothing)
