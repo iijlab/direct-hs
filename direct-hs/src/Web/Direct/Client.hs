@@ -16,6 +16,7 @@ module Web.Direct.Client
     , isActive
     , Channel
     , withChannel
+    , channelTalkRoom
     , findChannel
     , dispatch
     , shutdown
@@ -142,22 +143,28 @@ inactivate client = S.atomically $ S.writeTVar (clientStatus client) Inactive
 --   This returns 'Nothing' after 'shutdown'.
 allocateChannel :: Client -> ChannelType -> IO (Maybe Channel)
 allocateChannel client ctyp = do
-    let key = channelKey ctyp
-    chan <- newChannel (clientRpcClient client) ctyp
+    (room, muser) <- case ctyp of
+      Pair user -> do
+          room <- createPairTalk (clientRpcClient client) user
+          return (room, Just user)
+      PinPoint room user -> return (room, Just user)
+      Group room         -> return (room, Nothing)
+    let ckey = (talkId room, userId <$> muser)
+    chan <- newChannel (clientRpcClient client) ctyp ckey room
     S.atomically $ do
         active <- isActiveSTM client
         if active
             then do
-                S.modifyTVar' chanDB $ HM.insert key chan
+                S.modifyTVar' chanDB $ HM.insert ckey chan
                 return $ Just chan
             else return Nothing
     where chanDB = clientChannels client
 
-freeChannel :: Client -> ChannelType -> IO ()
-freeChannel client ctyp = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
+freeChannel :: Client -> Channel -> IO ()
+freeChannel client chan = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
   where
     chanDB = clientChannels client
-    key    = channelKey ctyp
+    key    = channelKey chan
 
 allChannels :: Client -> IO [Channel]
 allChannels client = HM.elems <$> S.atomically (S.readTVar chanDB)
@@ -195,7 +202,9 @@ withChannel client ctyp body = do
     case mchan of
         Nothing   -> return False
         Just chan -> do
-            void $ C.forkFinally (body chan) $ \_ -> freeChannel client ctyp
+            void $ C.forkFinally (body chan) $ \e -> do
+                print e
+                freeChannel client chan
             return True
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,

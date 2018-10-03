@@ -54,10 +54,12 @@ module Web.Direct
   -- ** Channel type
     , ChannelType
     , pairChannel
+    , pinPointChannel
     , groupChannel
   -- ** Creating channel
     , Channel
     , withChannel
+    , channelTalkRoom
   -- ** Channel IO
     , recv
     , send
@@ -65,6 +67,8 @@ module Web.Direct
     , shutdown
   -- *Exceptions
     , Exception(..)
+  -- *Misc
+    , createPair
     )
 where
 
@@ -74,3 +78,8 @@ import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
 import           Web.Direct.Types
+
+import           Web.Direct.DirectRPC hiding (getDomains)
+
+createPair :: Client -> User -> IO TalkRoom
+createPair client = createPairTalk (clientRpcClient client)

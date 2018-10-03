@@ -1,11 +1,13 @@
 module Web.Direct.Channel (
       Channel
+    , channelTalkId
+    , channelTalkRoom
     , newChannel
     , dispatch
     , die
     , send
     , recv
-    , ChannelType
+    , ChannelType(..)
     , pairChannel
     , pinPointChannel
     , groupChannel
@@ -31,18 +33,25 @@ data Channel = Channel {
       toWorker         :: C.MVar (Either Control (Message, MessageId))
     , channelRPCClient :: RPC.Client
     , channelType      :: ChannelType
+    , channelKey       :: ChannelKey
+    , channelTalkRoom  :: TalkRoom
     }
+
+channelTalkId :: Channel -> TalkId
+channelTalkId = fst . channelKey
 
 ----------------------------------------------------------------
 
 -- | Creating a new channel.
-newChannel :: RPC.Client -> ChannelType -> IO Channel
-newChannel rpcclient ctyp = do
+newChannel :: RPC.Client -> ChannelType -> ChannelKey -> TalkRoom -> IO Channel
+newChannel rpcclient ctyp ckey room = do
     mvar <- C.newEmptyMVar
     return Channel
         { toWorker         = mvar
         , channelRPCClient = rpcclient
         , channelType      = ctyp
+        , channelKey       = ckey
+        , channelTalkRoom  = room
         }
 
 ----------------------------------------------------------------
@@ -65,35 +74,26 @@ recv chan = do
     case cm of
         Right msg            -> return msg
         Left  (Die announce) -> do
-            let tid = talkId $ channelTypeTalkRoom $ channelType chan
-            void $ createMessage (channelRPCClient chan) announce tid
+            void $ createMessage (channelRPCClient chan) announce $ channelTalkId chan
             E.throwIO E.ThreadKilled
 
 -- | Sending a message to the channel.
 send :: Channel -> Message -> IO (Either Exception MessageId)
-send chan msg = createMessage (channelRPCClient chan) msg tid
-    where tid = talkId $ channelTypeTalkRoom $ channelType chan
+send chan msg = createMessage (channelRPCClient chan) msg $ channelTalkId chan
 
 ----------------------------------------------------------------
 
 -- | Type of channel.
-data ChannelType = Pair     !TalkRoom !User
+data ChannelType = Pair               !User
                  | PinPoint !TalkRoom !User
                  | Group    !TalkRoom
                  deriving (Eq, Show)
 
-channelTypeTalkRoom :: ChannelType -> TalkRoom
-channelTypeTalkRoom (Pair     room _) = room
-channelTypeTalkRoom (PinPoint room _) = room
-channelTypeTalkRoom (Group    room)   = room
-
 -- | Pair channel with the user.
 --   A pair talk room is created if necessary.
 --   The conversation is NOT seen by other users.
-pairChannel :: User -> IO ChannelType
-pairChannel user = do
-    room <- undefined -- createPairTalk
-    return $ Pair room user
+pairChannel :: User -> ChannelType
+pairChannel user = Pair user
 
 -- | One-to-one channel with the user in the talk room.
 --   The conversation is seen by other users.
@@ -105,8 +105,3 @@ groupChannel :: TalkRoom -> ChannelType
 groupChannel room = Group room
 
 type ChannelKey = (TalkId, Maybe UserId)
-
-channelKey :: ChannelType -> ChannelKey
-channelKey (Pair     room user) = (talkId room, Just (userId user))
-channelKey (PinPoint room user) = (talkId room, Just (userId user))
-channelKey (Group    room)      = (talkId room, Nothing)
