@@ -40,7 +40,7 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC hiding (getDomains)
+import           Web.Direct.DirectRPC                     hiding (getDomains)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
@@ -127,10 +127,17 @@ findChannel client ckey = findChannel' (clientChannels client) ckey
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
 withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
-withChannel client ctyp body = withChannel' (clientRpcClient client) (clientChannels client) (clientStatus client) ctyp body
+withChannel client ctyp body = withChannel' (clientRpcClient client)
+                                            (clientChannels client)
+                                            (clientStatus client)
+                                            ctyp
+                                            body
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,
 --   and finnaly waits that all channels are closed.
 shutdown :: Client -> Message -> IO ()
-shutdown client msg = shutdown' (clientRpcClient client) (clientChannels client) (clientStatus client) msg
+shutdown client msg = shutdown' (clientRpcClient client)
+                                (clientChannels client)
+                                (clientStatus client)
+                                msg

@@ -1,6 +1,6 @@
 module Web.Direct.Client.Status where
 
-import qualified Control.Concurrent.STM                   as S
+import qualified Control.Concurrent.STM as S
 
 data Status = Active | Inactive deriving Eq
 type StatusVar = S.TVar Status

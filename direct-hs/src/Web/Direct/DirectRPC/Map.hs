@@ -50,7 +50,7 @@ fromGetTalks users (M.ObjectArray arr) = mapMaybe (decodeTalkRoom users) arr
 fromGetTalks _     _                   = []
 
 decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
-decodeTalkRoom (me:others) (M.ObjectMap m) = do
+decodeTalkRoom (me : others) (M.ObjectMap m) = do
     M.ObjectWord tid <- look "talk_id" m
     M.ObjectWord tp  <- look "type" m
     let typ
@@ -61,8 +61,10 @@ decodeTalkRoom (me:others) (M.ObjectMap m) = do
             | otherwise = UnknownTalk
     M.ObjectArray uids <- look "user_ids" m
     let userIds = mapMaybe extract uids
-        roomUsers = me :
-            mapMaybe (\uid -> L.find (\u -> uid == userId u) others) userIds
+        roomUsers =
+            me
+                : mapMaybe (\uid -> L.find (\u -> uid == userId u) others)
+                           userIds
     Just $ TalkRoom tid typ roomUsers
   where
     extract (M.ObjectWord uid) = Just uid

@@ -1,5 +1,5 @@
-module Web.Direct.Client.Channel.Types (
-      Channel
+module Web.Direct.Client.Channel.Types
+    ( Channel
     , channelTalkId
     , channelTalkRoom
     , newChannel
@@ -74,7 +74,9 @@ recv chan = do
     case cm of
         Right msg            -> return msg
         Left  (Die announce) -> do
-            void $ createMessage (channelRPCClient chan) announce $ channelTalkId chan
+            void
+                $ createMessage (channelRPCClient chan) announce
+                $ channelTalkId chan
             E.throwIO E.ThreadKilled
 
 -- | Sending a message to the channel.

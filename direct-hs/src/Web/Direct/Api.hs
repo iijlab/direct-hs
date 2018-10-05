@@ -19,7 +19,7 @@ import qualified Data.UUID                                as Uuid
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
-import           Web.Direct.Client hiding (getDomains)
+import           Web.Direct.Client                        hiding (getDomains)
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
@@ -92,7 +92,9 @@ withClient config pInfo action = do
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
-        me <- createSession (clientRpcClient client) (loginInfoDirectAccessToken $ clientLoginInfo client)
+        me <- createSession
+            (clientRpcClient client)
+            (loginInfoDirectAccessToken $ clientLoginInfo client)
         setMe client me
         subscribeNotification client me
         action client
@@ -111,24 +113,29 @@ withClient config pInfo action = do
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, msgid, tid, uid) | uid /= myid && uid /= 0 -> do
-                                mchan <- findChannel client (tid, Just uid)
-                                case mchan of
-                                    Just chan -> dispatch chan msg msgid
-                                    Nothing   -> do
-                                        mchan' <- findChannel client (tid, Nothing)
-                                        case mchan' of
-                                            Just chan' ->
-                                                dispatch chan' msg msgid
-                                            Nothing -> do
-                                                Just user <- findUser uid client
-                                                Just room <- findTalkRoom
-                                                    tid
-                                                    client
-                                                directCreateMessageHandler
-                                                    config
-                                                    client
-                                                    (msg, msgid, room, user)
+                            Just (msg, msgid, tid, uid)
+                                | uid /= myid && uid /= 0 -> do
+                                    mchan <- findChannel client (tid, Just uid)
+                                    case mchan of
+                                        Just chan -> dispatch chan msg msgid
+                                        Nothing   -> do
+                                            mchan' <- findChannel
+                                                client
+                                                (tid, Nothing)
+                                            case mchan' of
+                                                Just chan' ->
+                                                    dispatch chan' msg msgid
+                                                Nothing -> do
+                                                    Just user <- findUser
+                                                        uid
+                                                        client
+                                                    Just room <- findTalkRoom
+                                                        tid
+                                                        client
+                                                    directCreateMessageHandler
+                                                        config
+                                                        client
+                                                        (msg, msgid, room, user)
                             _ -> return ()
                         _ -> return ()
         , RPC.logger             = directLogger config
@@ -149,7 +156,7 @@ subscribeNotification client me = do
     getFriends rpcclient
 
     users0 <- getAcquaintances rpcclient
-    let users  = me : (me `L.delete` users0)
+    let users = me : (me `L.delete` users0)
     setUsers client users
 
     getTalks rpcclient users >>= setTalkRooms client
