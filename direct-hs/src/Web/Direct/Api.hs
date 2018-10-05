@@ -9,8 +9,7 @@ module Web.Direct.Api
     )
 where
 
-import qualified Control.Exception                        as E
-import           Control.Monad                            (void, when)
+import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import qualified Data.MessagePack                         as M
@@ -20,10 +19,10 @@ import qualified Data.UUID                                as Uuid
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
-import           Web.Direct.Client
+import           Web.Direct.Client                        hiding (getDomains)
+import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Map
 import           Web.Direct.Message
 import           Web.Direct.Types
 
@@ -61,22 +60,7 @@ login
 login config email pass =
     RPC.withClient (directEndpointUrl config) rpcConfig $ \rpcClient -> do
         idfv <- genIdfv
-
-        let magicConstant = M.ObjectStr ""
-            methodName    = "create_access_token"
-        res <- RPC.call
-            rpcClient
-            methodName
-            [ M.ObjectStr email
-            , M.ObjectStr pass
-            , M.ObjectStr idfv
-            , M.ObjectStr agentName
-            , magicConstant
-            ]
-        case resultToObjectOrException methodName res of
-            Right (M.ObjectStr token) -> return $ Right $ LoginInfo token idfv
-            Right other -> return $ Left $ UnexpectedReponse methodName other
-            Left e -> return $ Left e
+        createAccessToken rpcClient email pass idfv agentName
   where
     rpcConfig = RPC.defaultConfig
         { RPC.requestHandler     = \rpcClient mid _method _objs ->
@@ -100,12 +84,6 @@ genIdfv = do
             <*> Random.uniform g
             )
 
-agentName :: T.Text
-agentName = "bot"
-
-apiVersion :: T.Text
-apiVersion = "1.91"
-
 ----------------------------------------------------------------
 
 withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
@@ -114,7 +92,10 @@ withClient config pInfo action = do
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         client <- newClient pInfo rpcClient
         I.writeIORef ref $ Just client
-        me <- createSession client
+        me <- createSession
+            (clientRpcClient client)
+            (loginInfoDirectAccessToken $ clientLoginInfo client)
+        setMe client me
         subscribeNotification client me
         action client
   where
@@ -132,24 +113,29 @@ withClient config pInfo action = do
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, msgid, tid, uid) | uid /= myid && uid /= 0 -> do
-                                mchan <- findChannel client (Pair tid uid)
-                                case mchan of
-                                    Just chan -> dispatch chan msg msgid
-                                    Nothing   -> do
-                                        mchan' <- findChannel client (Group tid)
-                                        case mchan' of
-                                            Just chan' ->
-                                                dispatch chan' msg msgid
-                                            Nothing -> do
-                                                Just user <- findUser uid client
-                                                Just room <- findTalkRoom
-                                                    tid
-                                                    client
-                                                directCreateMessageHandler
-                                                    config
-                                                    client
-                                                    (msg, msgid, room, user)
+                            Just (msg, msgid, tid, uid)
+                                | uid /= myid && uid /= 0 -> do
+                                    mchan <- findChannel client (tid, Just uid)
+                                    case mchan of
+                                        Just chan -> dispatch chan msg msgid
+                                        Nothing   -> do
+                                            mchan' <- findChannel
+                                                client
+                                                (tid, Nothing)
+                                            case mchan' of
+                                                Just chan' ->
+                                                    dispatch chan' msg msgid
+                                                Nothing -> do
+                                                    Just user <- findUser
+                                                        uid
+                                                        client
+                                                    Just room <- findTalkRoom
+                                                        tid
+                                                        client
+                                                    directCreateMessageHandler
+                                                        config
+                                                        client
+                                                        (msg, msgid, room, user)
                             _ -> return ()
                         _ -> return ()
         , RPC.logger             = directLogger config
@@ -157,41 +143,24 @@ withClient config pInfo action = do
         , RPC.waitRequestHandler = True
         }
 
-createSession :: Client -> IO User
-createSession client = do
-    let methodName = "create_session"
-    rsp <- callRpcThrow
-        (clientRpcClient client)
-        methodName
-        [ M.ObjectStr $ loginInfoDirectAccessToken $ clientLoginInfo client
-        , M.ObjectStr apiVersion
-        , M.ObjectStr agentName
-        ]
-
-    case fromCreateSession rsp of
-        Just user -> setMe client user >> return user
-        _         -> E.throwIO $ UnexpectedReponse methodName rsp
-
 subscribeNotification :: Client -> User -> IO ()
 subscribeNotification client me = do
-    let c = clientRpcClient client
-    void $ callRpcThrow c "reset_notification" []
-    void $ callRpcThrow c "start_notification" []
-    doms <- callRpcThrow c "get_domains" []
-    setDomains client $ fromGetDomains doms
-    void $ callRpcThrow c "get_domain_invites" []
-    void $ callRpcThrow c "get_account_control_requests" []
-    void $ callRpcThrow c "get_joined_account_control_group" []
-    void $ callRpcThrow c "get_announcement_statuses" []
-    void $ callRpcThrow c "get_friends" []
-    acq <- callRpcThrow c "get_acquaintances" []
-    -- Me comes first
-    let users0 = fromGetAcquaintances acq
-        users  = me : (me `L.delete` users0)
+    let rpcclient = clientRpcClient client
+    resetNotification rpcclient
+    startNotification rpcclient
+    getDomains rpcclient >>= setDomains client
+    getDomainInvites rpcclient
+    getAccountControlRequests rpcclient
+    getJoinedAccountControlGroup rpcclient
+    getAnnouncementStatuses rpcclient
+    getFriends rpcclient
+
+    users0 <- getAcquaintances rpcclient
+    let users = me : (me `L.delete` users0)
     setUsers client users
-    talks <- callRpcThrow c "get_talks" []
-    setTalkRooms client $ fromGetTalks talks users
-    void $ callRpcThrow c "get_talk_statuses" []
+
+    getTalks rpcclient users >>= setTalkRooms client
+    getTalkStatuses rpcclient
 
 ----------------------------------------------------------------
 

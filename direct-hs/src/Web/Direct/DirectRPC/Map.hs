@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Direct.Map where
+module Web.Direct.DirectRPC.Map where
 
 import qualified Data.List        as L
 import           Data.Maybe       (mapMaybe)
@@ -45,12 +45,12 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: M.Object -> [User] -> [TalkRoom]
-fromGetTalks (M.ObjectArray arr) users = mapMaybe (decodeTalkRoom users) arr
-fromGetTalks _                   _     = []
+fromGetTalks :: [User] -> M.Object -> [TalkRoom]
+fromGetTalks users (M.ObjectArray arr) = mapMaybe (decodeTalkRoom users) arr
+fromGetTalks _     _                   = []
 
 decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
-decodeTalkRoom users (M.ObjectMap m) = do
+decodeTalkRoom (me : others) (M.ObjectMap m) = do
     M.ObjectWord tid <- look "talk_id" m
     M.ObjectWord tp  <- look "type" m
     let typ
@@ -62,7 +62,9 @@ decodeTalkRoom users (M.ObjectMap m) = do
     M.ObjectArray uids <- look "user_ids" m
     let userIds = mapMaybe extract uids
         roomUsers =
-            mapMaybe (\uid -> L.find (\u -> uid == userId u) users) userIds
+            me
+                : mapMaybe (\uid -> L.find (\u -> uid == userId u) others)
+                           userIds
     Just $ TalkRoom tid typ roomUsers
   where
     extract (M.ObjectWord uid) = Just uid

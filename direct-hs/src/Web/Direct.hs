@@ -1,27 +1,23 @@
 -- | Client library for Direct.
 module Web.Direct
-    ( Config(..)
+    (
+  -- * Configuration
+      Config(..)
     , defaultConfig
+    , URL
   -- * Login
     , login
-    , URL
-  -- * Client
-    , Client
-    , withClient
-    , setDomains
-    , getDomains
-    , setTalkRooms
-    , getTalkRooms
-    , setMe
-    , getMe
-    , setUsers
-    , getUsers
-    , findUser
-    , findPairTalkRoom
   -- ** Login information
     , LoginInfo(..)
     , serializeLoginInfo
     , deserializeLoginInfo
+  -- * Client
+    , Client
+    , withClient
+    , getDomains
+    , getTalkRooms
+    , getMe
+    , getUsers
   -- * Message
   -- ** Ids
     , DomainId
@@ -34,11 +30,11 @@ module Web.Direct
     , domainId
     , domainName
   -- *** Talk room
-    , TalkType(..)
     , TalkRoom
     , talkId
-    , talkType
     , talkUsers
+    , talkType
+    , TalkType(..)
   -- *** User
     , User
     , userId
@@ -54,10 +50,12 @@ module Web.Direct
   -- ** Channel type
     , ChannelType
     , pairChannel
+    , pinPointChannel
     , groupChannel
   -- ** Creating channel
     , Channel
     , withChannel
+    , channelTalkRoom
   -- ** Channel IO
     , recv
     , send
@@ -74,3 +72,8 @@ import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
 import           Web.Direct.Types
+
+import           Web.Direct.DirectRPC hiding (getDomains)
+
+createPair :: Client -> User -> IO TalkRoom
+createPair client = createPairTalk (clientRpcClient client)

@@ -18,10 +18,14 @@ library
   ghc-options:     -Wall
   exposed-modules: Web.Direct
   other-modules:   Web.Direct.Api
-                   Web.Direct.Exception
                    Web.Direct.Client
+                   Web.Direct.Client.Channel
+                   Web.Direct.Client.Channel.Types
+                   Web.Direct.Client.Status
+                   Web.Direct.DirectRPC
+                   Web.Direct.DirectRPC.Map
+                   Web.Direct.Exception
                    Web.Direct.LoginInfo
-                   Web.Direct.Map
                    Web.Direct.Message
                    Web.Direct.Types
                    Web.Direct.Utils
