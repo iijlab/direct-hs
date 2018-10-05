@@ -1,4 +1,4 @@
-module Web.Direct.Channel (
+module Web.Direct.Client.Channel.Types (
       Channel
     , channelTalkId
     , channelTalkRoom
