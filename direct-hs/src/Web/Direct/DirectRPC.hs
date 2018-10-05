@@ -7,9 +7,9 @@ import qualified Data.MessagePack                         as M
 import           Data.Text                                (Text)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
+import           Web.Direct.DirectRPC.Map
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Map
 import           Web.Direct.Message
 import           Web.Direct.Types
 

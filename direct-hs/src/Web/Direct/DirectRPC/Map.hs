@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Web.Direct.Map where
+module Web.Direct.DirectRPC.Map where
 
 import qualified Data.List        as L
 import           Data.Maybe       (mapMaybe)

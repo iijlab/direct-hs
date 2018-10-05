@@ -23,9 +23,9 @@ library
                    Web.Direct.Client.Channel.Types
                    Web.Direct.Client.Status
                    Web.Direct.DirectRPC
+                   Web.Direct.DirectRPC.Map
                    Web.Direct.Exception
                    Web.Direct.LoginInfo
-                   Web.Direct.Map
                    Web.Direct.Message
                    Web.Direct.Types
                    Web.Direct.Utils
