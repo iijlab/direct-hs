@@ -17,7 +17,6 @@ module Web.Direct.Client
     , isActive
     , findUser
     , findTalkRoom
-    , findPairTalkRoom
     , findChannel
     , withChannel
     , shutdown
@@ -109,18 +108,6 @@ findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
 findTalkRoom tid client = do
     rooms <- getTalkRooms client
     return $ L.find (\r -> talkId r == tid) rooms
-
-findPairTalkRoom :: UserId -> Client -> IO (Maybe TalkRoom)
-findPairTalkRoom uid client = do
-    rooms <- getTalkRooms client
-    return $ L.find
-        (\room ->
-            talkType room
-                ==     PairTalk
-                &&     uid
-                `elem` (map userId $ talkUsers room)
-        )
-        rooms
 
 ----------------------------------------------------------------
 
