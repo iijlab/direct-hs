@@ -1,5 +1,5 @@
-module Web.Direct.Client.Channel (
-      withChannel'
+module Web.Direct.Client.Channel
+    ( withChannel'
     , ChannelDB
     , newChannelDB
     , shutdown'
@@ -15,7 +15,8 @@ module Web.Direct.Client.Channel (
     , groupChannel
     , dispatch
     , ChannelKey
-    ) where
+    )
+where
 
 import qualified Control.Concurrent                       as C
 import qualified Control.Concurrent.STM                   as S
@@ -25,7 +26,7 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel.Types
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC hiding (getDomains)
+import           Web.Direct.DirectRPC                     hiding (getDomains)
 import           Web.Direct.Message
 import           Web.Direct.Types
 
@@ -40,14 +41,15 @@ newChannelDB = S.newTVarIO HM.empty
 
 -- | Creating a new channel.
 --   This returns 'Nothing' after 'shutdown'.
-allocateChannel :: RPC.Client -> ChannelDB -> StatusVar -> ChannelType -> IO (Maybe Channel)
+allocateChannel
+    :: RPC.Client -> ChannelDB -> StatusVar -> ChannelType -> IO (Maybe Channel)
 allocateChannel rpcclient chanDB tvar ctyp = do
     (room, muser) <- case ctyp of
-      Pair user -> do
-          room <- createPairTalk rpcclient user
-          return (room, Just user)
-      PinPoint room user -> return (room, Just user)
-      Group room         -> return (room, Nothing)
+        Pair user -> do
+            room <- createPairTalk rpcclient user
+            return (room, Just user)
+        PinPoint room user -> return (room, Just user)
+        Group room         -> return (room, Nothing)
     let ckey = (talkId room, userId <$> muser)
     chan <- newChannel rpcclient ctyp ckey room
     S.atomically $ do
@@ -60,8 +62,7 @@ allocateChannel rpcclient chanDB tvar ctyp = do
 
 freeChannel :: ChannelDB -> Channel -> IO ()
 freeChannel chanDB chan = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
-  where
-    key    = channelKey chan
+    where key = channelKey chan
 
 allChannels :: ChannelDB -> IO [Channel]
 allChannels chanDB = HM.elems <$> S.atomically (S.readTVar chanDB)
@@ -78,7 +79,13 @@ wait chanDB = S.atomically $ do
 
 ----------------------------------------------------------------
 
-withChannel' :: RPC.Client -> ChannelDB -> StatusVar -> ChannelType -> (Channel -> IO ()) -> IO Bool
+withChannel'
+    :: RPC.Client
+    -> ChannelDB
+    -> StatusVar
+    -> ChannelType
+    -> (Channel -> IO ())
+    -> IO Bool
 withChannel' rpcclient chanDB tvar ctyp body = do
     mchan <- allocateChannel rpcclient chanDB tvar ctyp
     case mchan of
