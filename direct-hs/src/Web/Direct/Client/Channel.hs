@@ -78,11 +78,6 @@ wait chanDB = S.atomically $ do
 
 ----------------------------------------------------------------
 
--- | A new channel is created according to the first and second arguments.
---   Then the third argument runs in a new thread with the channel.
---   In this case, 'True' is returned.
---   If 'shutdown' is already called, a new thread is not spawned
---   and 'False' is returned.
 withChannel' :: RPC.Client -> ChannelDB -> StatusVar -> ChannelType -> (Channel -> IO ()) -> IO Bool
 withChannel' rpcclient chanDB tvar ctyp body = do
     mchan <- allocateChannel rpcclient chanDB tvar ctyp
@@ -94,9 +89,6 @@ withChannel' rpcclient chanDB tvar ctyp body = do
                 freeChannel chanDB chan
             return True
 
--- | This function lets 'directCreateMessageHandler' to not accept any message,
---   then sends the maintenance message to all channels,
---   and finnaly waits that all channels are closed.
 shutdown' :: RPC.Client -> ChannelDB -> StatusVar -> Message -> IO ()
 shutdown' rpcclient chanDB tvar msg = do
     inactivate tvar

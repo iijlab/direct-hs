@@ -34,7 +34,7 @@ data Channel = Channel {
     , channelRPCClient :: RPC.Client
     , channelType      :: ChannelType
     , channelKey       :: ChannelKey
-    , channelTalkRoom  :: TalkRoom
+    , channelTalkRoom  :: TalkRoom -- ^ Getting the talk room associated with this channel.
     }
 
 channelTalkId :: Channel -> TalkId

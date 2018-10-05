@@ -38,5 +38,5 @@ data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show)
 data TalkRoom = TalkRoom {
     talkId    :: !TalkId
   , talkType  :: !TalkType
-  , talkUsers :: [User]
+  , talkUsers :: [User] -- ^ The head of this list is myself.
   } deriving (Eq, Show)

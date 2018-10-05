@@ -94,6 +94,7 @@ getMe client = I.readIORef (clientMe client)
 setUsers :: Client -> [User] -> IO ()
 setUsers client users = I.writeIORef (clientUsers client) users
 
+-- | Getting acquaintances for me. The head of the list is myself.
 getUsers :: Client -> IO [User]
 getUsers client = I.readIORef (clientUsers client)
 
@@ -133,8 +134,16 @@ isActive client = S.atomically $ isActiveSTM $ clientStatus client
 findChannel :: Client -> ChannelKey -> IO (Maybe Channel)
 findChannel client ckey = findChannel' (clientChannels client) ckey
 
+-- | A new channel is created according to the first and second arguments.
+--   Then the third argument runs in a new thread with the channel.
+--   In this case, 'True' is returned.
+--   If 'shutdown' is already called, a new thread is not spawned
+--   and 'False' is returned.
 withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
 withChannel client ctyp body = withChannel' (clientRpcClient client) (clientChannels client) (clientStatus client) ctyp body
 
+-- | This function lets 'directCreateMessageHandler' to not accept any message,
+--   then sends the maintenance message to all channels,
+--   and finnaly waits that all channels are closed.
 shutdown :: Client -> Message -> IO ()
 shutdown client msg = shutdown' (clientRpcClient client) (clientChannels client) (clientStatus client) msg
