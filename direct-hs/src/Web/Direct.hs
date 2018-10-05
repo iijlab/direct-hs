@@ -1,27 +1,23 @@
 -- | Client library for Direct.
 module Web.Direct
-    ( Config(..)
+    (
+  -- * Configuration
+      Config(..)
     , defaultConfig
+    , URL
   -- * Login
     , login
-    , URL
-  -- * Client
-    , Client
-    , withClient
-    , setDomains
-    , getDomains
-    , setTalkRooms
-    , getTalkRooms
-    , setMe
-    , getMe
-    , setUsers
-    , getUsers
-    , findUser
-    , findPairTalkRoom
   -- ** Login information
     , LoginInfo(..)
     , serializeLoginInfo
     , deserializeLoginInfo
+  -- * Client
+    , Client
+    , withClient
+    , getDomains
+    , getTalkRooms
+    , getMe
+    , getUsers
   -- * Message
   -- ** Ids
     , DomainId
@@ -34,11 +30,11 @@ module Web.Direct
     , domainId
     , domainName
   -- *** Talk room
-    , TalkType(..)
     , TalkRoom
     , talkId
-    , talkType
     , talkUsers
+    , talkType
+    , TalkType(..)
   -- *** User
     , User
     , userId
@@ -67,8 +63,6 @@ module Web.Direct
     , shutdown
   -- *Exceptions
     , Exception(..)
-  -- *Misc
-    , createPair
     )
 where
 

@@ -24,8 +24,6 @@ main = do
 
 handleCreateMessage
     :: D.Client -> (D.Message, D.MessageId, D.TalkRoom, D.User) -> IO ()
-handleCreateMessage client (D.Txt "ペア作れ", _, _, user) =
-    void $ D.createPair client user
 handleCreateMessage client (D.Txt "ping", _, room, _) =
     void $ D.sendMessage client (D.Txt "pong") (D.talkId room)
 handleCreateMessage client (D.Txt "stamp", _, room, _) = void $ D.sendMessage
