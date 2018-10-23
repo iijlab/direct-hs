@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Web.Direct.Client
     ( Client
@@ -124,20 +125,28 @@ sendMessage client req tid = createMessage (clientRpcClient client) req tid
 
 ----------------------------------------------------------------
 
-uploadFile :: Client -> UploadFile -> Aux -> IO (Either Exception ())
-uploadFile client upf aux = runExceptT $ do
+uploadFile :: Client -> UploadFile -> Aux -> IO (Either Exception MessageId)
+uploadFile client upf@UploadFile {..} aux = runExceptT $ do
     let methodName = "create_upload_auth"
-        obj = toCreateUploadAuth upf
-    rsp <-
-        ExceptT
-            (   resultToObjectOrException methodName
-            <$> RPC.call (clientRpcClient client) methodName obj
-            )
+        obj        = toCreateUploadAuth upf
+    rsp <- ExceptT
+        (   resultToObjectOrException methodName
+        <$> RPC.call (clientRpcClient client) methodName obj
+        )
     case rsp of
         M.ObjectMap rspMap -> do
-            ua <- hoistEither $ decodeUploadAuth methodName rsp rspMap
+            ua@UploadAuth {..} <- hoistEither
+                $ decodeUploadAuth methodName rsp rspMap
             ExceptT $ runUploadFile upf ua
-            error "TODO: sendMessage as Files"
+            let files = Files
+                    [ File uploadAuthGetUrl
+                           uploadFileMimeType
+                           uploadFileSize
+                           uploadFileName
+                           uploadAuthFileId
+                    ]
+                    uploadFileAttachedText
+            ExceptT $ sendMessage client files aux
         other -> throwError $ UnexpectedReponse methodName other
 
 isActive :: Client -> IO Bool
