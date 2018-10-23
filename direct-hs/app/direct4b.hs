@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Applicative    ((<**>), (<|>))
+import           Control.Applicative    (optional, (<**>), (<|>))
 import qualified Control.Exception      as E
-import           Control.Monad          (forM_, join)
+import           Control.Monad          (forM_, join, void)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (intercalate)
+import           Data.Maybe             (fromMaybe)
 import qualified Data.MessagePack       as M
 import qualified Data.MessagePack.RPC   as Msg
 import           Data.Monoid            ((<>))
@@ -61,8 +62,11 @@ main = join $ Opt.execParser optionsInfo
                    "upload"
                    (Opt.info
                        (   uploadFile
-                       <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
-                       <*> Opt.argument Opt.auto (Opt.metavar "FILE_PATH")
+                       <$> optional (Opt.strOption (Opt.short 't' <> Opt.metavar "[MESSAGE_TEXT]"))
+                       <*> optional (Opt.strOption (Opt.short 'm' <> Opt.metavar "[MIME_TYPE]" <> Opt.help "Default \"application/octet-stream\"" ))
+                       <*> optional (Opt.option Opt.auto (Opt.short 'd' <> Opt.metavar "[DOMAIN_ID]" <> Opt.help "Default: the first domain you belong to." ))
+                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       <*> Opt.strArgument (Opt.metavar "FILE_PATH")
                        )
                        (Opt.fullDesc <> Opt.progDesc
                            "Send a message from stdin as the logged-in user."
@@ -179,12 +183,19 @@ showMsg (Msg.NotificationMessage method objs) =
     "notification " ++ T.unpack method ++ " " ++ showObjs objs
 
 
-uploadFile :: D.TalkId -> FilePath -> IO ()
-uploadFile tid path = do
+uploadFile
+    :: Maybe T.Text     -- ^ Text message sent with the file.
+    -> Maybe T.Text     -- ^ MIME type of the file. Default: "application/octet-stream".
+    -> Maybe D.DomainId -- ^ The ID of domain onto which the file is uploaded. Default: the first domain obtained by `get_domains` RPC.
+    -> D.TalkId         -- ^ The ID of talk room onto which the file is uploaded.
+    -> FilePath         -- ^ The path to file.
+    -> IO ()
+uploadFile mtxt mmime mdid tid path = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let aux    = D.defaultAux { D.auxTalkId = tid }
         config = D.defaultConfig { D.directEndpointUrl = url }
     D.withClient config pInfo $ \client -> do
-        upf <- D.readToUpload Nothing path
-        either E.throwIO return =<< D.uploadFile client upf aux
+        dom <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
+        upf <- D.readToUpload dom mtxt (fromMaybe "application/octet-stream" mmime) path
+        void (either E.throwIO return =<< D.uploadFile client upf aux)

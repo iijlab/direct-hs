@@ -37,7 +37,9 @@ library
     , containers
     , data-msgpack
     , errors
+    , filepath
     , http-client
+    , http-client-tls
     , http-types
     , mtl
     , mwc-random
