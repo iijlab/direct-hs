@@ -18,7 +18,7 @@ import qualified Options.Applicative    as Opt
 import qualified System.Directory       as Dir
 import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
 import           System.Exit            (die)
-import           System.FilePath        ((</>))
+import           System.FilePath        (takeExtension, (</>))
 import           System.IO              (BufferMode (NoBuffering), hGetEcho,
                                          hSetBuffering, hSetEcho, stderr, stdin,
                                          stdout)
@@ -197,5 +197,19 @@ uploadFile mtxt mmime mdid tid path = do
         config = D.defaultConfig { D.directEndpointUrl = url }
     D.withClient config pInfo $ \client -> do
         dom <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
-        upf <- D.readToUpload dom mtxt (fromMaybe "application/octet-stream" mmime) path
+        upf <- D.readToUpload dom mtxt (fromMaybe (judgeMimeFromName path) mmime) path
         void (either E.throwIO return =<< D.uploadFile client upf aux)
+
+  where
+    judgeMimeFromName p =
+        case takeExtension p of
+            ".txt"  -> "text/plain"
+            ".htm"  -> "text/html"
+            ".html" -> "text/html"
+            ".xml"  -> "text/xml"
+            ".gif"  -> "image/gif"
+            ".jpg"  -> "image/jpeg"
+            ".jpeg" -> "image/jpeg"
+            ".png"  -> "image/png"
+            ".pdf"  -> "application/pdf"
+            _       -> "application/octet-stream"
