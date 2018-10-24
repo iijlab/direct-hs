@@ -7,7 +7,6 @@ license:             BSD3
 license-file:        LICENSE
 author:              Yuji Yamamoto and Kazu Yamamoto
 maintainer:          yuji-yamamoto@iij.ad.jp, kazu@iij.ad.jp
-copyright:           2018 Yuji Yamamoto
 category:            Web
 build-type:          Simple
 extra-source-files:  README.md
