@@ -176,24 +176,10 @@ decodeMessage rspinfo = do
                 idx           <- look "stamp_index" m >>= M.fromObject
                 let txt = look "text" m >>= M.fromObject
                 return (Stamp set idx txt)
-            M.ObjectWord 4 -> do -- TODO: refactor with the case of (M.ObjectWord 5)
-                obj@(M.ObjectMap m) <- look "content" rspinfo
-                fs <- ((: []) <$> decodeFile obj) <|> decodeFiles m
-                let text =
-                        case look "text" m of
-                            Just (M.ObjectStr t) -> Just t
-                            Just _other          -> Nothing
-                            Nothing              -> Nothing
-                Just (Files fs text, aux)
-            M.ObjectWord 5 -> do
-                obj@(M.ObjectMap m) <- look "content" rspinfo
-                fs <- ((: []) <$> decodeFile obj) <|> decodeFiles m
-                let text =
-                        case look "text" m of
-                            Just (M.ObjectStr t) -> Just t
-                            Just _other          -> Nothing
-                            Nothing              -> Nothing
-                Just (Files fs text, aux)
+            M.ObjectWord 4 ->
+                decodeFilesMessage aux
+            M.ObjectWord 5 ->
+                decodeFilesMessage aux
             M.ObjectWord 500 -> do
                 M.ObjectMap m <- look "content" rspinfo
                 qst           <- look "question" m >>= M.fromObject
@@ -229,6 +215,16 @@ decodeMessage rspinfo = do
                 let cls = cls' == (1 :: Word64)
                 return (TaskA ttl cls don)
             _ -> return (Other $ T.pack $ show rspinfo)
+
+    decodeFilesMessage aux = do
+        obj@(M.ObjectMap m) <- look "content" rspinfo
+        fs <- ((: []) <$> decodeFile obj) <|> decodeFiles m
+        let text =
+                case look "text" m of
+                    Just (M.ObjectStr t) -> Just t
+                    Just _other          -> Nothing
+                    Nothing              -> Nothing
+        Just (Files fs text, aux)
 
     decodeFiles m = do
         M.ObjectArray xs <- look "files" m
