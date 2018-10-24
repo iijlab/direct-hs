@@ -50,6 +50,19 @@ executable nippo
   default-language: Haskell2010
   other-modules: Common
 
+executable observe-pretty
+  main-is: observe-pretty.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -threaded
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , direct-hs
+    , pretty-simple
+    , envy
+  default-language: Haskell2010
+  other-modules: Common
+
 source-repository head
   type:     git
   location: https://github.com/iij-ii/direct-hs
