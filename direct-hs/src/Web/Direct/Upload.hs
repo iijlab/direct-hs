@@ -6,7 +6,8 @@ module Web.Direct.Upload
     , UploadAuth(..)
     , readToUpload
     , runUploadFile
-    ) where
+    )
+where
 
 import qualified Data.ByteString.Lazy      as BL
 import qualified Data.Text                 as T
@@ -33,18 +34,17 @@ data UploadFile = UploadFile
 
 
 readToUpload :: Maybe T.Text -> T.Text -> FilePath -> IO UploadFile
-readToUpload uploadFileAttachedText uploadFileMimeType path
-    = do
-        let uploadFileName = T.pack $ FP.takeFileName path
-        uploadFileContent <- BL.readFile path
-        let uploadFileSize = fromIntegral $ BL.length uploadFileContent
-        return UploadFile {..}
+readToUpload uploadFileAttachedText uploadFileMimeType path = do
+    let uploadFileName = T.pack $ FP.takeFileName path
+    uploadFileContent <- BL.readFile path
+    let uploadFileSize = fromIntegral $ BL.length uploadFileContent
+    return UploadFile {..}
 
 
 runUploadFile :: UploadFile -> UploadAuth -> IO (Either Exception ())
 runUploadFile UploadFile {..} UploadAuth {..} = do
-    mgr <- H.newManager tlsManagerSettings
-    req0    <- H.parseRequest $ T.unpack uploadAuthPutUrl
+    mgr  <- H.newManager tlsManagerSettings
+    req0 <- H.parseRequest $ T.unpack uploadAuthPutUrl
     let
         req = req0
             { H.method         = "PUT"
@@ -61,5 +61,5 @@ runUploadFile UploadFile {..} UploadAuth {..} = do
     let st = H.responseStatus res
         sc = statusCode st
     if 200 <= sc && sc < 300
-      then return $ Right ()
-      else return $ Left $ UnexpectedReponseWhenUpload st
+        then return $ Right ()
+        else return $ Left $ UnexpectedReponseWhenUpload st
