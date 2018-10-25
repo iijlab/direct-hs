@@ -193,12 +193,11 @@ uploadFile
 uploadFile mtxt mmime mdid tid path = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    let aux    = D.defaultAux { D.auxTalkId = tid }
-        config = D.defaultConfig { D.directEndpointUrl = url }
+    let config = D.defaultConfig { D.directEndpointUrl = url }
     D.withClient config pInfo $ \client -> do
-        dom <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
-        upf <- D.readToUpload dom mtxt (fromMaybe (judgeMimeFromName path) mmime) path
-        void (either E.throwIO return =<< D.uploadFile client upf aux)
+        did <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
+        upf <- D.readToUpload mtxt (fromMaybe (judgeMimeFromName path) mmime) path
+        void (either E.throwIO return =<< D.uploadFile client upf did tid)
 
   where
     judgeMimeFromName p =

@@ -115,3 +115,21 @@ createPairTalk rpcclient peer = do
         dat        = [M.ObjectWord did, M.ObjectWord uid]
     rsp <- callRpcThrow rpcclient methodName dat
     convertOrThrow methodName (decodeTalkRoom [peer]) rsp -- fixme: users
+
+createUploadAuth :: RPC.Client -> Text -> Text -> FileSize -> DomainId -> IO (Either Exception UploadAuth)
+createUploadAuth rpcclient fn mimeType fileSize did = do
+    let methodName = "create_upload_auth"
+        obj =
+            [ M.ObjectStr fn
+            , M.ObjectStr mimeType
+            , M.ObjectWord fileSize
+            , M.ObjectWord did
+            ]
+    eres <- callRpc rpcclient methodName obj
+    case eres of
+        Right rsp@(M.ObjectMap rspMap) ->
+            case decodeUploadAuth rspMap of
+                Just ua -> return $ Right ua
+                _       -> return $ Left $ UnexpectedReponse methodName rsp
+        Right other -> return $ Left $ UnexpectedReponse methodName other
+        Left e -> return $ Left e

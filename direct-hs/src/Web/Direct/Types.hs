@@ -15,6 +15,8 @@ type UserId    = Word64
 type MessageId = Word64
 -- | (Uploaded) File ID.
 type FileId    = Word64
+-- | (Uploaded) File size in bytes.
+type FileSize  = Word64
 
 ----------------------------------------------------------------
 
@@ -42,3 +44,12 @@ data TalkRoom = TalkRoom {
   , talkType  :: !TalkType
   , talkUsers :: [User] -- ^ The head of this list is myself.
   } deriving (Eq, Show)
+
+-- | Created from the response of direct's RPC function @create_upload_auth@.
+--   Contains information to upload/download a file to/from direct.
+data UploadAuth = UploadAuth
+    { uploadAuthGetUrl             :: !T.Text
+    , uploadAuthPutUrl             :: !T.Text
+    , uploadAuthFileId             :: !FileId
+    , uploadAuthContentDisposition :: !T.Text
+    }
