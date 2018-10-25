@@ -79,8 +79,7 @@ main = join $ Opt.execParser optionsInfo
                        <*> optional
                                (Opt.option
                                    Opt.auto
-                                   (  Opt.short 'd'
-                                   <> Opt.metavar "[DOMAIN_ID]"
+                                   (Opt.short 'd' <> Opt.metavar "[DOMAIN_ID]"
                                    )
                                )
                        <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
