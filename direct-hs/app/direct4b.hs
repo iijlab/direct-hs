@@ -62,9 +62,29 @@ main = join $ Opt.execParser optionsInfo
                    "upload"
                    (Opt.info
                        (   uploadFile
-                       <$> optional (Opt.strOption (Opt.short 't' <> Opt.metavar "[MESSAGE_TEXT]"))
-                       <*> optional (Opt.strOption (Opt.short 'm' <> Opt.metavar "[MIME_TYPE]" <> Opt.help "Default \"application/octet-stream\"" ))
-                       <*> optional (Opt.option Opt.auto (Opt.short 'd' <> Opt.metavar "[DOMAIN_ID]" <> Opt.help "Default: the first domain you belong to." ))
+                       <$> optional
+                               (Opt.strOption
+                                   (  Opt.short 't'
+                                   <> Opt.metavar "[MESSAGE_TEXT]"
+                                   )
+                               )
+                       <*> optional
+                               (Opt.strOption
+                                   (  Opt.short 'm'
+                                   <> Opt.metavar "[MIME_TYPE]"
+                                   <> Opt.help
+                                          "Default \"application/octet-stream\""
+                                   )
+                               )
+                       <*> optional
+                               (Opt.option
+                                   Opt.auto
+                                   (  Opt.short 'd'
+                                   <> Opt.metavar "[DOMAIN_ID]"
+                                   <> Opt.help
+                                          "Default: the first domain you belong to."
+                                   )
+                               )
                        <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        <*> Opt.strArgument (Opt.metavar "FILE_PATH")
                        )
@@ -196,19 +216,19 @@ uploadFile mtxt mmime mdid tid path = do
     let config = D.defaultConfig { D.directEndpointUrl = url }
     D.withClient config pInfo $ \client -> do
         did <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
-        upf <- D.readToUpload mtxt (fromMaybe (judgeMimeFromName path) mmime) path
+        upf <- D.readToUpload mtxt
+                              (fromMaybe (judgeMimeFromName path) mmime)
+                              path
         void (either E.throwIO return =<< D.uploadFile client upf did tid)
-
   where
-    judgeMimeFromName p =
-        case takeExtension p of
-            ".txt"  -> "text/plain"
-            ".htm"  -> "text/html"
-            ".html" -> "text/html"
-            ".xml"  -> "text/xml"
-            ".gif"  -> "image/gif"
-            ".jpg"  -> "image/jpeg"
-            ".jpeg" -> "image/jpeg"
-            ".png"  -> "image/png"
-            ".pdf"  -> "application/pdf"
-            _       -> "application/octet-stream"
+    judgeMimeFromName p = case takeExtension p of
+        ".txt"  -> "text/plain"
+        ".htm"  -> "text/html"
+        ".html" -> "text/html"
+        ".xml"  -> "text/xml"
+        ".gif"  -> "image/gif"
+        ".jpg"  -> "image/jpeg"
+        ".jpeg" -> "image/jpeg"
+        ".png"  -> "image/png"
+        ".pdf"  -> "application/pdf"
+        _       -> "application/octet-stream"

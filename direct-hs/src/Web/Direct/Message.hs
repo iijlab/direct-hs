@@ -67,16 +67,14 @@ encodeMessage (Stamp set idx (Just txt)) tid =
         ]
     ]
 encodeMessage (Files [file] Nothing) tid =
-    [ M.ObjectWord tid
-    , M.ObjectWord 4
-    , encodeFile file
-    ]
+    [M.ObjectWord tid, M.ObjectWord 4, encodeFile file]
 encodeMessage (Files files mtext) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 5
     , M.ObjectMap
         $ (M.ObjectStr "files", M.ObjectArray $ map encodeFile files)
-        : maybeToList (fmap (\text -> (M.ObjectStr "text" , M.ObjectStr text)) mtext)
+        : maybeToList
+              (fmap (\text -> (M.ObjectStr "text", M.ObjectStr text)) mtext)
         -- TODO: Try <$> [multiple files, single file] <*> [has text, no text]
     ]
 encodeMessage (YesNoQ qst) tid =
@@ -138,14 +136,13 @@ encodeMessage (Other text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 
 encodeFile :: File -> M.Object
-encodeFile File {..} =
-    M.ObjectMap
-        [ (M.ObjectStr "url", M.ObjectStr fileUrl)
-        , (M.ObjectStr "file_id", M.ObjectWord fileId)
-        , (M.ObjectStr "name", M.ObjectStr fileName)
-        , (M.ObjectStr "content_type", M.ObjectStr fileContentType)
-        , (M.ObjectStr "content_size", M.ObjectWord fileContentSize)
-        ]
+encodeFile File {..} = M.ObjectMap
+    [ (M.ObjectStr "url"         , M.ObjectStr fileUrl)
+    , (M.ObjectStr "file_id"     , M.ObjectWord fileId)
+    , (M.ObjectStr "name"        , M.ObjectStr fileName)
+    , (M.ObjectStr "content_type", M.ObjectStr fileContentType)
+    , (M.ObjectStr "content_size", M.ObjectWord fileContentSize)
+    ]
 
 ----------------------------------------------------------------
 
@@ -176,10 +173,8 @@ decodeMessage rspinfo = do
                 idx           <- look "stamp_index" m >>= M.fromObject
                 let txt = look "text" m >>= M.fromObject
                 return (Stamp set idx txt)
-            M.ObjectWord 4 ->
-                decodeFilesMessage
-            M.ObjectWord 5 ->
-                decodeFilesMessage
+            M.ObjectWord 4   -> decodeFilesMessage
+            M.ObjectWord 5   -> decodeFilesMessage
             M.ObjectWord 500 -> do
                 M.ObjectMap m <- look "content" rspinfo
                 qst           <- look "question" m >>= M.fromObject
@@ -218,12 +213,11 @@ decodeMessage rspinfo = do
 
     decodeFilesMessage = do
         obj@(M.ObjectMap m) <- look "content" rspinfo
-        fs <- ((: []) <$> decodeFile obj) <|> decodeFiles m
-        let text =
-                case look "text" m of
-                    Just (M.ObjectStr t) -> Just t
-                    Just _other          -> Nothing
-                    Nothing              -> Nothing
+        fs                  <- ((: []) <$> decodeFile obj) <|> decodeFiles m
+        let text = case look "text" m of
+                Just (M.ObjectStr t) -> Just t
+                Just _other          -> Nothing
+                Nothing              -> Nothing
         Just $ Files fs text
 
     decodeFiles m = do
@@ -231,10 +225,10 @@ decodeMessage rspinfo = do
         mapM decodeFile xs
 
     decodeFile (M.ObjectMap f) = do
-        M.ObjectWord fileId <- look "file_id" f
-        M.ObjectStr fileName <- look "name" f
-        M.ObjectStr fileContentType <- look "content_type" f
-        M.ObjectWord fileContentSize <-  look "content_size" f
-        M.ObjectStr fileUrl <- look "url" f
+        M.ObjectWord fileId          <- look "file_id" f
+        M.ObjectStr  fileName        <- look "name" f
+        M.ObjectStr  fileContentType <- look "content_type" f
+        M.ObjectWord fileContentSize <- look "content_size" f
+        M.ObjectStr  fileUrl         <- look "url" f
         Just File {..}
     decodeFile _ = Nothing
