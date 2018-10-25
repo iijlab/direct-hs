@@ -81,8 +81,6 @@ main = join $ Opt.execParser optionsInfo
                                    Opt.auto
                                    (  Opt.short 'd'
                                    <> Opt.metavar "[DOMAIN_ID]"
-                                   <> Opt.help
-                                          "Default: the first domain you belong to."
                                    )
                                )
                        <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
@@ -205,7 +203,7 @@ showMsg (Msg.NotificationMessage method objs) =
 
 uploadFile
     :: Maybe T.Text     -- ^ Text message sent with the file.
-    -> Maybe T.Text     -- ^ MIME type of the file. Default: "application/octet-stream".
+    -> Maybe T.Text     -- ^ MIME type of the file.
     -> Maybe D.DomainId -- ^ The ID of domain onto which the file is uploaded. Default: the first domain obtained by `get_domains` RPC.
     -> D.TalkId         -- ^ The ID of talk room onto which the file is uploaded.
     -> FilePath         -- ^ The path to file.
