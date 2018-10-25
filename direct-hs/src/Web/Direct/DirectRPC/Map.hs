@@ -72,9 +72,7 @@ decodeTalkRoom (me : others) (M.ObjectMap m) = do
     extract _                  = Nothing
 decodeTalkRoom _ _ = Nothing
 
-decodeUploadAuth
-    :: [(M.Object, M.Object)]
-    -> Maybe UploadAuth
+decodeUploadAuth :: [(M.Object, M.Object)] -> Maybe UploadAuth
 decodeUploadAuth rspMap = do
     M.ObjectStr uploadAuthGetUrl <- lookup (M.ObjectStr "get_url") rspMap
     M.ObjectStr uploadAuthPutUrl <- lookup (M.ObjectStr "put_url") rspMap
