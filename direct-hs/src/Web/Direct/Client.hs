@@ -36,13 +36,10 @@ module Web.Direct.Client
 where
 
 import qualified Control.Concurrent.STM                   as S
-import           Control.Error                            (hoistEither)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
-                                                           runExceptT,
-                                                           throwError)
+                                                           runExceptT)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
-import qualified Data.MessagePack                         as M
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -125,29 +122,24 @@ sendMessage client req tid = createMessage (clientRpcClient client) req tid
 
 ----------------------------------------------------------------
 
-uploadFile :: Client -> UploadFile -> Aux -> IO (Either Exception MessageId)
-uploadFile client upf@UploadFile {..} aux = runExceptT $ do
-    let methodName = "create_upload_auth"
-        obj        = toCreateUploadAuth upf
-    rsp <- ExceptT
-        (   resultToObjectOrException methodName
-        <$> RPC.call (clientRpcClient client) methodName obj
-        )
-    case rsp of
-        M.ObjectMap rspMap -> do
-            ua@UploadAuth {..} <- hoistEither
-                $ decodeUploadAuth methodName rsp rspMap
-            ExceptT $ runUploadFile upf ua
-            let files = Files
-                    [ File uploadAuthGetUrl
-                           uploadFileMimeType
-                           uploadFileSize
-                           uploadFileName
-                           uploadAuthFileId
-                    ]
-                    uploadFileAttachedText
-            ExceptT $ sendMessage client files aux
-        other -> throwError $ UnexpectedReponse methodName other
+uploadFile :: Client -> UploadFile -> DomainId -> TalkId -> IO (Either Exception MessageId)
+uploadFile client upf@UploadFile {..} did tid = runExceptT $ do
+    ua@UploadAuth {..} <- ExceptT $ createUploadAuth
+        (clientRpcClient client)
+        uploadFileName
+        uploadFileMimeType
+        uploadFileSize
+        did
+    ExceptT $ runUploadFile upf ua
+    let files = Files
+            [ File uploadAuthGetUrl
+                   uploadFileMimeType
+                   uploadFileSize
+                   uploadFileName
+                   uploadAuthFileId
+            ]
+            uploadFileAttachedText
+    ExceptT $ sendMessage client files tid
 
 isActive :: Client -> IO Bool
 isActive client = S.atomically $ isActiveSTM $ clientStatus client

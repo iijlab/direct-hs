@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Web.Direct.DirectRPC.Map where
 
@@ -71,3 +72,16 @@ decodeTalkRoom (me : others) (M.ObjectMap m) = do
     extract _                  = Nothing
 decodeTalkRoom _ _ = Nothing
 
+decodeUploadAuth
+    :: [(M.Object, M.Object)]
+    -> Maybe UploadAuth
+decodeUploadAuth rspMap = do
+    M.ObjectStr uploadAuthGetUrl <- lookup (M.ObjectStr "get_url") rspMap
+    M.ObjectStr uploadAuthPutUrl <- lookup (M.ObjectStr "put_url") rspMap
+    M.ObjectWord uploadAuthFileId <- lookup (M.ObjectStr "file_id") rspMap
+
+    M.ObjectMap formObj <- lookup (M.ObjectStr "post_form") rspMap
+    M.ObjectStr uploadAuthContentDisposition <- lookup
+        (M.ObjectStr "Content-Disposition")
+        formObj
+    return UploadAuth {..}

@@ -66,12 +66,12 @@ encodeMessage (Stamp set idx (Just txt)) tid =
         , (M.ObjectStr "text"       , M.ObjectStr txt)
         ]
     ]
-encodeMessage (Files [file] Nothing)  (Aux tid _ _) =
+encodeMessage (Files [file] Nothing) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 4
     , encodeFile file
     ]
-encodeMessage (Files files mtext) (Aux tid _ _) =
+encodeMessage (Files files mtext) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 5
     , M.ObjectMap
@@ -177,9 +177,9 @@ decodeMessage rspinfo = do
                 let txt = look "text" m >>= M.fromObject
                 return (Stamp set idx txt)
             M.ObjectWord 4 ->
-                decodeFilesMessage aux
+                decodeFilesMessage
             M.ObjectWord 5 ->
-                decodeFilesMessage aux
+                decodeFilesMessage
             M.ObjectWord 500 -> do
                 M.ObjectMap m <- look "content" rspinfo
                 qst           <- look "question" m >>= M.fromObject
@@ -216,7 +216,7 @@ decodeMessage rspinfo = do
                 return (TaskA ttl cls don)
             _ -> return (Other $ T.pack $ show rspinfo)
 
-    decodeFilesMessage aux = do
+    decodeFilesMessage = do
         obj@(M.ObjectMap m) <- look "content" rspinfo
         fs <- ((: []) <$> decodeFile obj) <|> decodeFiles m
         let text =
@@ -224,7 +224,7 @@ decodeMessage rspinfo = do
                     Just (M.ObjectStr t) -> Just t
                     Just _other          -> Nothing
                     Nothing              -> Nothing
-        Just (Files fs text, aux)
+        Just $ Files fs text
 
     decodeFiles m = do
         M.ObjectArray xs <- look "files" m
