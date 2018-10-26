@@ -215,7 +215,8 @@ uploadFile mtxt mmime mdid tid path = do
     let config = D.defaultConfig { D.directEndpointUrl = url }
     D.withClient config pInfo $ \client -> do
         did <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
-        upf <- D.readToUpload mtxt
-                              (fromMaybe (TE.decodeUtf8 $ defaultMimeLookup $ T.pack path) mmime)
-                              path
+        upf <- D.readToUpload
+            mtxt
+            (fromMaybe (TE.decodeUtf8 $ defaultMimeLookup $ T.pack path) mmime)
+            path
         void (either E.throwIO return =<< D.uploadFile client upf did tid)
