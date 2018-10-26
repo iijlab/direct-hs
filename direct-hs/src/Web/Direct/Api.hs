@@ -54,7 +54,7 @@ defaultConfig = Config
     { directCreateMessageHandler     = \_ _ -> return ()
     , directLogger                   = \_ -> return ()
     , directFormatter                = show
-    , directEndpointUrl              = "wss://api.direct4b.com/albero-app-server/api"
+    , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
     , directWaitCreateMessageHandler = True
     }
 
