@@ -11,14 +11,16 @@ import qualified Data.MessagePack       as M
 import qualified Data.MessagePack.RPC   as Msg
 import           Data.Monoid            ((<>))
 import qualified Data.Text              as T
+import qualified Data.Text.Encoding     as TE
 import qualified Data.Text.IO           as T
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.IO      as TL
+import           Network.Mime           (defaultMimeLookup)
 import qualified Options.Applicative    as Opt
 import qualified System.Directory       as Dir
 import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
 import           System.Exit            (die)
-import           System.FilePath        (takeExtension, (</>))
+import           System.FilePath        ((</>))
 import           System.IO              (BufferMode (NoBuffering), hGetEcho,
                                          hSetBuffering, hSetEcho, stderr, stdin,
                                          stdout)
@@ -214,18 +216,6 @@ uploadFile mtxt mmime mdid tid path = do
     D.withClient config pInfo $ \client -> do
         did <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
         upf <- D.readToUpload mtxt
-                              (fromMaybe (judgeMimeFromName path) mmime)
+                              (fromMaybe (TE.decodeUtf8 $ defaultMimeLookup $ T.pack path) mmime)
                               path
         void (either E.throwIO return =<< D.uploadFile client upf did tid)
-  where
-    judgeMimeFromName p = case takeExtension p of
-        ".txt"  -> "text/plain"
-        ".htm"  -> "text/html"
-        ".html" -> "text/html"
-        ".xml"  -> "text/xml"
-        ".gif"  -> "image/gif"
-        ".jpg"  -> "image/jpeg"
-        ".jpeg" -> "image/jpeg"
-        ".png"  -> "image/png"
-        ".pdf"  -> "application/pdf"
-        _       -> "application/octet-stream"

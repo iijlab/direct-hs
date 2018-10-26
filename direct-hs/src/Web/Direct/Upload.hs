@@ -15,7 +15,7 @@ import qualified Data.Text.Encoding        as TE
 import           Data.Word                 (Word64)
 import qualified Network.HTTP.Client       as H
 import           Network.HTTP.Client.TLS   (tlsManagerSettings)
-import           Network.HTTP.Types.Status (Status (statusCode))
+import           Network.HTTP.Types.Status (statusIsSuccessful)
 import qualified System.FilePath           as FP
 
 import           Web.Direct.Exception
@@ -59,7 +59,6 @@ runUploadFile UploadFile {..} UploadAuth {..} = do
             }
     res <- H.httpNoBody req mgr
     let st = H.responseStatus res
-        sc = statusCode st
-    if 200 <= sc && sc < 300
+    if statusIsSuccessful st
         then return $ Right ()
         else return $ Left $ UnexpectedReponseWhenUpload st

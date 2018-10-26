@@ -66,6 +66,7 @@ executable direct4b
     , optparse-applicative
     , envy
     , text
+    , mime-types
     , network-messagepack-rpc
   default-language: Haskell2010
 
