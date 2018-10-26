@@ -42,6 +42,11 @@ data Config = Config {
     --   Disable this to write a batch application, which just send a message
     --   once or more, then finishes.
     --   Default: @True@.
+  , directInitialDomainId          :: Maybe DomainId
+    -- ^ Domain ID used with some RPC functions which requires a domain ID for its argument (e.g. @createPairTalk@, @createUploadAuth@).
+    --   If @Nothing@, the first domain obtained by @get_domains@ RPC function is used.
+    --   If you want to change the target domain in the 'withClient' block,
+    --   Use 'setCurrentDomainId' for 'Client'.
   }
 
 -- | The default configuration.
@@ -56,6 +61,7 @@ defaultConfig = Config
     , directFormatter                = show
     , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
     , directWaitCreateMessageHandler = True
+    , directInitialDomainId      = Nothing
     }
 
 ----------------------------------------------------------------
@@ -99,8 +105,11 @@ withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
 withClient config pInfo action = do
     ref <- I.newIORef Nothing
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
-        client <- newClient pInfo rpcClient
-        I.writeIORef ref $ Just client
+        incompleteClient <- newClient pInfo rpcClient
+        I.writeIORef ref $ Just incompleteClient
+        client <-
+            setCurrentDomain incompleteClient
+                <$> decideInitialDomain config incompleteClient
         me <- createSession
             (clientRpcClient client)
             (loginInfoDirectAccessToken $ clientLoginInfo client)
@@ -151,6 +160,19 @@ withClient config pInfo action = do
         , RPC.formatter          = directFormatter config
         , RPC.waitRequestHandler = directWaitCreateMessageHandler config
         }
+
+decideInitialDomain :: Config -> Client -> IO Domain
+decideInitialDomain config incompleteClient = do
+    doms <- getDomains $ clientRpcClient incompleteClient
+    case directInitialDomainId config of
+        Just did -> case L.find (\dom -> domainId dom == did) doms of
+            Just dom -> return dom
+            -- TODO: This exception is obviously recoverable by the library user.
+            --       Return a Left exception?
+            _        -> fail $ "ERROR: You don't belong to domain#" ++ show did
+        _ -> case doms of
+            []      -> fail "Assertion failure: no domains obtained!"
+            (dom:_) -> return dom
 
 subscribeNotification :: Client -> User -> IO ()
 subscribeNotification client me = do

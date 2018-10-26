@@ -42,11 +42,11 @@ newChannelDB = S.newTVarIO HM.empty
 -- | Creating a new channel.
 --   This returns 'Nothing' after 'shutdown'.
 allocateChannel
-    :: RPC.Client -> ChannelDB -> StatusVar -> ChannelType -> IO (Maybe Channel)
-allocateChannel rpcclient chanDB tvar ctyp = do
+    :: RPC.Client -> Domain -> ChannelDB -> StatusVar -> ChannelType -> IO (Maybe Channel)
+allocateChannel rpcclient dom chanDB tvar ctyp = do
     (room, muser) <- case ctyp of
         Pair user -> do
-            room <- createPairTalk rpcclient user
+            room <- createPairTalk rpcclient dom user
             return (room, Just user)
         PinPoint room user -> return (room, Just user)
         Group room         -> return (room, Nothing)
@@ -81,13 +81,14 @@ wait chanDB = S.atomically $ do
 
 withChannel'
     :: RPC.Client
+    -> Domain
     -> ChannelDB
     -> StatusVar
     -> ChannelType
     -> (Channel -> IO ())
     -> IO Bool
-withChannel' rpcclient chanDB tvar ctyp body = do
-    mchan <- allocateChannel rpcclient chanDB tvar ctyp
+withChannel' rpcclient dom chanDB tvar ctyp body = do
+    mchan <- allocateChannel rpcclient dom chanDB tvar ctyp
     case mchan of
         Nothing   -> return False
         Just chan -> do
@@ -103,4 +104,3 @@ shutdown' rpcclient chanDB tvar msg = do
     mapM_ (die msg) chans
     wait chanDB
     RPC.shutdown rpcclient
-

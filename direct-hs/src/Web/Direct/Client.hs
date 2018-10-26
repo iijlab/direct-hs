@@ -16,6 +16,8 @@ module Web.Direct.Client
     , getMe
     , setUsers
     , getUsers
+    , getCurrentDomain
+    , setCurrentDomain
     , isActive
     , findUser
     , findTalkRoom
@@ -55,14 +57,15 @@ import           Web.Direct.Upload
 
 -- | Direct client.
 data Client = Client {
-    clientLoginInfo :: !LoginInfo
-  , clientRpcClient :: !RPC.Client
-  , clientDomains   :: I.IORef [Domain]
-  , clientTalkRooms :: I.IORef [TalkRoom]
-  , clientMe        :: I.IORef (Maybe User)
-  , clientUsers     :: I.IORef [User]
-  , clientChannels  :: ChannelDB
-  , clientStatus    :: StatusVar
+    clientLoginInfo     :: !LoginInfo
+  , clientRpcClient     :: !RPC.Client
+  , clientDomains       :: I.IORef [Domain]
+  , clientTalkRooms     :: I.IORef [TalkRoom]
+  , clientMe            :: I.IORef (Maybe User)
+  , clientUsers         :: I.IORef [User]
+  , clientChannels      :: ChannelDB
+  , clientStatus        :: StatusVar
+  , clientCurrentDomain :: Domain
   }
 
 newClient :: LoginInfo -> RPC.Client -> IO Client
@@ -74,6 +77,7 @@ newClient pinfo rpcClient =
         <*> I.newIORef []
         <*> newChannelDB
         <*> S.newTVarIO Active
+        <*> error "Assertion failure: uninitialized domain ID!"
 
 ----------------------------------------------------------------
 
@@ -102,6 +106,12 @@ setUsers client users = I.writeIORef (clientUsers client) users
 getUsers :: Client -> IO [User]
 getUsers client = I.readIORef (clientUsers client)
 
+getCurrentDomain :: Client -> Domain
+getCurrentDomain = clientCurrentDomain
+
+setCurrentDomain :: Client -> Domain -> Client
+setCurrentDomain client did = client { clientCurrentDomain = did }
+
 ----------------------------------------------------------------
 
 findUser :: UserId -> Client -> IO (Maybe User)
@@ -125,16 +135,15 @@ sendMessage client req tid = createMessage (clientRpcClient client) req tid
 uploadFile
     :: Client
     -> UploadFile
-    -> DomainId
     -> TalkId
     -> IO (Either Exception MessageId)
-uploadFile client upf@UploadFile {..} did tid = runExceptT $ do
+uploadFile client upf@UploadFile {..} tid = runExceptT $ do
     ua@UploadAuth {..} <- ExceptT $ createUploadAuth
         (clientRpcClient client)
         uploadFileName
         uploadFileMimeType
         uploadFileSize
-        did
+        (getCurrentDomain client)
     ExceptT $ runUploadFile upf ua
     let files = Files
             [ File uploadAuthGetUrl
@@ -159,6 +168,7 @@ findChannel client ckey = findChannel' (clientChannels client) ckey
 --   and 'False' is returned.
 withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
 withChannel client ctyp body = withChannel' (clientRpcClient client)
+                                            (clientCurrentDomain client)
                                             (clientChannels client)
                                             (clientStatus client)
                                             ctyp
