@@ -72,12 +72,8 @@ where
 
 import           Web.Direct.Api
 import           Web.Direct.Client
-import           Web.Direct.DirectRPC hiding (getDomains)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
 import           Web.Direct.Types
 import           Web.Direct.Upload
-
-createPair :: Client -> User -> IO TalkRoom
-createPair client = createPairTalk (clientRpcClient client)
