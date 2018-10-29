@@ -1,18 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Applicative    ((<**>), (<|>))
+import           Control.Applicative    (optional, (<**>), (<|>))
 import qualified Control.Exception      as E
-import           Control.Monad          (forM_, join)
+import           Control.Monad          (forM_, join, void)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (intercalate)
+import           Data.Maybe             (fromMaybe)
 import qualified Data.MessagePack       as M
 import qualified Data.MessagePack.RPC   as Msg
 import           Data.Monoid            ((<>))
 import qualified Data.Text              as T
+import qualified Data.Text.Encoding     as TE
 import qualified Data.Text.IO           as T
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.IO      as TL
+import           Network.Mime           (defaultMimeLookup)
 import qualified Options.Applicative    as Opt
 import qualified System.Directory       as Dir
 import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
@@ -55,6 +58,37 @@ main = join $ Opt.execParser optionsInfo
                        (pure observe)
                        (Opt.fullDesc <> Opt.progDesc
                            "Observe all messages for the logged-in user."
+                       )
+                   )
+            <> Opt.command
+                   "upload"
+                   (Opt.info
+                       (   uploadFile
+                       <$> optional
+                               (Opt.strOption
+                                   (  Opt.short 't'
+                                   <> Opt.metavar "[MESSAGE_TEXT]"
+                                   )
+                               )
+                       <*> optional
+                               (Opt.strOption
+                                   (  Opt.short 'm'
+                                   <> Opt.metavar "[MIME_TYPE]"
+                                   <> Opt.help
+                                          "Default \"application/octet-stream\""
+                                   )
+                               )
+                       <*> optional
+                               (Opt.option
+                                   Opt.auto
+                                   (Opt.short 'd' <> Opt.metavar "[DOMAIN_ID]"
+                                   )
+                               )
+                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       <*> Opt.strArgument (Opt.metavar "FILE_PATH")
+                       )
+                       (Opt.fullDesc <> Opt.progDesc
+                           "Send a message from stdin as the logged-in user."
                        )
                    )
 
@@ -166,3 +200,23 @@ showMsg (Msg.ResponseMessage _ (Left  obj)) = "response error " ++ showObj obj
 showMsg (Msg.ResponseMessage _ (Right obj)) = "response " ++ showObj obj
 showMsg (Msg.NotificationMessage method objs) =
     "notification " ++ T.unpack method ++ " " ++ showObjs objs
+
+
+uploadFile
+    :: Maybe T.Text     -- ^ Text message sent with the file.
+    -> Maybe T.Text     -- ^ MIME type of the file.
+    -> Maybe D.DomainId -- ^ The ID of domain onto which the file is uploaded. Default: the first domain obtained by `get_domains` RPC.
+    -> D.TalkId         -- ^ The ID of talk room onto which the file is uploaded.
+    -> FilePath         -- ^ The path to file.
+    -> IO ()
+uploadFile mtxt mmime mdid tid path = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let config = D.defaultConfig { D.directEndpointUrl = url }
+    D.withClient config pInfo $ \client -> do
+        did <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
+        upf <- D.readToUpload
+            mtxt
+            (fromMaybe (TE.decodeUtf8 $ defaultMimeLookup $ T.pack path) mmime)
+            path
+        void (either E.throwIO return =<< D.uploadFile client upf did tid)

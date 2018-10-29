@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Web.Direct.Client
     ( Client
     , clientRpcClient
     , clientLoginInfo
     , sendMessage
+    , uploadFile
     , newClient
     , setDomains
     , getDomains
@@ -34,6 +36,8 @@ module Web.Direct.Client
 where
 
 import qualified Control.Concurrent.STM                   as S
+import           Control.Monad.Except                     (ExceptT (ExceptT),
+                                                           runExceptT)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
@@ -45,6 +49,7 @@ import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
 import           Web.Direct.Types
+import           Web.Direct.Upload
 
 ----------------------------------------------------------------
 
@@ -114,6 +119,32 @@ findTalkRoom tid client = do
 -- | Sending a message in the main 'IO' or 'directCreateMessageHandler'.
 sendMessage :: Client -> Message -> TalkId -> IO (Either Exception MessageId)
 sendMessage client req tid = createMessage (clientRpcClient client) req tid
+
+----------------------------------------------------------------
+
+uploadFile
+    :: Client
+    -> UploadFile
+    -> DomainId
+    -> TalkId
+    -> IO (Either Exception MessageId)
+uploadFile client upf@UploadFile {..} did tid = runExceptT $ do
+    ua@UploadAuth {..} <- ExceptT $ createUploadAuth
+        (clientRpcClient client)
+        uploadFileName
+        uploadFileMimeType
+        uploadFileSize
+        did
+    ExceptT $ runUploadFile upf ua
+    let files = Files
+            [ File uploadAuthGetUrl
+                   uploadFileMimeType
+                   uploadFileSize
+                   uploadFileName
+                   uploadAuthFileId
+            ]
+            uploadFileAttachedText
+    ExceptT $ sendMessage client files tid
 
 isActive :: Client -> IO Bool
 isActive client = S.atomically $ isActiveSTM $ clientStatus client

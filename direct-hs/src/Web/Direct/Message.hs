@@ -1,11 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module Web.Direct.Message where
 
-import           Data.List        (elemIndex)
-import qualified Data.MessagePack as M
-import qualified Data.Text        as T
-import           Data.Word        (Word64)
+import           Control.Applicative ((<|>))
+import           Control.Monad       (mapM)
+import           Data.List           (elemIndex)
+import           Data.Maybe          (maybeToList)
+import qualified Data.MessagePack    as M
+import qualified Data.Text           as T
+import           Data.Word           (Word64)
 
 import           Web.Direct.Types
 import           Web.Direct.Utils
@@ -23,8 +27,17 @@ data Message =
   | SelectA   !T.Text ![T.Text] T.Text
   | TaskQ     !T.Text Bool -- False: anyone, True: everyone
   | TaskA     !T.Text Bool Bool -- done
+  | Files     ![File] !(Maybe T.Text)
   | Other     !T.Text
   deriving (Eq, Show)
+
+data File = File
+    { fileUrl         :: !T.Text
+    , fileContentType :: !T.Text
+    , fileContentSize :: !Word64
+    , fileName        :: !T.Text
+    , fileId          :: !FileId
+    } deriving (Eq, Show)
 
 ----------------------------------------------------------------
 
@@ -52,6 +65,17 @@ encodeMessage (Stamp set idx (Just txt)) tid =
         , (M.ObjectStr "stamp_index", M.ObjectWord idx)
         , (M.ObjectStr "text"       , M.ObjectStr txt)
         ]
+    ]
+encodeMessage (Files [file] Nothing) tid =
+    [M.ObjectWord tid, M.ObjectWord 4, encodeFile file]
+encodeMessage (Files files mtext) tid =
+    [ M.ObjectWord tid
+    , M.ObjectWord 5
+    , M.ObjectMap
+        $ (M.ObjectStr "files", M.ObjectArray $ map encodeFile files)
+        : maybeToList
+              (fmap (\text -> (M.ObjectStr "text", M.ObjectStr text)) mtext)
+        -- TODO: Try <$> [multiple files, single file] <*> [has text, no text]
     ]
 encodeMessage (YesNoQ qst) tid =
     [ M.ObjectWord tid
@@ -111,6 +135,15 @@ encodeMessage (TaskA ttl cls don) tid =
 encodeMessage (Other text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
 
+encodeFile :: File -> M.Object
+encodeFile File {..} = M.ObjectMap
+    [ (M.ObjectStr "url"         , M.ObjectStr fileUrl)
+    , (M.ObjectStr "file_id"     , M.ObjectWord fileId)
+    , (M.ObjectStr "name"        , M.ObjectStr fileName)
+    , (M.ObjectStr "content_type", M.ObjectStr fileContentType)
+    , (M.ObjectStr "content_size", M.ObjectWord fileContentSize)
+    ]
+
 ----------------------------------------------------------------
 
 decodeMessage
@@ -140,6 +173,8 @@ decodeMessage rspinfo = do
                 idx           <- look "stamp_index" m >>= M.fromObject
                 let txt = look "text" m >>= M.fromObject
                 return (Stamp set idx txt)
+            M.ObjectWord 4   -> decodeFilesMessage
+            M.ObjectWord 5   -> decodeFilesMessage
             M.ObjectWord 500 -> do
                 M.ObjectMap m <- look "content" rspinfo
                 qst           <- look "question" m >>= M.fromObject
@@ -175,3 +210,25 @@ decodeMessage rspinfo = do
                 let cls = cls' == (1 :: Word64)
                 return (TaskA ttl cls don)
             _ -> return (Other $ T.pack $ show rspinfo)
+
+    decodeFilesMessage = do
+        obj@(M.ObjectMap m) <- look "content" rspinfo
+        fs                  <- ((: []) <$> decodeFile obj) <|> decodeFiles m
+        let text = case look "text" m of
+                Just (M.ObjectStr t) -> Just t
+                Just _other          -> Nothing
+                Nothing              -> Nothing
+        Just $ Files fs text
+
+    decodeFiles m = do
+        M.ObjectArray xs <- look "files" m
+        mapM decodeFile xs
+
+    decodeFile (M.ObjectMap f) = do
+        M.ObjectWord fileId          <- look "file_id" f
+        M.ObjectStr  fileName        <- look "name" f
+        M.ObjectStr  fileContentType <- look "content_type" f
+        M.ObjectWord fileContentSize <- look "content_size" f
+        M.ObjectStr  fileUrl         <- look "url" f
+        Just File {..}
+    decodeFile _ = Nothing
