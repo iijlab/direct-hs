@@ -30,10 +30,18 @@ import           Web.Direct.Types
 
 -- | Type for client configuration.
 data Config = Config {
-    directCreateMessageHandler :: Client -> (Message,MessageId,TalkRoom,User) -> IO ()
-  , directLogger               :: RPC.Logger
-  , directFormatter            :: RPC.Formatter
-  , directEndpointUrl          :: RPC.URL -- Endpoint URL for direct WebSocket API.
+    directCreateMessageHandler     :: Client -> (Message, MessageId, TalkRoom, User) -> IO ()
+    -- ^ Called every time receiving a new message from the server.
+  , directLogger                   :: RPC.Logger
+  , directFormatter                :: RPC.Formatter
+  , directEndpointUrl              :: RPC.URL
+    -- ^ Endpoint URL for direct WebSocket API.
+  , directWaitCreateMessageHandler :: Bool
+    -- ^ If @True@, 'withClient' function doesen't finish until the
+    --   'directCreateMessageHandler' thread finish.
+    --   Disable this to write a batch application, which just send a message
+    --   once or more, then finishes.
+    --   Default: @True@.
   }
 
 -- | The default configuration.
@@ -43,17 +51,18 @@ data Config = Config {
 --   * 'directEndpointUrl' is 'wss://api.direct4b.com/albero-app-server/api'
 defaultConfig :: Config
 defaultConfig = Config
-    { directCreateMessageHandler = \_ _ -> return ()
-    , directLogger               = \_ -> return ()
-    , directFormatter            = show
+    { directCreateMessageHandler     = \_ _ -> return ()
+    , directLogger                   = \_ -> return ()
+    , directFormatter                = show
     , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
+    , directWaitCreateMessageHandler = True
     }
 
 ----------------------------------------------------------------
 
 -- | Logging in the Direct cloud.
 login
-    :: Config
+    :: Config -- ^ The configuration. NOTE: 'directCreateMessageHandler' and 'directWaitCreateMessageHandler' are ignored.
     -> T.Text -- ^ Login email address for direct.
     -> T.Text -- ^ Login password for direct.
     -> IO (Either Exception LoginInfo) -- ^ This should be passed to 'withClient'.
@@ -140,7 +149,7 @@ withClient config pInfo action = do
                         _ -> return ()
         , RPC.logger             = directLogger config
         , RPC.formatter          = directFormatter config
-        , RPC.waitRequestHandler = True
+        , RPC.waitRequestHandler = directWaitCreateMessageHandler config
         }
 
 subscribeNotification :: Client -> User -> IO ()
