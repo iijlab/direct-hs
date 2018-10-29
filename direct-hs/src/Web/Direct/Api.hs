@@ -61,7 +61,7 @@ defaultConfig = Config
     , directFormatter                = show
     , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
     , directWaitCreateMessageHandler = True
-    , directInitialDomainId      = Nothing
+    , directInitialDomainId          = Nothing
     }
 
 ----------------------------------------------------------------
@@ -171,8 +171,8 @@ decideInitialDomain config incompleteClient = do
             --       Return a Left exception?
             _        -> fail $ "ERROR: You don't belong to domain#" ++ show did
         _ -> case doms of
-            []      -> fail "Assertion failure: no domains obtained!"
-            (dom:_) -> return dom
+            []        -> fail "Assertion failure: no domains obtained!"
+            (dom : _) -> return dom
 
 subscribeNotification :: Client -> User -> IO ()
 subscribeNotification client me = do

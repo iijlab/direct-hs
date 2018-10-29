@@ -42,7 +42,12 @@ newChannelDB = S.newTVarIO HM.empty
 -- | Creating a new channel.
 --   This returns 'Nothing' after 'shutdown'.
 allocateChannel
-    :: RPC.Client -> Domain -> ChannelDB -> StatusVar -> ChannelType -> IO (Maybe Channel)
+    :: RPC.Client
+    -> Domain
+    -> ChannelDB
+    -> StatusVar
+    -> ChannelType
+    -> IO (Maybe Channel)
 allocateChannel rpcclient dom chanDB tvar ctyp = do
     (room, muser) <- case ctyp of
         Pair user -> do
