@@ -125,21 +125,22 @@ withClient config pInfo action = do
                             Just (msg, msgid, tid, uid)
                                 | uid /= myid && uid /= 0 -> do
                                     mchan <- findChannel client (tid, Just uid)
-                                    Just user <- findUser
-                                        uid
-                                        client
-                                    Just room <- findTalkRoom
-                                        tid
-                                        client
+                                    Just user <- findUser uid client
+                                    Just room <- findTalkRoom tid client
                                     case mchan of
-                                        Just chan -> dispatch chan msg msgid room user
-                                        Nothing   -> do
+                                        Just chan ->
+                                            dispatch chan msg msgid room user
+                                        Nothing -> do
                                             mchan' <- findChannel
                                                 client
                                                 (tid, Nothing)
                                             case mchan' of
-                                                Just chan' ->
-                                                    dispatch chan' msg msgid room user
+                                                Just chan' -> dispatch
+                                                    chan'
+                                                    msg
+                                                    msgid
+                                                    room
+                                                    user
                                                 Nothing ->
                                                     directCreateMessageHandler
                                                         config

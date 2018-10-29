@@ -57,7 +57,8 @@ newChannel rpcclient ctyp ckey room = do
 ----------------------------------------------------------------
 
 dispatch :: Channel -> Message -> MessageId -> TalkRoom -> User -> IO ()
-dispatch chan msg mid room user = C.putMVar (toWorker chan) $ Right (msg, mid, room, user)
+dispatch chan msg mid room user =
+    C.putMVar (toWorker chan) $ Right (msg, mid, room, user)
 
 newtype Control = Die Message
 
