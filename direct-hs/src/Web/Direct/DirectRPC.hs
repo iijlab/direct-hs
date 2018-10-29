@@ -106,9 +106,8 @@ getTalkStatuses :: RPC.Client -> IO ()
 getTalkStatuses rpcclient =
     void $ callRpcThrow rpcclient "get_talk_statuses" []
 
-createPairTalk :: RPC.Client -> User -> IO TalkRoom
-createPairTalk rpcclient peer = do
-    dom : _ <- getDomains rpcclient
+createPairTalk :: RPC.Client -> Domain -> User -> IO TalkRoom
+createPairTalk rpcclient dom peer = do
     let methodName = "create_pair_talk"
         did        = domainId dom
         uid        = userId peer
@@ -121,15 +120,15 @@ createUploadAuth
     -> Text
     -> Text
     -> FileSize
-    -> DomainId
+    -> Domain
     -> IO (Either Exception UploadAuth)
-createUploadAuth rpcclient fn mimeType fileSize did = do
+createUploadAuth rpcclient fn mimeType fileSize dom = do
     let methodName = "create_upload_auth"
         obj =
             [ M.ObjectStr fn
             , M.ObjectStr mimeType
             , M.ObjectWord fileSize
-            , M.ObjectWord did
+            , M.ObjectWord $ domainId dom
             ]
     eres <- callRpc rpcclient methodName obj
     case eres of
