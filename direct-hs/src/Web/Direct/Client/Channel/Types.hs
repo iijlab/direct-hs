@@ -30,7 +30,7 @@ import           Web.Direct.Types
 
 -- | A virtual communication channel.
 data Channel = Channel {
-      toWorker         :: C.MVar (Either Control (Message, MessageId))
+      toWorker         :: C.MVar (Either Control (Message, MessageId, TalkRoom, User))
     , channelRPCClient :: RPC.Client
     , channelType      :: ChannelType
     , channelKey       :: ChannelKey
@@ -56,8 +56,8 @@ newChannel rpcclient ctyp ckey room = do
 
 ----------------------------------------------------------------
 
-dispatch :: Channel -> Message -> MessageId -> IO ()
-dispatch chan msg mid = C.putMVar (toWorker chan) $ Right (msg, mid)
+dispatch :: Channel -> Message -> MessageId -> TalkRoom -> User -> IO ()
+dispatch chan msg mid room user = C.putMVar (toWorker chan) $ Right (msg, mid, room, user)
 
 newtype Control = Die Message
 
@@ -68,7 +68,7 @@ die :: Message -> Channel -> IO ()
 die msg chan = control chan (Die msg)
 
 -- | Receiving a message from the channel.
-recv :: Channel -> IO (Message, MessageId)
+recv :: Channel -> IO (Message, MessageId, TalkRoom, User)
 recv chan = do
     cm <- C.takeMVar $ toWorker chan
     case cm of
