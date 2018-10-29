@@ -214,7 +214,9 @@ uploadFile
 uploadFile mtxt mmime mdid tid path = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    let config = D.defaultConfig { D.directEndpointUrl = url }
+    let config = D.defaultConfig { D.directEndpointUrl              = url
+                                 , D.directWaitCreateMessageHandler = False
+                                 }
     D.withClient config pInfo $ \client -> do
         did <- (`fromMaybe` mdid) . D.domainId . head <$> D.getDomains client
         upf <- D.readToUpload
