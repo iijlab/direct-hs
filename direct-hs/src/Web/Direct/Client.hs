@@ -132,11 +132,7 @@ sendMessage client req tid = createMessage (clientRpcClient client) req tid
 
 ----------------------------------------------------------------
 
-uploadFile
-    :: Client
-    -> UploadFile
-    -> TalkId
-    -> IO (Either Exception MessageId)
+uploadFile :: Client -> UploadFile -> TalkId -> IO (Either Exception MessageId)
 uploadFile client upf@UploadFile {..} tid = runExceptT $ do
     ua@UploadAuth {..} <- ExceptT $ createUploadAuth
         (clientRpcClient client)
