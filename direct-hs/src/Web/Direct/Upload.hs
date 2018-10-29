@@ -15,6 +15,8 @@ import qualified Data.Text.Encoding        as TE
 import           Data.Word                 (Word64)
 import qualified Network.HTTP.Client       as H
 import           Network.HTTP.Client.TLS   (tlsManagerSettings)
+import           Network.HTTP.Types.Header (hContentDisposition, hContentType)
+import           Network.HTTP.Types.Method (methodPut)
 import           Network.HTTP.Types.Status (statusIsSuccessful)
 import qualified System.FilePath           as FP
 
@@ -47,11 +49,11 @@ runUploadFile UploadFile {..} UploadAuth {..} = do
     req0 <- H.parseRequest $ T.unpack uploadAuthPutUrl
     let
         req = req0
-            { H.method         = "PUT"
-            , H.requestHeaders = [ ( "Content-Disposition"
+            { H.method         = methodPut
+            , H.requestHeaders = [ ( hContentDisposition
                                    , TE.encodeUtf8 uploadAuthContentDisposition
                                    )
-                                 , ( "Content-Type"
+                                 , ( hContentType
                                    , TE.encodeUtf8 uploadFileMimeType
                                    )
                                  ]
