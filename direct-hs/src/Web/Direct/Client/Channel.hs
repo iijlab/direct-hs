@@ -98,7 +98,9 @@ withChannel' rpcclient dom chanDB tvar ctyp body = do
         Nothing   -> return False
         Just chan -> do
             void $ C.forkFinally (body chan) $ \e -> do
-                print e
+                case e of
+                    Left ex -> print ex
+                    _       -> return ()
                 freeChannel chanDB chan
             return True
 
