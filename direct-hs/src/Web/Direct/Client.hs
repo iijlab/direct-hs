@@ -68,8 +68,8 @@ data Client = Client {
   , clientCurrentDomain :: Domain
   }
 
-newClient :: LoginInfo -> RPC.Client -> IO Client
-newClient pinfo rpcClient =
+newClient :: LoginInfo -> RPC.Client -> Domain -> IO Client
+newClient pinfo rpcClient initialDomain =
     Client pinfo rpcClient
         <$> I.newIORef []
         <*> I.newIORef []
@@ -77,7 +77,7 @@ newClient pinfo rpcClient =
         <*> I.newIORef []
         <*> newChannelDB
         <*> S.newTVarIO Active
-        <*> error "Assertion failure: uninitialized domain ID!"
+        <*> pure initialDomain
 
 ----------------------------------------------------------------
 

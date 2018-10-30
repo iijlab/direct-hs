@@ -105,11 +105,9 @@ withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
 withClient config pInfo action = do
     ref <- I.newIORef Nothing
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
-        incompleteClient <- newClient pInfo rpcClient
-        I.writeIORef ref $ Just incompleteClient
-        client <-
-            setCurrentDomain incompleteClient
-                <$> decideInitialDomain config incompleteClient
+        initialDomain <- decideInitialDomain config rpcClient
+        client <- newClient pInfo rpcClient initialDomain
+        I.writeIORef ref $ Just client
         me <- createSession
             (clientRpcClient client)
             (loginInfoDirectAccessToken $ clientLoginInfo client)
@@ -162,9 +160,9 @@ withClient config pInfo action = do
         , RPC.waitRequestHandler = directWaitCreateMessageHandler config
         }
 
-decideInitialDomain :: Config -> Client -> IO Domain
-decideInitialDomain config incompleteClient = do
-    doms <- getDomains $ clientRpcClient incompleteClient
+decideInitialDomain :: Config -> RPC.Client -> IO Domain
+decideInitialDomain config rpcclient = do
+    doms <- getDomains rpcclient
     case directInitialDomainId config of
         Just did -> case L.find (\dom -> domainId dom == did) doms of
             Just dom -> return dom
