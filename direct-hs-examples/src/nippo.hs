@@ -23,9 +23,8 @@ main = do
         pInfo
         body
   where
-    body client = do
-        S.installHandler S.sigTERM $ \_ ->
-            D.shutdown client $ D.Txt "BOTが終了します。\nこの作業は後からやり直してください。"
+    body client = S.installHandler S.sigTERM
+        $ \_ -> D.shutdown client $ D.Txt "BOTが終了します。\nこの作業は後からやり直してください。"
 
 handleCreateMessage
     :: D.Client -> (D.Message, D.MessageId, D.TalkRoom, D.User) -> IO ()
@@ -46,7 +45,7 @@ nippo peer chan = do
                     `T.append` "さん、\nお疲れ様です。\n今日はどんな業務をしましたか？\n1件1メッセージでお願いします。"
         void $ D.send chan (D.Txt msg)
     askJobs jobs = do
-        (msg, _msgid) <- D.recv chan
+        (msg, _msgid, _room, _user) <- D.recv chan
         case msg of
             D.Txt "。" -> return jobs
             D.Txt job -> do
@@ -64,7 +63,7 @@ nippo peer chan = do
         recvLoop
       where
         recvLoop = do
-            (msg, _aux) <- D.recv chan
+            (msg, _msgid, _room, _user) <- D.recv chan
             case msg of
                 D.SelectA _ _ ans -> return ans
                 _                 -> do
