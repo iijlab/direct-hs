@@ -129,7 +129,7 @@ setCurrentDomain client domain = do
 retrieveUsers :: Client -> User -> IO [User]
 retrieveUsers client me = do
     acquaintances <- getAcquaintances (clientRpcClient client)
-    let did = domainId $ getCurrentDomain client
+    let did   = domainId $ getCurrentDomain client
     let users = fromMaybe [] $ lookup did acquaintances
     return $ me : (me `L.delete` users)
 
