@@ -191,8 +191,9 @@ subscribeNotification client me = do
     let users0 = fromMaybe [] $ lookup did acquaintances
     let users = me : (me `L.delete` users0)
     setUsers client users
-
-    getTalks rpcclient users >>= setTalkRooms client
+    allTalks <- getTalks rpcclient users
+    let talks = fromMaybe [] $ lookup did allTalks
+    setTalkRooms client talks
     getTalkStatuses rpcclient
 
 ----------------------------------------------------------------

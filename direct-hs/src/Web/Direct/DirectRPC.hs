@@ -98,7 +98,7 @@ getAcquaintances :: RPC.Client -> IO [(DomainId, [User])]
 getAcquaintances rpcclient =
     fromGetAcquaintances <$> callRpcThrow rpcclient "get_acquaintances" []
 
-getTalks :: RPC.Client -> [User] -> IO [TalkRoom]
+getTalks :: RPC.Client -> [User] -> IO [(DomainId, [TalkRoom])]
 getTalks rpcclient users =
     fromGetTalks users <$> callRpcThrow rpcclient "get_talks" []
 
