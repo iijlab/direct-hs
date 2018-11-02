@@ -12,6 +12,7 @@ where
 import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
+import           Data.Maybe                               (fromMaybe)
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
 import qualified Data.Text                                as T
@@ -185,7 +186,9 @@ subscribeNotification client me = do
     getAnnouncementStatuses rpcclient
     getFriends rpcclient
 
-    users0 <- getAcquaintances rpcclient
+    let did = domainId $ getCurrentDomain client
+    acquaintances <- getAcquaintances rpcclient
+    let users0 = fromMaybe [] $ lookup did acquaintances
     let users = me : (me `L.delete` users0)
     setUsers client users
 
