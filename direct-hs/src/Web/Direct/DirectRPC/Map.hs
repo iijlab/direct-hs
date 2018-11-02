@@ -49,9 +49,22 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: [User] -> M.Object -> [TalkRoom]
-fromGetTalks users (M.ObjectArray arr) = mapMaybe (decodeTalkRoom users) arr
-fromGetTalks _     _                   = []
+fromGetTalks :: [User] -> M.Object -> [(DomainId, [TalkRoom])]
+fromGetTalks users (M.ObjectArray arr) = foldr byDomain []
+    $ mapMaybe (decodeTalkRoomWithDomainId users) arr
+  where
+    byDomain (did, talk) [] = [(did, [talk])]
+    byDomain (did, talk) ((did', talks) : xs)
+        | did == did' = (did', talk : talks) : xs
+        | otherwise   = (did', talks) : byDomain (did, talk) xs
+fromGetTalks _ _ = []
+
+decodeTalkRoomWithDomainId :: [User] -> M.Object -> Maybe (DomainId, TalkRoom)
+decodeTalkRoomWithDomainId users (M.ObjectMap m) = do
+    M.ObjectWord did <- look "domain_id" m
+    talk             <- decodeTalkRoom users $ M.ObjectMap m
+    return (did, talk)
+decodeTalkRoomWithDomainId _ _ = Nothing
 
 decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
 decodeTalkRoom (me : others) (M.ObjectMap m) = do
