@@ -1,0 +1,28 @@
+version: 2
+jobs:
+  build:
+    docker:
+    - image: haskell:8.4
+    steps:
+    - run: stack upgrade
+    - run: "echo 'tcp     6       TCP' > /etc/protocols"
+    - run: "stack config --system-ghc set system-ghc --global true"
+    - checkout
+
+    - restore_cache:
+        keys:
+        - 'dependencies-{{ checksum "stack.yaml" }}'
+        - 'dependencies-'
+    - run: stack --compiler=ghc-8.4.3 --no-terminal build --pedantic
+
+    - save_cache:
+        key: 'dependencies-{{ checksum "stack.yaml" }}'
+        paths:
+        - ~/.stack/
+
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
