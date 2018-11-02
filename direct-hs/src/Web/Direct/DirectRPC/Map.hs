@@ -19,9 +19,12 @@ fromCreateSession (M.ObjectMap m) = do
     decodeUser user
 fromCreateSession _ = Nothing
 
-fromGetAcquaintances :: M.Object -> [User]
-fromGetAcquaintances (M.ObjectArray [M.ObjectArray [M.ObjectWord _domain, M.ObjectArray users]])
-    = mapMaybe decodeUser users
+fromGetAcquaintances :: M.Object -> [(DomainId, [User])]
+fromGetAcquaintances (M.ObjectArray xs) = mapMaybe fromGetAcquaintances' xs
+  where
+    fromGetAcquaintances' (M.ObjectArray [M.ObjectWord _domain, M.ObjectArray users])
+        = Just (_domain, mapMaybe decodeUser users)
+    fromGetAcquaintances' _ = Nothing
 fromGetAcquaintances _ = []
 
 decodeUser :: M.Object -> Maybe User
