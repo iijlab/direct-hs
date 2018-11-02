@@ -21,7 +21,7 @@ main = do
     D.withClient
         D.defaultConfig
             { D.directEndpointUrl = url
-            , D.directCreateMessageHandler = \_client msg _aux -> pPrint msg
+            , D.directCreateMessageHandler = \_client (msg, _, _, _) -> pPrint msg
             }
         pInfo
         (\_ -> return ())
