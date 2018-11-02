@@ -18,6 +18,8 @@ module Web.Direct.Client
     , getUsers
     , getCurrentDomain
     , setCurrentDomain
+    , retrieveUsers
+    , retrieveTalkRooms
     , isActive
     , findUser
     , findTalkRoom
@@ -42,6 +44,7 @@ import           Control.Monad.Except                     (ExceptT (ExceptT),
                                                            runExceptT)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
+import           Data.Maybe                               (fromMaybe)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -109,8 +112,32 @@ getUsers client = I.readIORef (clientUsers client)
 getCurrentDomain :: Client -> Domain
 getCurrentDomain = clientCurrentDomain
 
-setCurrentDomain :: Client -> Domain -> Client
-setCurrentDomain client did = client { clientCurrentDomain = did }
+setCurrentDomain :: Client -> Domain -> IO Client
+setCurrentDomain client domain = do
+    let client' = client { clientCurrentDomain = domain }
+    someone <- getMe client'
+    case someone of
+        Just me -> do
+            users <- retrieveUsers client' me
+            setUsers client' users
+            retrieveTalkRooms client' users >>= setTalkRooms client
+        Nothing -> fail "Assertion failure: Who am I?"
+    return client'
+
+----------------------------------------------------------------
+
+retrieveUsers :: Client -> User -> IO [User]
+retrieveUsers client me = do
+    acquaintances <- getAcquaintances (clientRpcClient client)
+    let did = domainId $ getCurrentDomain client
+    let users = fromMaybe [] $ lookup did acquaintances
+    return $ me : (me `L.delete` users)
+
+retrieveTalkRooms :: Client -> [User] -> IO [TalkRoom]
+retrieveTalkRooms client users = do
+    talks <- getTalks (clientRpcClient client) users
+    let did = domainId $ getCurrentDomain client
+    return $ fromMaybe [] $ lookup did talks
 
 ----------------------------------------------------------------
 
