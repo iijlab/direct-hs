@@ -105,9 +105,7 @@ withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
 withClient config pInfo action = do
     ref <- I.newIORef Nothing
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
-        me <- createSession
-            rpcClient
-            (loginInfoDirectAccessToken pInfo)
+        me <- createSession rpcClient (loginInfoDirectAccessToken pInfo)
         initialDomain <- decideInitialDomain config rpcClient
         client <- newClient pInfo rpcClient initialDomain
         I.writeIORef ref $ Just client
