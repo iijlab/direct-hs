@@ -19,7 +19,6 @@ module Web.Direct
     , getMe
     , getUsers
     , getCurrentDomain
-    , setCurrentDomain
   -- * Message
   -- ** Ids
     , DomainId
