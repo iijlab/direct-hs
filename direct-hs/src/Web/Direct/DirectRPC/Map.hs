@@ -3,6 +3,7 @@
 
 module Web.Direct.DirectRPC.Map where
 
+import           Data.Function    (on)
 import qualified Data.List        as L
 import           Data.Maybe       (mapMaybe)
 import qualified Data.MessagePack as M
@@ -50,13 +51,11 @@ decodeDomain (M.ObjectMap m) = do
 decodeDomain _ = Nothing
 
 fromGetTalks :: [User] -> M.Object -> [(DomainId, [TalkRoom])]
-fromGetTalks users (M.ObjectArray arr) = foldr byDomain []
-    $ mapMaybe (decodeTalkRoomWithDomainId users) arr
-  where
-    byDomain (did, talk) [] = [(did, [talk])]
-    byDomain (did, talk) ((did', talks) : xs)
-        | did == did' = (did', talk : talks) : xs
-        | otherwise   = (did', talks) : byDomain (did, talk) xs
+fromGetTalks users (M.ObjectArray arr) =
+    map ((\pair -> (head $ fst pair, snd pair)) . unzip)
+        $ L.groupBy ((==) `on` fst)
+        . L.sortBy (compare `on` fst)
+        $ mapMaybe (decodeTalkRoomWithDomainId users) arr
 fromGetTalks _ _ = []
 
 decodeTalkRoomWithDomainId :: [User] -> M.Object -> Maybe (DomainId, TalkRoom)
