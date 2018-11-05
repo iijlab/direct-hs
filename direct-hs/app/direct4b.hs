@@ -96,12 +96,6 @@ main = join $ Opt.execParser optionsInfo
                    (Opt.info
                        (    Opt.subparser
                                (  Opt.command
-                                     "all"
-                                     (Opt.info
-                                         (pure printAll <**> Opt.helper)
-                                         Opt.briefDesc
-                                     )
-                               <> Opt.command
                                       "domains"
                                       (Opt.info
                                           (pure printDomains <**> Opt.helper)
@@ -282,25 +276,6 @@ uploadFile mtxt mmime mdid tid path = do
             path
         void (either E.throwIO return =<< D.uploadFile client upf tid)
 
-
-printAll :: IO ()
-printAll = do
-    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
-    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
-    let config = D.defaultConfig { D.directEndpointUrl              = url
-                                 , D.directWaitCreateMessageHandler = False
-                                 }
-    D.withClient config pInfo $ \client -> do
-        domains <- D.getDomains client
-        forM_ domains $ \domain -> do
-            void $ D.setCurrentDomain client domain
-            putStrLn "# Domain"
-            putStrLn $ showDomain domain
-            putStrLn "# Users"
-            D.getUsers client >>= mapM_ (putStrLn . showUser)
-            putStrLn "# TalkRooms"
-            D.getTalkRooms client >>= mapM_ (putStrLn . showTalkRoom)
-            putStrLn ""
 
 printDomains :: IO ()
 printDomains = do
