@@ -187,7 +187,7 @@ subscribeNotification client me = do
     let did = domainId $ getCurrentDomain client
     acquaintances <- getAcquaintances rpcclient
     let users0 = fromMaybe [] $ lookup did acquaintances
-    let users = me : (me `L.delete` users0)
+    let users  = me : (me `L.delete` users0)
     setUsers client users
     allTalks <- getTalks rpcclient users
     let talks = fromMaybe [] $ lookup did allTalks

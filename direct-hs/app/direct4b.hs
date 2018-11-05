@@ -96,11 +96,11 @@ main = join $ Opt.execParser optionsInfo
                    (Opt.info
                        (    Opt.subparser
                                (  Opt.command
-                                      "domains"
-                                      (Opt.info
-                                          (pure printDomains <**> Opt.helper)
-                                          Opt.briefDesc
-                                      )
+                                     "domains"
+                                     (Opt.info
+                                         (pure printDomains <**> Opt.helper)
+                                         Opt.briefDesc
+                                     )
                                <> Opt.command
                                       "users"
                                       (Opt.info
