@@ -18,6 +18,7 @@ module Web.Direct
     , getTalkRooms
     , getMe
     , getUsers
+    , getCurrentDomain
   -- * Message
   -- ** Ids
     , DomainId

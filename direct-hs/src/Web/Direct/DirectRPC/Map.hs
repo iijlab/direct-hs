@@ -3,6 +3,7 @@
 
 module Web.Direct.DirectRPC.Map where
 
+import           Data.Function    (on)
 import qualified Data.List        as L
 import           Data.Maybe       (mapMaybe)
 import qualified Data.MessagePack as M
@@ -19,9 +20,12 @@ fromCreateSession (M.ObjectMap m) = do
     decodeUser user
 fromCreateSession _ = Nothing
 
-fromGetAcquaintances :: M.Object -> [User]
-fromGetAcquaintances (M.ObjectArray [M.ObjectArray [M.ObjectWord _domain, M.ObjectArray users]])
-    = mapMaybe decodeUser users
+fromGetAcquaintances :: M.Object -> [(DomainId, [User])]
+fromGetAcquaintances (M.ObjectArray xs) = mapMaybe fromGetAcquaintances' xs
+  where
+    fromGetAcquaintances' (M.ObjectArray [M.ObjectWord _domain, M.ObjectArray users])
+        = Just (_domain, mapMaybe decodeUser users)
+    fromGetAcquaintances' _ = Nothing
 fromGetAcquaintances _ = []
 
 decodeUser :: M.Object -> Maybe User
@@ -46,9 +50,20 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: [User] -> M.Object -> [TalkRoom]
-fromGetTalks users (M.ObjectArray arr) = mapMaybe (decodeTalkRoom users) arr
-fromGetTalks _     _                   = []
+fromGetTalks :: [User] -> M.Object -> [(DomainId, [TalkRoom])]
+fromGetTalks users (M.ObjectArray arr) =
+    map ((\pair -> (head $ fst pair, snd pair)) . unzip)
+        $ L.groupBy ((==) `on` fst)
+        . L.sortBy (compare `on` fst)
+        $ mapMaybe (decodeTalkRoomWithDomainId users) arr
+fromGetTalks _ _ = []
+
+decodeTalkRoomWithDomainId :: [User] -> M.Object -> Maybe (DomainId, TalkRoom)
+decodeTalkRoomWithDomainId users (M.ObjectMap m) = do
+    M.ObjectWord did <- look "domain_id" m
+    talk             <- decodeTalkRoom users $ M.ObjectMap m
+    return (did, talk)
+decodeTalkRoomWithDomainId _ _ = Nothing
 
 decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
 decodeTalkRoom (me : others) (M.ObjectMap m) = do

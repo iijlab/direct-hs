@@ -2,7 +2,7 @@
 
 import           Control.Applicative    (optional, (<**>), (<|>))
 import qualified Control.Exception      as E
-import           Control.Monad          (forM_, join, void)
+import           Control.Monad          (forM_, join, void, (>=>))
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Lazy   as B
 import           Data.List              (intercalate)
@@ -89,6 +89,57 @@ main = join $ Opt.execParser optionsInfo
                        )
                        (Opt.fullDesc <> Opt.progDesc
                            "Send a message from stdin as the logged-in user."
+                       )
+                   )
+            <> Opt.command
+                   "get"
+                   (Opt.info
+                       (    Opt.subparser
+                               (  Opt.command
+                                     "domains"
+                                     (Opt.info
+                                         (pure printDomains <**> Opt.helper)
+                                         Opt.briefDesc
+                                     )
+                               <> Opt.command
+                                      "users"
+                                      (Opt.info
+                                          (    printUsers
+                                          <$>  optional
+                                                   (Opt.option
+                                                       Opt.auto
+                                                       (  Opt.short 'd'
+                                                       <> Opt.metavar
+                                                              "DOMAIN_ID"
+                                                       )
+                                                   )
+                                          <**> Opt.helper
+                                          )
+                                          Opt.briefDesc
+                                      )
+                               <> Opt.command
+                                      "talks"
+                                      (Opt.info
+                                          (    printTalkRooms
+                                          <$>  optional
+                                                   (Opt.option
+                                                       Opt.auto
+                                                       (  Opt.short 'd'
+                                                       <> Opt.metavar
+                                                              "DOMAIN_ID"
+                                                       )
+                                                   )
+                                          <**> Opt.helper
+                                          )
+                                          Opt.briefDesc
+                                      )
+                               )
+                       <**> Opt.helper
+                       )
+                       (  Opt.fullDesc
+                       <> Opt.progDesc
+                              "Display information on the logged-in user."
+                       <> Opt.header ""
                        )
                    )
 
@@ -224,3 +275,57 @@ uploadFile mtxt mmime mdid tid path = do
             (fromMaybe (TE.decodeUtf8 $ defaultMimeLookup $ T.pack path) mmime)
             path
         void (either E.throwIO return =<< D.uploadFile client upf tid)
+
+
+printDomains :: IO ()
+printDomains = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let config = D.defaultConfig { D.directEndpointUrl              = url
+                                 , D.directWaitCreateMessageHandler = False
+                                 }
+    D.withClient config pInfo $ D.getDomains >=> mapM_ (putStrLn . showDomain)
+
+printUsers :: Maybe D.DomainId -> IO ()
+printUsers mdid = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let config = D.defaultConfig { D.directEndpointUrl              = url
+                                 , D.directInitialDomainId          = mdid
+                                 , D.directWaitCreateMessageHandler = False
+                                 }
+    D.withClient config pInfo $ D.getUsers >=> mapM_ (putStrLn . showUser)
+
+printTalkRooms :: Maybe D.DomainId -> IO ()
+printTalkRooms mdid = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let config = D.defaultConfig { D.directEndpointUrl              = url
+                                 , D.directInitialDomainId          = mdid
+                                 , D.directWaitCreateMessageHandler = False
+                                 }
+    D.withClient config pInfo $ D.getTalkRooms >=> mapM_
+        (putStrLn . showTalkRoom)
+
+showDomain :: D.Domain -> String
+showDomain domain =
+    intercalate "\t" [show (D.domainId domain), T.unpack (D.domainName domain)]
+
+showUser :: D.User -> String
+showUser user = intercalate
+    "\t"
+    [ show (D.userId user)
+    , T.unpack (D.displayName user)
+    , T.unpack (D.phoneticDisplayName user)
+    ]
+
+showTalkRoom :: D.TalkRoom -> String
+showTalkRoom talkRoom = intercalate
+    "\t"
+    [ show (D.talkId talkRoom)
+    , showTalkType (D.talkType talkRoom)
+    , intercalate ", " $ map (T.unpack . D.displayName) (D.talkUsers talkRoom)
+    ]
+  where
+    showTalkType (D.GroupTalk name) = "GroupTalk \"" ++ T.unpack name ++ "\""
+    showTalkType other              = show other

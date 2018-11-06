@@ -12,6 +12,7 @@ where
 import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
+import           Data.Maybe                               (fromMaybe)
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
 import qualified Data.Text                                as T
@@ -105,9 +106,7 @@ withClient :: Config -> LoginInfo -> (Client -> IO a) -> IO a
 withClient config pInfo action = do
     ref <- I.newIORef Nothing
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
-        me <- createSession
-            rpcClient
-            (loginInfoDirectAccessToken pInfo)
+        me <- createSession rpcClient (loginInfoDirectAccessToken pInfo)
         initialDomain <- decideInitialDomain config rpcClient
         client <- newClient pInfo rpcClient initialDomain
         I.writeIORef ref $ Just client
@@ -185,11 +184,14 @@ subscribeNotification client me = do
     getAnnouncementStatuses rpcclient
     getFriends rpcclient
 
-    users0 <- getAcquaintances rpcclient
-    let users = me : (me `L.delete` users0)
+    let did = domainId $ getCurrentDomain client
+    acquaintances <- getAcquaintances rpcclient
+    let users0 = fromMaybe [] $ lookup did acquaintances
+    let users  = me : (me `L.delete` users0)
     setUsers client users
-
-    getTalks rpcclient users >>= setTalkRooms client
+    allTalks <- getTalks rpcclient users
+    let talks = fromMaybe [] $ lookup did allTalks
+    setTalkRooms client talks
     getTalkStatuses rpcclient
 
 ----------------------------------------------------------------

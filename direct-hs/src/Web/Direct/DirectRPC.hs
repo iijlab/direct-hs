@@ -94,11 +94,11 @@ getAnnouncementStatuses rpcclient =
 getFriends :: RPC.Client -> IO ()
 getFriends rpcclient = void $ callRpcThrow rpcclient "get_friends" []
 
-getAcquaintances :: RPC.Client -> IO [User]
+getAcquaintances :: RPC.Client -> IO [(DomainId, [User])]
 getAcquaintances rpcclient =
     fromGetAcquaintances <$> callRpcThrow rpcclient "get_acquaintances" []
 
-getTalks :: RPC.Client -> [User] -> IO [TalkRoom]
+getTalks :: RPC.Client -> [User] -> IO [(DomainId, [TalkRoom])]
 getTalks rpcclient users =
     fromGetTalks users <$> callRpcThrow rpcclient "get_talks" []
 
