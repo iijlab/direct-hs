@@ -92,6 +92,23 @@ main = join $ Opt.execParser optionsInfo
                        )
                    )
             <> Opt.command
+                   "leave"
+                   (Opt.info
+                       (leave <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
+                       (Opt.fullDesc <> Opt.progDesc "Leave the talk room.")
+                   )
+            <> Opt.command
+                   "ban"
+                   (Opt.info
+                       (   ban
+                       <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       <*> Opt.argument Opt.auto (Opt.metavar "USER_ID")
+                       )
+                       (Opt.fullDesc <> Opt.progDesc
+                           "Remove the user from the talk room."
+                       )
+                   )
+            <> Opt.command
                    "get"
                    (Opt.info
                        (    Opt.subparser
@@ -275,6 +292,37 @@ uploadFile mtxt mmime mdid tid path = do
             (fromMaybe (TE.decodeUtf8 $ defaultMimeLookup $ T.pack path) mmime)
             path
         void (either E.throwIO return =<< D.uploadFile client upf tid)
+
+
+leave :: D.TalkId -> IO ()
+leave tid = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let config = D.defaultConfig { D.directEndpointUrl              = url
+                                 , D.directWaitCreateMessageHandler = False
+                                 }
+    D.withClient config pInfo $ \client -> do
+        result <- D.leaveTalkRoom client tid
+        case result of
+            Right _               -> return ()
+            Left  D.InvalidTalkId -> die "Talk room not found."
+            Left  e               -> die $ "Unexpected Error: " ++ show e
+
+ban :: D.TalkId -> D.UserId -> IO ()
+ban tid uid = do
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
+    (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
+    let config = D.defaultConfig { D.directEndpointUrl              = url
+                                 , D.directWaitCreateMessageHandler = False
+                                 }
+    D.withClient config pInfo $ \client -> do
+        result <- D.removeUserFromTalkRoom client tid uid
+        case result of
+            Right _                 -> return ()
+            Left  D.InvalidTalkId   -> die "Talk room not found."
+            Left  D.InvalidTalkType -> die "Operation not permitted with PairTalk."
+            Left  D.InvalidUserId   -> die "User not found."
+            Left  e                 -> die $ "Unexpected Error: " ++ show e
 
 
 printDomains :: IO ()
