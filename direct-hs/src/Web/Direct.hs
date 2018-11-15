@@ -51,6 +51,9 @@ module Web.Direct
     , UploadFile(..)
     , readToUpload
     , uploadFile
+  -- * Talk Room
+    , leaveTalkRoom
+    , removeUserFromTalkRoom
   -- * Channel
   -- ** Channel type
     , ChannelType

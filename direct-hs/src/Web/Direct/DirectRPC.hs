@@ -115,6 +115,14 @@ createPairTalk rpcclient dom peer = do
     rsp <- callRpcThrow rpcclient methodName dat
     convertOrThrow methodName (decodeTalkRoom [peer]) rsp -- fixme: users
 
+deleteTalker :: RPC.Client -> TalkRoom -> User -> IO ()
+deleteTalker rpcclient talk user = do
+    let methodName = "delete_talker"
+        tid        = talkId talk
+        uid        = userId user
+        dat        = [M.ObjectWord tid, M.ObjectWord uid]
+    void $ callRpcThrow rpcclient methodName dat
+
 createUploadAuth
     :: RPC.Client
     -> Text

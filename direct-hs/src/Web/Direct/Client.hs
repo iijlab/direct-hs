@@ -21,6 +21,8 @@ module Web.Direct.Client
     , isActive
     , findUser
     , findTalkRoom
+    , leaveTalkRoom
+    , removeUserFromTalkRoom
     , findChannel
     , withChannel
     , shutdown
@@ -123,6 +125,39 @@ findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
 findTalkRoom tid client = do
     rooms <- getTalkRooms client
     return $ L.find (\r -> talkId r == tid) rooms
+
+----------------------------------------------------------------
+
+leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
+leaveTalkRoom client tid = do
+    mtalk <- L.find ((tid ==) . talkId) <$> getTalkRooms client
+    case mtalk of
+        Nothing   -> return $ Left InvalidTalkId
+        Just talk -> do
+            mme <- getMe client
+            case mme of
+                Nothing -> fail "Assertion failure: `getMe` returns `Nothing`"
+                Just me -> do
+                    deleteTalker (clientRpcClient client) talk me
+                    return $ Right ()
+
+removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
+removeUserFromTalkRoom client tid uid = do
+    mtalk <- L.find ((tid ==) . talkId) <$> getTalkRooms client
+    case mtalk of
+        Nothing   -> return $ Left InvalidTalkId
+        Just talk -> if talkType talk == PairTalk
+-- Can not ban a friend on PairTalk
+            then return $ Left InvalidTalkType
+            else do
+                muser <- findUser uid client
+                case muser of
+                    Nothing   -> return $ Left InvalidUserId
+                    Just user -> if user `notElem` talkUsers talk
+                        then return $ Left InvalidUserId
+                        else do
+                            deleteTalker (clientRpcClient client) talk user
+                            return $ Right ()
 
 ----------------------------------------------------------------
 
