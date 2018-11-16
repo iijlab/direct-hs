@@ -318,11 +318,12 @@ ban tid uid = do
     D.withClient config pInfo $ \client -> do
         result <- D.removeUserFromTalkRoom client tid uid
         case result of
-            Right _                 -> return ()
-            Left  D.InvalidTalkId   -> die "Talk room not found."
-            Left  D.InvalidTalkType -> die "Operation not permitted with PairTalk."
-            Left  D.InvalidUserId   -> die "User not found."
-            Left  e                 -> die $ "Unexpected Error: " ++ show e
+            Right _               -> return ()
+            Left  D.InvalidTalkId -> die "Talk room not found."
+            Left D.InvalidTalkType ->
+                die "Operation not permitted with PairTalk."
+            Left D.InvalidUserId -> die "User not found."
+            Left e               -> die $ "Unexpected Error: " ++ show e
 
 
 printDomains :: IO ()
