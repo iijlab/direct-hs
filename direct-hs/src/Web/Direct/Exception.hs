@@ -22,6 +22,8 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 data Exception =
       InvalidEmailOrPassword
     | InvalidTalkId
+    | InvalidTalkType
+    | InvalidUserId
     | InvalidWsUrl !String
     | UnexpectedReponseWhenUpload Status
     | UnexpectedReponse !RPC.MethodName !M.Object

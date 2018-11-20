@@ -21,6 +21,8 @@ module Web.Direct.Client
     , isActive
     , findUser
     , findTalkRoom
+    , leaveTalkRoom
+    , removeUserFromTalkRoom
     , findChannel
     , withChannel
     , shutdown
@@ -38,8 +40,12 @@ module Web.Direct.Client
 where
 
 import qualified Control.Concurrent.STM                   as S
+import           Control.Error.Util                       (failWith)
+import           Control.Monad                            (when)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
-                                                           runExceptT)
+                                                           runExceptT,
+                                                           throwError)
+import           Control.Monad.IO.Class                   (liftIO)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
@@ -123,6 +129,25 @@ findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
 findTalkRoom tid client = do
     rooms <- getTalkRooms client
     return $ L.find (\r -> talkId r == tid) rooms
+
+----------------------------------------------------------------
+
+leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
+leaveTalkRoom client tid = runExceptT $ do
+    talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    mme  <- liftIO $ getMe client
+    case mme of
+        Nothing -> fail "Assertion failure: `getMe` returns `Nothing`"
+        Just me -> ExceptT $ deleteTalker (clientRpcClient client) talk me
+
+removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
+removeUserFromTalkRoom client tid uid = runExceptT $ do
+    talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    -- Can not ban a friend on PairTalk
+    when (talkType talk == PairTalk) $ throwError InvalidTalkType
+    user <- failWith InvalidUserId =<< liftIO (findUser uid client)
+    when (user `notElem` talkUsers talk) $ throwError InvalidUserId
+    ExceptT $ deleteTalker (clientRpcClient client) talk user
 
 ----------------------------------------------------------------
 
