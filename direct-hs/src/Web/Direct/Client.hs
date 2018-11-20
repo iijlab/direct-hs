@@ -137,12 +137,8 @@ leaveTalkRoom client tid = runExceptT $ do
     talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
     mme  <- liftIO $ getMe client
     case mme of
-        Just me -> do
-            result <- liftIO $ deleteTalker (clientRpcClient client) talk me
-            case result of
-                Right _ -> return ()
-                Left  e -> throwError e
-        _ -> return ()
+        Nothing -> fail "Assertion failure: `getMe` returns `Nothing`"
+        Just me -> ExceptT $ deleteTalker (clientRpcClient client) talk me
 
 removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
 removeUserFromTalkRoom client tid uid = runExceptT $ do
@@ -151,10 +147,7 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     when (talkType talk == PairTalk) $ throwError InvalidTalkType
     user <- failWith InvalidUserId =<< liftIO (findUser uid client)
     when (user `notElem` talkUsers talk) $ throwError InvalidUserId
-    result <- liftIO $ deleteTalker (clientRpcClient client) talk user
-    case result of
-        Right _ -> return ()
-        Left  e -> throwError e
+    ExceptT $ deleteTalker (clientRpcClient client) talk user
 
 ----------------------------------------------------------------
 
