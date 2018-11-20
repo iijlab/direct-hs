@@ -30,7 +30,6 @@ module Web.Direct.Client
     , dispatch
     , ChannelType
     , Channel
-    , channelTalkRoom
     , pairChannel
     , pinPointChannel
     , groupChannel

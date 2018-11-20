@@ -63,7 +63,6 @@ module Web.Direct
   -- ** Creating channel
     , Channel
     , withChannel
-    , channelTalkRoom
   -- ** Channel IO
     , recv
     , send

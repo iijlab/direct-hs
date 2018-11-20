@@ -1,7 +1,6 @@
 module Web.Direct.Client.Channel.Types
     ( Channel
     , channelTalkId
-    , channelTalkRoom
     , newChannel
     , dispatch
     , die
@@ -34,7 +33,6 @@ data Channel = Channel {
     , channelRPCClient :: RPC.Client
     , channelType      :: ChannelType
     , channelKey       :: ChannelKey
-    , channelTalkRoom  :: TalkRoom -- ^ Getting the talk room associated with this channel.
     }
 
 channelTalkId :: Channel -> TalkId
@@ -43,15 +41,14 @@ channelTalkId = fst . channelKey
 ----------------------------------------------------------------
 
 -- | Creating a new channel.
-newChannel :: RPC.Client -> ChannelType -> ChannelKey -> TalkRoom -> IO Channel
-newChannel rpcclient ctyp ckey room = do
+newChannel :: RPC.Client -> ChannelType -> ChannelKey -> IO Channel
+newChannel rpcclient ctyp ckey = do
     mvar <- C.newEmptyMVar
     return Channel
         { toWorker         = mvar
         , channelRPCClient = rpcclient
         , channelType      = ctyp
         , channelKey       = ckey
-        , channelTalkRoom  = room
         }
 
 ----------------------------------------------------------------
