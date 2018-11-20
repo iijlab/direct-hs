@@ -98,9 +98,8 @@ getAcquaintances :: RPC.Client -> IO [(DomainId, [User])]
 getAcquaintances rpcclient =
     fromGetAcquaintances <$> callRpcThrow rpcclient "get_acquaintances" []
 
-getTalks :: RPC.Client -> [User] -> IO [(DomainId, [TalkRoom])]
-getTalks rpcclient users =
-    fromGetTalks users <$> callRpcThrow rpcclient "get_talks" []
+getTalks :: RPC.Client -> IO [(DomainId, [TalkRoom])]
+getTalks rpcclient = fromGetTalks <$> callRpcThrow rpcclient "get_talks" []
 
 getTalkStatuses :: RPC.Client -> IO ()
 getTalkStatuses rpcclient =
@@ -113,7 +112,7 @@ createPairTalk rpcclient dom peer = do
         uid        = userId peer
         dat        = [M.ObjectWord did, M.ObjectWord uid]
     rsp <- callRpcThrow rpcclient methodName dat
-    convertOrThrow methodName (decodeTalkRoom [peer]) rsp -- fixme: users
+    convertOrThrow methodName decodeTalkRoom rsp
 
 deleteTalker :: RPC.Client -> TalkRoom -> User -> IO (Either Exception ())
 deleteTalker rpcclient talk user = do

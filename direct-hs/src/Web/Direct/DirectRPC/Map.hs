@@ -50,23 +50,23 @@ decodeDomain (M.ObjectMap m) = do
     Just $ Domain did dname
 decodeDomain _ = Nothing
 
-fromGetTalks :: [User] -> M.Object -> [(DomainId, [TalkRoom])]
-fromGetTalks users (M.ObjectArray arr) =
+fromGetTalks :: M.Object -> [(DomainId, [TalkRoom])]
+fromGetTalks (M.ObjectArray arr) =
     map ((\pair -> (head $ fst pair, snd pair)) . unzip)
         $ L.groupBy ((==) `on` fst)
         . L.sortBy (compare `on` fst)
-        $ mapMaybe (decodeTalkRoomWithDomainId users) arr
-fromGetTalks _ _ = []
+        $ mapMaybe decodeTalkRoomWithDomainId arr
+fromGetTalks _ = []
 
-decodeTalkRoomWithDomainId :: [User] -> M.Object -> Maybe (DomainId, TalkRoom)
-decodeTalkRoomWithDomainId users (M.ObjectMap m) = do
+decodeTalkRoomWithDomainId :: M.Object -> Maybe (DomainId, TalkRoom)
+decodeTalkRoomWithDomainId (M.ObjectMap m) = do
     M.ObjectWord did <- look "domain_id" m
-    talk             <- decodeTalkRoom users $ M.ObjectMap m
+    talk             <- decodeTalkRoom $ M.ObjectMap m
     return (did, talk)
-decodeTalkRoomWithDomainId _ _ = Nothing
+decodeTalkRoomWithDomainId _ = Nothing
 
-decodeTalkRoom :: [User] -> M.Object -> Maybe TalkRoom
-decodeTalkRoom (me : others) (M.ObjectMap m) = do
+decodeTalkRoom :: M.Object -> Maybe TalkRoom
+decodeTalkRoom (M.ObjectMap m) = do
     M.ObjectWord tid <- look "talk_id" m
     M.ObjectWord tp  <- look "type" m
     let typ
@@ -77,15 +77,11 @@ decodeTalkRoom (me : others) (M.ObjectMap m) = do
             | otherwise = UnknownTalk
     M.ObjectArray uids <- look "user_ids" m
     let userIds = mapMaybe extract uids
-        roomUsers =
-            me
-                : mapMaybe (\uid -> L.find (\u -> uid == userId u) others)
-                           userIds
-    Just $ TalkRoom tid typ roomUsers
+    Just $ TalkRoom tid typ userIds
   where
     extract (M.ObjectWord uid) = Just uid
     extract _                  = Nothing
-decodeTalkRoom _ _ = Nothing
+decodeTalkRoom _ = Nothing
 
 decodeUploadAuth :: [(M.Object, M.Object)] -> Maybe UploadAuth
 decodeUploadAuth rspMap = do

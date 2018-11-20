@@ -189,8 +189,7 @@ subscribeNotification client = do
     allAcqs <- getAcquaintances rpcclient
     let acqs = fromMaybe [] $ lookup did allAcqs
     setAcquaintances client acqs
-    me       <- getMe client
-    allTalks <- getTalks rpcclient (me : acqs)
+    allTalks <- getTalks rpcclient
     let talks = fromMaybe [] $ lookup did allTalks
     setTalkRooms client talks
     getTalkStatuses rpcclient

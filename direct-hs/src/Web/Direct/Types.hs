@@ -46,9 +46,9 @@ data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show)
 
 -- | Type for talk rooms.
 data TalkRoom = TalkRoom {
-    talkId    :: !TalkId
-  , talkType  :: !TalkType
-  , talkUsers :: [User] -- ^ The head of this list is myself.
+    talkId      :: !TalkId
+  , talkType    :: !TalkType
+  , talkUserIds :: [UserId]
   } deriving (Eq, Show)
 
 -- | Created from the response of direct's RPC function @create_upload_auth@.

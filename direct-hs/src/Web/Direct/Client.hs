@@ -23,6 +23,7 @@ module Web.Direct.Client
     , isActive
     , findUser
     , findTalkRoom
+    , getTalkUsers
     , leaveTalkRoom
     , removeUserFromTalkRoom
     , findChannel
@@ -49,6 +50,7 @@ import           Control.Monad.Except                     (ExceptT (ExceptT),
 import           Control.Monad.IO.Class                   (liftIO)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
+import           Data.Maybe                               (catMaybes)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -144,6 +146,13 @@ findTalkRoom tid client = do
     rooms <- getTalkRooms client
     return $ L.find (\r -> talkId r == tid) rooms
 
+getTalkUsers :: Client -> TalkRoom -> IO Users
+getTalkUsers client talk = do
+    me    <- getMe client
+    users <- catMaybes <$> mapM (`findUser` client) (talkUserIds talk)
+    let talkAcqs = filter ((/= userId me) . userId) users
+    return $ Users me talkAcqs
+
 ----------------------------------------------------------------
 
 leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
@@ -157,8 +166,9 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
     -- Can not ban a friend on PairTalk
     when (talkType talk == PairTalk) $ throwError InvalidTalkType
-    user <- failWith InvalidUserId =<< liftIO (findUser uid client)
-    when (user `notElem` talkUsers talk) $ throwError InvalidUserId
+    user      <- failWith InvalidUserId =<< liftIO (findUser uid client)
+    talkUsers <- liftIO $ getTalkUsers client talk
+    when (user `notElem` acquaintances talkUsers) $ throwError InvalidUserId
     ExceptT $ deleteTalker (clientRpcClient client) talk user
 
 ----------------------------------------------------------------
