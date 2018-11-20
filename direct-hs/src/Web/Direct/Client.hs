@@ -14,6 +14,8 @@ module Web.Direct.Client
     , getTalkRooms
     , setMe
     , getMe
+    , setAcquaintances
+    , getAcquaintances
     , setUsers
     , getUsers
     , getCurrentDomain
@@ -51,7 +53,9 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC                     hiding (getDomains)
+import           Web.Direct.DirectRPC                     hiding
+                                                           (getAcquaintances,
+                                                           getDomains)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
@@ -66,20 +70,18 @@ data Client = Client {
   , clientRpcClient     :: !RPC.Client
   , clientDomains       :: I.IORef [Domain]
   , clientTalkRooms     :: I.IORef [TalkRoom]
-  , clientMe            :: I.IORef (Maybe User)
-  , clientUsers         :: I.IORef [User]
+  , clientUsers         :: I.IORef Users
   , clientChannels      :: ChannelDB
   , clientStatus        :: StatusVar
   , clientCurrentDomain :: Domain
   }
 
-newClient :: LoginInfo -> RPC.Client -> Domain -> IO Client
-newClient pinfo rpcClient initialDomain =
+newClient :: LoginInfo -> RPC.Client -> Domain -> User -> IO Client
+newClient pinfo rpcClient initialDomain me =
     Client pinfo rpcClient
         <$> I.newIORef []
         <*> I.newIORef []
-        <*> I.newIORef Nothing
-        <*> I.newIORef []
+        <*> I.newIORef (Users me [])
         <*> newChannelDB
         <*> S.newTVarIO Active
         <*> pure initialDomain
@@ -99,16 +101,29 @@ getTalkRooms :: Client -> IO [TalkRoom]
 getTalkRooms client = I.readIORef (clientTalkRooms client)
 
 setMe :: Client -> User -> IO ()
-setMe client user = I.writeIORef (clientMe client) (Just user)
+setMe client user = do
+    users <- getUsers client
+    setUsers client $ users { myself = user }
 
-getMe :: Client -> IO (Maybe User)
-getMe client = I.readIORef (clientMe client)
+getMe :: Client -> IO User
+getMe client = do
+    users <- getUsers client
+    return $ myself users
 
-setUsers :: Client -> [User] -> IO ()
+setAcquaintances :: Client -> [User] -> IO ()
+setAcquaintances client acqs = do
+    users <- getUsers client
+    setUsers client $ users { acquaintances = acqs }
+
+getAcquaintances :: Client -> IO [User]
+getAcquaintances client = do
+    users <- getUsers client
+    return $ acquaintances users
+
+setUsers :: Client -> Users -> IO ()
 setUsers client users = I.writeIORef (clientUsers client) users
 
--- | Getting acquaintances for me. The head of the list is myself.
-getUsers :: Client -> IO [User]
+getUsers :: Client -> IO Users
 getUsers client = I.readIORef (clientUsers client)
 
 getCurrentDomain :: Client -> Domain
@@ -122,7 +137,7 @@ setCurrentDomain client did = client { clientCurrentDomain = did }
 findUser :: UserId -> Client -> IO (Maybe User)
 findUser uid client = do
     users <- getUsers client
-    return $ L.find (\u -> userId u == uid) users
+    return $ L.find (\u -> userId u == uid) (myself users : acquaintances users)
 
 findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
 findTalkRoom tid client = do
@@ -134,10 +149,8 @@ findTalkRoom tid client = do
 leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
 leaveTalkRoom client tid = runExceptT $ do
     talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
-    mme  <- liftIO $ getMe client
-    case mme of
-        Nothing -> fail "Assertion failure: `getMe` returns `Nothing`"
-        Just me -> ExceptT $ deleteTalker (clientRpcClient client) talk me
+    me   <- liftIO $ getMe client
+    ExceptT $ deleteTalker (clientRpcClient client) talk me
 
 removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
 removeUserFromTalkRoom client tid uid = runExceptT $ do

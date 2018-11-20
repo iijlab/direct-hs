@@ -29,6 +29,12 @@ data User = User {
   , canonicalPhoneticDisplayName :: !T.Text
   } deriving (Eq, Show)
 
+-- | Type for user list.
+data Users = Users {
+    myself        :: !User
+  , acquaintances :: [User]
+} deriving (Eq, Show)
+
 -- | Type for domains.
 data Domain = Domain {
     domainId   :: !DomainId

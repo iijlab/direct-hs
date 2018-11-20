@@ -43,6 +43,10 @@ module Web.Direct
     , canonicalDisplayName
     , phoneticDisplayName
     , canonicalPhoneticDisplayName
+  -- *** Users
+    , Users
+    , myself
+    , acquaintances
   -- ** Message
     , Message(..)
   -- * Sending

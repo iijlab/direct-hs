@@ -20,7 +20,9 @@ import qualified Data.UUID                                as Uuid
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 import qualified System.Random.MWC                        as Random
 
-import           Web.Direct.Client                        hiding (getDomains)
+import           Web.Direct.Client                        hiding
+                                                           (getAcquaintances,
+                                                           getDomains)
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
@@ -108,10 +110,9 @@ withClient config pInfo action = do
     RPC.withClient (directEndpointUrl config) (rpcConfig ref) $ \rpcClient -> do
         me <- createSession rpcClient (loginInfoDirectAccessToken pInfo)
         initialDomain <- decideInitialDomain config rpcClient
-        client <- newClient pInfo rpcClient initialDomain
+        client <- newClient pInfo rpcClient initialDomain me
         I.writeIORef ref $ Just client
-        setMe client me
-        subscribeNotification client me
+        subscribeNotification client
         action client
   where
     rpcConfig ref = RPC.defaultConfig
@@ -124,7 +125,7 @@ withClient config pInfo action = do
                 when active $ do
                     -- fixme: "notify_update_domain_users"
                     -- fixme: "notify_update_read_statuses"
-                    Just me <- getMe client
+                    me <- getMe client
                     let myid = userId me
                     when (method == "notify_create_message") $ case objs of
                         M.ObjectMap rsp : _ -> case decodeMessage rsp of
@@ -172,8 +173,8 @@ decideInitialDomain config rpcclient = do
             []        -> fail "Assertion failure: no domains obtained!"
             (dom : _) -> return dom
 
-subscribeNotification :: Client -> User -> IO ()
-subscribeNotification client me = do
+subscribeNotification :: Client -> IO ()
+subscribeNotification client = do
     let rpcclient = clientRpcClient client
     resetNotification rpcclient
     startNotification rpcclient
@@ -185,11 +186,11 @@ subscribeNotification client me = do
     getFriends rpcclient
 
     let did = domainId $ getCurrentDomain client
-    acquaintances <- getAcquaintances rpcclient
-    let users0 = fromMaybe [] $ lookup did acquaintances
-    let users  = me : (me `L.delete` users0)
-    setUsers client users
-    allTalks <- getTalks rpcclient users
+    allAcqs <- getAcquaintances rpcclient
+    let acqs = fromMaybe [] $ lookup did allAcqs
+    setAcquaintances client acqs
+    me       <- getMe client
+    allTalks <- getTalks rpcclient (me : acqs)
     let talks = fromMaybe [] $ lookup did allTalks
     setTalkRooms client talks
     getTalkStatuses rpcclient

@@ -343,7 +343,9 @@ printUsers mdid = do
                                  , D.directInitialDomainId          = mdid
                                  , D.directWaitCreateMessageHandler = False
                                  }
-    D.withClient config pInfo $ D.getUsers >=> mapM_ (putStrLn . showUser)
+    D.withClient config pInfo $ \client -> do
+        users <- D.getUsers client
+        mapM_ (putStrLn . showUser) (D.myself users : D.acquaintances users)
 
 printTalkRooms :: Maybe D.DomainId -> IO ()
 printTalkRooms mdid = do
