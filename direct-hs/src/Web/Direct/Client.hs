@@ -40,8 +40,12 @@ module Web.Direct.Client
 where
 
 import qualified Control.Concurrent.STM                   as S
+import           Control.Error.Util                       (failWith)
+import           Control.Monad                            (when)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
-                                                           runExceptT)
+                                                           runExceptT,
+                                                           throwError)
+import           Control.Monad.IO.Class                   (liftIO)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
@@ -129,35 +133,28 @@ findTalkRoom tid client = do
 ----------------------------------------------------------------
 
 leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
-leaveTalkRoom client tid = do
-    mtalk <- L.find ((tid ==) . talkId) <$> getTalkRooms client
-    case mtalk of
-        Nothing   -> return $ Left InvalidTalkId
-        Just talk -> do
-            mme <- getMe client
-            case mme of
-                Nothing -> fail "Assertion failure: `getMe` returns `Nothing`"
-                Just me -> do
-                    deleteTalker (clientRpcClient client) talk me
-                    return $ Right ()
+leaveTalkRoom client tid = runExceptT $ do
+    talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    mme  <- liftIO $ getMe client
+    case mme of
+        Just me -> do
+            result <- liftIO $ deleteTalker (clientRpcClient client) talk me
+            case result of
+                Right _ -> return ()
+                Left  e -> throwError e
+        _ -> return ()
 
 removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
-removeUserFromTalkRoom client tid uid = do
-    mtalk <- L.find ((tid ==) . talkId) <$> getTalkRooms client
-    case mtalk of
-        Nothing   -> return $ Left InvalidTalkId
-        Just talk -> if talkType talk == PairTalk
--- Can not ban a friend on PairTalk
-            then return $ Left InvalidTalkType
-            else do
-                muser <- findUser uid client
-                case muser of
-                    Nothing   -> return $ Left InvalidUserId
-                    Just user -> if user `notElem` talkUsers talk
-                        then return $ Left InvalidUserId
-                        else do
-                            deleteTalker (clientRpcClient client) talk user
-                            return $ Right ()
+removeUserFromTalkRoom client tid uid = runExceptT $ do
+    talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    -- Can not ban a friend on PairTalk
+    when (talkType talk == PairTalk) $ throwError InvalidTalkType
+    user <- failWith InvalidUserId =<< liftIO (findUser uid client)
+    when (user `notElem` talkUsers talk) $ throwError InvalidUserId
+    result <- liftIO $ deleteTalker (clientRpcClient client) talk user
+    case result of
+        Right _ -> return ()
+        Left  e -> throwError e
 
 ----------------------------------------------------------------
 
