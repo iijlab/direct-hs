@@ -47,6 +47,7 @@ module Web.Direct
     , Users
     , myself
     , acquaintances
+    , usersList
   -- ** Message
     , Message(..)
   -- * Sending

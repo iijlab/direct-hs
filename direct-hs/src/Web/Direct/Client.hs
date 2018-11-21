@@ -139,7 +139,7 @@ setCurrentDomain client did = client { clientCurrentDomain = did }
 findUser :: UserId -> Client -> IO (Maybe User)
 findUser uid client = do
     users <- getUsers client
-    return $ L.find (\u -> userId u == uid) (myself users : acquaintances users)
+    return $ L.find (\u -> userId u == uid) (usersList users)
 
 findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
 findTalkRoom tid client = do

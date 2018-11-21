@@ -345,7 +345,7 @@ printUsers mdid = do
                                  }
     D.withClient config pInfo $ \client -> do
         users <- D.getUsers client
-        mapM_ (putStrLn . showUser) (D.myself users : D.acquaintances users)
+        mapM_ (putStrLn . showUser) (D.usersList users)
 
 printTalkRooms :: Maybe D.DomainId -> IO ()
 printTalkRooms mdid = do
@@ -378,10 +378,8 @@ showTalkRoom talk talkUsers = intercalate
     "\t"
     [ show (D.talkId talk)
     , showTalkType (D.talkType talk)
-    , intercalate ", " $ map (T.unpack . D.displayName) (me : talkAcqs)
+    , intercalate ", " $ map (T.unpack . D.displayName) (D.usersList talkUsers)
     ]
   where
     showTalkType (D.GroupTalk name) = "GroupTalk \"" ++ T.unpack name ++ "\""
     showTalkType other              = show other
-    me       = D.myself talkUsers
-    talkAcqs = D.acquaintances talkUsers

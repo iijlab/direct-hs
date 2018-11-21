@@ -35,6 +35,9 @@ data Users = Users {
   , acquaintances :: [User]
 } deriving (Eq, Show)
 
+usersList :: Users -> [User]
+usersList users = myself users : acquaintances users
+
 -- | Type for domains.
 data Domain = Domain {
     domainId   :: !DomainId
