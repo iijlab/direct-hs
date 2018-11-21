@@ -16,7 +16,6 @@ module Web.Direct.Client
     , getMe
     , setAcquaintances
     , getAcquaintances
-    , setUsers
     , getUsers
     , getCurrentDomain
     , setCurrentDomain
@@ -72,7 +71,8 @@ data Client = Client {
   , clientRpcClient     :: !RPC.Client
   , clientDomains       :: I.IORef [Domain]
   , clientTalkRooms     :: I.IORef [TalkRoom]
-  , clientUsers         :: I.IORef Users
+  , clientMe            :: I.IORef User
+  , clientAcquaintances :: I.IORef [User]
   , clientChannels      :: ChannelDB
   , clientStatus        :: StatusVar
   , clientCurrentDomain :: Domain
@@ -83,7 +83,8 @@ newClient pinfo rpcClient initialDomain me =
     Client pinfo rpcClient
         <$> I.newIORef []
         <*> I.newIORef []
-        <*> I.newIORef (Users me [])
+        <*> I.newIORef me
+        <*> I.newIORef []
         <*> newChannelDB
         <*> S.newTVarIO Active
         <*> pure initialDomain
@@ -103,30 +104,23 @@ getTalkRooms :: Client -> IO [TalkRoom]
 getTalkRooms client = I.readIORef (clientTalkRooms client)
 
 setMe :: Client -> User -> IO ()
-setMe client user = do
-    users <- getUsers client
-    setUsers client $ users { myself = user }
+setMe client user = I.writeIORef (clientMe client) user
 
 getMe :: Client -> IO User
-getMe client = do
-    users <- getUsers client
-    return $ myself users
+getMe client = I.readIORef (clientMe client)
 
 setAcquaintances :: Client -> [User] -> IO ()
-setAcquaintances client acqs = do
-    users <- getUsers client
-    setUsers client $ users { acquaintances = acqs }
+setAcquaintances client users = I.writeIORef (clientAcquaintances client) users
 
 getAcquaintances :: Client -> IO [User]
-getAcquaintances client = do
-    users <- getUsers client
-    return $ acquaintances users
+getAcquaintances client = I.readIORef (clientAcquaintances client)
 
-setUsers :: Client -> Users -> IO ()
-setUsers client users = I.writeIORef (clientUsers client) users
-
-getUsers :: Client -> IO Users
-getUsers client = I.readIORef (clientUsers client)
+--- | Getting acquaintances and me. The head of the list is myself.
+getUsers :: Client -> IO [User]
+getUsers client = do
+    me   <- getMe client
+    acqs <- getAcquaintances client
+    return $ me : acqs
 
 getCurrentDomain :: Client -> Domain
 getCurrentDomain = clientCurrentDomain
@@ -139,19 +133,25 @@ setCurrentDomain client did = client { clientCurrentDomain = did }
 findUser :: UserId -> Client -> IO (Maybe User)
 findUser uid client = do
     users <- getUsers client
-    return $ L.find (\u -> userId u == uid) (usersList users)
+    return $ L.find (\u -> userId u == uid) users
 
 findTalkRoom :: TalkId -> Client -> IO (Maybe TalkRoom)
 findTalkRoom tid client = do
     rooms <- getTalkRooms client
     return $ L.find (\r -> talkId r == tid) rooms
 
-getTalkUsers :: Client -> TalkRoom -> IO Users
+--- | Getting talk room members. The head of the list is myself.
+getTalkUsers :: Client -> TalkRoom -> IO [User]
 getTalkUsers client talk = do
+    me       <- getMe client
+    talkAcqs <- getTalkAcquaintances client talk
+    return $ me : talkAcqs
+
+getTalkAcquaintances :: Client -> TalkRoom -> IO [User]
+getTalkAcquaintances client talk = do
     me    <- getMe client
     users <- catMaybes <$> mapM (`findUser` client) (talkUserIds talk)
-    let talkAcqs = filter ((/= userId me) . userId) users
-    return $ Users me talkAcqs
+    return $ filter ((/= userId me) . userId) users
 
 ----------------------------------------------------------------
 
@@ -166,9 +166,9 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
     -- Can not ban a friend on PairTalk
     when (talkType talk == PairTalk) $ throwError InvalidTalkType
-    user      <- failWith InvalidUserId =<< liftIO (findUser uid client)
-    talkUsers <- liftIO $ getTalkUsers client talk
-    when (user `notElem` acquaintances talkUsers) $ throwError InvalidUserId
+    user     <- failWith InvalidUserId =<< liftIO (findUser uid client)
+    talkAcqs <- liftIO $ getTalkAcquaintances client talk
+    when (user `notElem` talkAcqs) $ throwError InvalidUserId
     ExceptT $ deleteTalker (clientRpcClient client) talk user
 
 ----------------------------------------------------------------

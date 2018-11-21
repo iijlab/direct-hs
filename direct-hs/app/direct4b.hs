@@ -343,9 +343,7 @@ printUsers mdid = do
                                  , D.directInitialDomainId          = mdid
                                  , D.directWaitCreateMessageHandler = False
                                  }
-    D.withClient config pInfo $ \client -> do
-        users <- D.getUsers client
-        mapM_ (putStrLn . showUser) (D.usersList users)
+    D.withClient config pInfo $ D.getUsers >=> mapM_ (putStrLn . showUser)
 
 printTalkRooms :: Maybe D.DomainId -> IO ()
 printTalkRooms mdid = do
@@ -373,12 +371,12 @@ showUser user = intercalate
     , T.unpack (D.phoneticDisplayName user)
     ]
 
-showTalkRoom :: D.TalkRoom -> D.Users -> String
+showTalkRoom :: D.TalkRoom -> [D.User] -> String
 showTalkRoom talk talkUsers = intercalate
     "\t"
     [ show (D.talkId talk)
     , showTalkType (D.talkType talk)
-    , intercalate ", " $ map (T.unpack . D.displayName) (D.usersList talkUsers)
+    , intercalate ", " $ map (T.unpack . D.displayName) talkUsers
     ]
   where
     showTalkType (D.GroupTalk name) = "GroupTalk \"" ++ T.unpack name ++ "\""
