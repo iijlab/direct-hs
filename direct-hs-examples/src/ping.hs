@@ -46,7 +46,9 @@ handleCreateMessage client (D.Txt "whoareyou", _, room, _) = do
         (D.talkId room)
 handleCreateMessage client (D.Txt "users", _, room, _) = do
     users <- D.getUsers client
-    let ans = T.unlines $ map D.displayName (D.myself users : D.acquaintances users)
+    let
+        ans = T.unlines
+            $ map D.displayName (D.myself users : D.acquaintances users)
     void $ D.sendMessage client (D.Txt (ans `T.append` "がいます。")) (D.talkId room)
 handleCreateMessage client (D.Txt "domains", _, room, _) = do
     doms <- D.getDomains client
