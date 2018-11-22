@@ -39,7 +39,7 @@ handleCreateMessage client (D.Txt "select", _, room, _) = void $ D.sendMessage
 handleCreateMessage client (D.Txt "task", _, room, _) =
     void $ D.sendMessage client (D.TaskQ "高速化できる？" False) (D.talkId room)
 handleCreateMessage client (D.Txt "whoareyou", _, room, _) = do
-    Just me <- D.getMe client
+    me <- D.getMe client
     void $ D.sendMessage
         client
         (D.Txt $ "私は" `T.append` D.displayName me `T.append` "です")

@@ -6,7 +6,6 @@ module Web.Direct.Client.Channel
     , findChannel'
     -- re-exporting
     , Channel
-    , channelTalkRoom
     , send
     , recv
     , ChannelType
@@ -56,7 +55,7 @@ allocateChannel rpcclient dom chanDB tvar ctyp = do
         PinPoint room user -> return (room, Just user)
         Group room         -> return (room, Nothing)
     let ckey = (talkId room, userId <$> muser)
-    chan <- newChannel rpcclient ctyp ckey room
+    chan <- newChannel rpcclient ctyp ckey
     S.atomically $ do
         active <- isActiveSTM tvar
         if active

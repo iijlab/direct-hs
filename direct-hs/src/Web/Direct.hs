@@ -19,6 +19,7 @@ module Web.Direct
     , getMe
     , getUsers
     , getCurrentDomain
+    , getTalkUsers
   -- * Message
   -- ** Ids
     , DomainId
@@ -33,7 +34,6 @@ module Web.Direct
   -- *** Talk room
     , TalkRoom
     , talkId
-    , talkUsers
     , talkType
     , TalkType(..)
   -- *** User
@@ -63,7 +63,6 @@ module Web.Direct
   -- ** Creating channel
     , Channel
     , withChannel
-    , channelTalkRoom
   -- ** Channel IO
     , recv
     , send
