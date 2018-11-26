@@ -150,6 +150,7 @@ createUploadAuth rpcclient fn mimeType fileSize dom = do
 
 data NotificationHandlers = NotificationHandlers
     { onNotifyDeleteTalk :: TalkId -> IO ()
+    , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
     }
 
 handleNotification
@@ -157,4 +158,8 @@ handleNotification
 handleNotification method params handlers = case (method, params) of
     ("notify_delete_talk", M.ObjectWord tid : _) ->
         onNotifyDeleteTalk handlers tid
+    ("notify_delete_talker", obj : _) -> case decodeTalker obj of
+        Just (did, tid, uids, leftUids) ->
+            onNotifyDeleteTalker handlers did tid uids leftUids
+        _ -> return ()
     _ -> return ()

@@ -9,7 +9,7 @@ module Web.Direct.Api
     )
 where
 
-import           Control.Monad                            (when)
+import           Control.Monad                            (forM_, when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (fromMaybe)
@@ -157,6 +157,7 @@ withClient config pInfo action = do
                         _ -> return ()
                     handleNotification method objs $ NotificationHandlers
                         { onNotifyDeleteTalk   = handleNotifyDeleteTalk client
+                        , onNotifyDeleteTalker = handleNotifyDeleteTalker client
                         }
         , RPC.logger             = directLogger config
         , RPC.formatter          = directFormatter config
@@ -212,3 +213,20 @@ handleNotifyDeleteTalk client tid = do
     -- Remove talk
     talks <- getTalkRooms client
     setTalkRooms client $ filter ((tid /=) . talkId) talks
+
+handleNotifyDeleteTalker
+    :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+handleNotifyDeleteTalker client _ tid uids leftUids = do
+    -- Close channels that has no users
+    let chanDB = clientChannels client
+    chans <- getChannels chanDB tid
+    forM_ chans $ \chan -> do
+        chanAcqs <- getChannelAcquaintances client chan
+        let newChanAcqUids = filter (`notElem` leftUids) $ map userId chanAcqs
+        when (null newChanAcqUids) $ haltChannel chanDB chan
+    -- Update talk users
+    talks <- getTalkRooms client
+    setTalkRooms client $ map updateTalkUserIds talks
+  where
+    updateTalkUserIds talk =
+        if talkId talk == tid then talk { talkUserIds = uids } else talk
