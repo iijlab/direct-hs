@@ -2,6 +2,7 @@ module Web.Direct.Client.Channel
     ( withChannel'
     , ChannelDB
     , newChannelDB
+    , haltChannel
     , shutdown'
     , findChannel'
     -- re-exporting
@@ -67,6 +68,11 @@ allocateChannel rpcclient dom chanDB tvar ctyp = do
 freeChannel :: ChannelDB -> Channel -> IO ()
 freeChannel chanDB chan = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
     where key = channelKey chan
+
+haltChannel :: ChannelDB -> Channel -> IO ()
+haltChannel chanDB chan = do
+    die Nothing chan
+    freeChannel chanDB chan
 
 allChannels :: ChannelDB -> IO [Channel]
 allChannels chanDB = HM.elems <$> S.atomically (S.readTVar chanDB)
