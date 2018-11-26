@@ -8,9 +8,10 @@ module Web.Direct.Client.Channel
     , findChannel'
     -- re-exporting
     , Channel
+    , channelType
     , send
     , recv
-    , ChannelType
+    , ChannelType(..)
     , pairChannel
     , pinPointChannel
     , groupChannel

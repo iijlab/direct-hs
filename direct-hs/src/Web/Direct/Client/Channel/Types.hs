@@ -1,5 +1,6 @@
 module Web.Direct.Client.Channel.Types
     ( Channel
+    , channelType
     , channelTalkId
     , newChannel
     , dispatch

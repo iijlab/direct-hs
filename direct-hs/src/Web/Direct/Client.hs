@@ -27,6 +27,7 @@ module Web.Direct.Client
     , removeUserFromTalkRoom
     , findChannel
     , withChannel
+    , getChannelAcquaintances
     , shutdown
     -- re-exporting
     , dispatch
@@ -216,6 +217,12 @@ withChannel client ctyp body = withChannel' (clientRpcClient client)
                                             (clientStatus client)
                                             ctyp
                                             body
+
+getChannelAcquaintances :: Client -> Channel -> IO [User]
+getChannelAcquaintances client chan = case channelType chan of
+    (Pair user      ) -> return [user]
+    (PinPoint _ user) -> return [user]
+    (Group talk     ) -> getTalkAcquaintances client talk
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,
