@@ -4,6 +4,7 @@ module Web.Direct.Client.Channel
     , newChannelDB
     , haltChannel
     , shutdown'
+    , getChannels
     , findChannel'
     -- re-exporting
     , Channel
@@ -76,6 +77,10 @@ haltChannel chanDB chan = do
 
 allChannels :: ChannelDB -> IO [Channel]
 allChannels chanDB = HM.elems <$> S.atomically (S.readTVar chanDB)
+
+getChannels :: ChannelDB -> TalkId -> IO [Channel]
+getChannels chanDB tid =
+    filter ((tid ==) . channelTalkId) <$> allChannels chanDB
 
 findChannel' :: ChannelDB -> ChannelKey -> IO (Maybe Channel)
 findChannel' chanDB key = HM.lookup key <$> S.atomically (S.readTVar chanDB)
