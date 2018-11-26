@@ -107,6 +107,6 @@ shutdown' :: RPC.Client -> ChannelDB -> StatusVar -> Message -> IO ()
 shutdown' rpcclient chanDB tvar msg = do
     inactivate tvar
     chans <- allChannels chanDB
-    mapM_ (die msg) chans
+    mapM_ (die $ Just msg) chans
     wait chanDB
     RPC.shutdown rpcclient

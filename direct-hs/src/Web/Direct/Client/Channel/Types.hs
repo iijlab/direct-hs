@@ -57,12 +57,12 @@ dispatch :: Channel -> Message -> MessageId -> TalkRoom -> User -> IO ()
 dispatch chan msg mid room user =
     C.putMVar (toWorker chan) $ Right (msg, mid, room, user)
 
-newtype Control = Die Message
+newtype Control = Die (Maybe Message)
 
 control :: Channel -> Control -> IO ()
 control chan ctl = C.putMVar (toWorker chan) $ Left ctl
 
-die :: Message -> Channel -> IO ()
+die :: Maybe Message -> Channel -> IO ()
 die msg chan = control chan (Die msg)
 
 -- | Receiving a message from the channel.
@@ -70,8 +70,9 @@ recv :: Channel -> IO (Message, MessageId, TalkRoom, User)
 recv chan = do
     cm <- C.takeMVar $ toWorker chan
     case cm of
-        Right msg            -> return msg
-        Left  (Die announce) -> do
+        Right msg                   -> return msg
+        Left  (Die Nothing        ) -> E.throwIO E.ThreadKilled
+        Left  (Die (Just announce)) -> do
             void
                 $ createMessage (channelRPCClient chan) announce
                 $ channelTalkId chan
