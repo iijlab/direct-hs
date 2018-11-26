@@ -5,6 +5,7 @@ module Web.Direct.Client
     ( Client
     , clientRpcClient
     , clientLoginInfo
+    , clientChannels
     , sendMessage
     , uploadFile
     , newClient
@@ -36,6 +37,8 @@ module Web.Direct.Client
     , pairChannel
     , pinPointChannel
     , groupChannel
+    , haltChannel
+    , getChannels
     , send
     , recv
     )

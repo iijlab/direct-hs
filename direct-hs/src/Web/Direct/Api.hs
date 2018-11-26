@@ -155,6 +155,9 @@ withClient config pInfo action = do
                                                         (msg, msgid, room, user)
                             _ -> return ()
                         _ -> return ()
+                    handleNotification method objs $ NotificationHandlers
+                        { onNotifyDeleteTalk   = handleNotifyDeleteTalk client
+                        }
         , RPC.logger             = directLogger config
         , RPC.formatter          = directFormatter config
         , RPC.waitRequestHandler = directWaitCreateMessageHandler config
@@ -198,3 +201,14 @@ subscribeNotification client = do
 
 sendAck :: RPC.Client -> R.MessageId -> IO ()
 sendAck rpcClient mid = RPC.reply rpcClient mid $ Right $ M.ObjectBool True
+
+----------------------------------------------------------------
+
+handleNotifyDeleteTalk :: Client -> TalkId -> IO ()
+handleNotifyDeleteTalk client tid = do
+    -- Close channels for talk
+    let chanDB = clientChannels client
+    getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
+    -- Remove talk
+    talks <- getTalkRooms client
+    setTalkRooms client $ filter ((tid /=) . talkId) talks

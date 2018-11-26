@@ -4,6 +4,7 @@ module Web.Direct.DirectRPC where
 
 import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
+import qualified Data.MessagePack.RPC                     as R
 import           Data.Text                                (Text)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
@@ -144,3 +145,16 @@ createUploadAuth rpcclient fn mimeType fileSize dom = do
             _       -> return $ Left $ UnexpectedReponse methodName rsp
         Right other -> return $ Left $ UnexpectedReponse methodName other
         Left  e     -> return $ Left e
+
+----------------------------------------------------------------
+
+data NotificationHandlers = NotificationHandlers
+    { onNotifyDeleteTalk :: TalkId -> IO ()
+    }
+
+handleNotification
+    :: R.MethodName -> [M.Object] -> NotificationHandlers -> IO ()
+handleNotification method params handlers = case (method, params) of
+    ("notify_delete_talk", M.ObjectWord tid : _) ->
+        onNotifyDeleteTalk handlers tid
+    _ -> return ()
