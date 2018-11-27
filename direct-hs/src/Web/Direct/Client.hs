@@ -11,6 +11,7 @@ module Web.Direct.Client
     , newClient
     , setDomains
     , getDomains
+    , modifyTalkRooms
     , setTalkRooms
     , getTalkRooms
     , setMe
@@ -100,6 +101,9 @@ setDomains client domains = I.writeIORef (clientDomains client) domains
 
 getDomains :: Client -> IO [Domain]
 getDomains client = I.readIORef (clientDomains client)
+
+modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], ())) -> IO ()
+modifyTalkRooms client = I.atomicModifyIORef' (clientTalkRooms client)
 
 setTalkRooms :: Client -> [TalkRoom] -> IO ()
 setTalkRooms client talks = I.writeIORef (clientTalkRooms client) talks

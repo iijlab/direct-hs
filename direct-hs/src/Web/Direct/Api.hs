@@ -203,16 +203,17 @@ handleNotifyCreateMessage config client msg msgid tid uid = do
 
 handleNotifyDeleteTalk :: Client -> TalkId -> IO ()
 handleNotifyDeleteTalk client tid = do
+    -- Remove talk
+    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
     -- Close channels for talk
     let chanDB = clientChannels client
     getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
-    -- Remove talk
-    talks <- getTalkRooms client
-    setTalkRooms client $ filter ((tid /=) . talkId) talks
 
 handleNotifyDeleteTalker
     :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
 handleNotifyDeleteTalker client _ tid uids leftUids = do
+    -- Update talk users
+    modifyTalkRooms client $ \talks -> (map updateTalkUserIds talks, ())
     -- Close channels that has no users
     let chanDB = clientChannels client
     chans <- getChannels chanDB tid
@@ -220,9 +221,6 @@ handleNotifyDeleteTalker client _ tid uids leftUids = do
         chanAcqs <- getChannelAcquaintances client chan
         let newChanAcqUids = filter (`notElem` leftUids) $ map userId chanAcqs
         when (null newChanAcqUids) $ haltChannel chanDB chan
-    -- Update talk users
-    talks <- getTalkRooms client
-    setTalkRooms client $ map updateTalkUserIds talks
   where
     updateTalkUserIds talk =
         if talkId talk == tid then talk { talkUserIds = uids } else talk
