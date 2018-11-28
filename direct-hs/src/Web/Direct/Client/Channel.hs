@@ -2,13 +2,16 @@ module Web.Direct.Client.Channel
     ( withChannel'
     , ChannelDB
     , newChannelDB
+    , haltChannel
     , shutdown'
+    , getChannels
     , findChannel'
     -- re-exporting
     , Channel
+    , channelType
     , send
     , recv
-    , ChannelType
+    , ChannelType(..)
     , pairChannel
     , pinPointChannel
     , groupChannel
@@ -68,8 +71,17 @@ freeChannel :: ChannelDB -> Channel -> IO ()
 freeChannel chanDB chan = S.atomically $ S.modifyTVar' chanDB $ HM.delete key
     where key = channelKey chan
 
+haltChannel :: ChannelDB -> Channel -> IO ()
+haltChannel chanDB chan = do
+    die Nothing chan
+    freeChannel chanDB chan
+
 allChannels :: ChannelDB -> IO [Channel]
 allChannels chanDB = HM.elems <$> S.atomically (S.readTVar chanDB)
+
+getChannels :: ChannelDB -> TalkId -> IO [Channel]
+getChannels chanDB tid =
+    filter ((tid ==) . channelTalkId) <$> allChannels chanDB
 
 findChannel' :: ChannelDB -> ChannelKey -> IO (Maybe Channel)
 findChannel' chanDB key = HM.lookup key <$> S.atomically (S.readTVar chanDB)
@@ -107,6 +119,6 @@ shutdown' :: RPC.Client -> ChannelDB -> StatusVar -> Message -> IO ()
 shutdown' rpcclient chanDB tvar msg = do
     inactivate tvar
     chans <- allChannels chanDB
-    mapM_ (die msg) chans
+    mapM_ (die $ Just msg) chans
     wait chanDB
     RPC.shutdown rpcclient

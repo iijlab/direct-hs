@@ -94,3 +94,30 @@ decodeUploadAuth rspMap = do
         (M.ObjectStr "Content-Disposition")
         formObj
     return UploadAuth {..}
+
+----------------------------------------------------------------
+
+decodeTalker :: M.Object -> Maybe (DomainId, TalkId, [UserId], [UserId])
+decodeTalker (M.ObjectMap m) = do
+    M.ObjectWord did <- look "domain_id" m
+    M.ObjectWord tid <- look "talk_id" m
+    userIds          <- decodeUserIds =<< look "user_ids" m
+    leftUsers        <- decodeLeftUsers =<< look "left_users" m
+    return (did, tid, userIds, leftUsers)
+decodeTalker _ = Nothing
+
+decodeUserIds :: M.Object -> Maybe [UserId]
+decodeUserIds (M.ObjectArray arr) = Just $ mapMaybe decodeUserId arr
+  where
+    decodeUserId (M.ObjectWord uid) = Just uid
+    decodeUserId _                  = Nothing
+decodeUserIds _ = Nothing
+
+decodeLeftUsers :: M.Object -> Maybe [UserId]
+decodeLeftUsers (M.ObjectArray arr) = Just $ mapMaybe decodeLeftUser arr
+  where
+    decodeLeftUser (M.ObjectMap m) = do
+        M.ObjectWord uid <- look "user_id" m
+        return uid
+    decodeLeftUser _ = Nothing
+decodeLeftUsers _ = Nothing

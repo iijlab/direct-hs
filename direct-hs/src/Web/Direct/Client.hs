@@ -5,11 +5,13 @@ module Web.Direct.Client
     ( Client
     , clientRpcClient
     , clientLoginInfo
+    , clientChannels
     , sendMessage
     , uploadFile
     , newClient
     , setDomains
     , getDomains
+    , modifyTalkRooms
     , setTalkRooms
     , getTalkRooms
     , setMe
@@ -27,6 +29,7 @@ module Web.Direct.Client
     , removeUserFromTalkRoom
     , findChannel
     , withChannel
+    , getChannelAcquaintances
     , shutdown
     -- re-exporting
     , dispatch
@@ -35,6 +38,8 @@ module Web.Direct.Client
     , pairChannel
     , pinPointChannel
     , groupChannel
+    , haltChannel
+    , getChannels
     , send
     , recv
     )
@@ -96,6 +101,9 @@ setDomains client domains = I.writeIORef (clientDomains client) domains
 
 getDomains :: Client -> IO [Domain]
 getDomains client = I.readIORef (clientDomains client)
+
+modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], ())) -> IO ()
+modifyTalkRooms client = I.atomicModifyIORef' (clientTalkRooms client)
 
 setTalkRooms :: Client -> [TalkRoom] -> IO ()
 setTalkRooms client talks = I.writeIORef (clientTalkRooms client) talks
@@ -216,6 +224,12 @@ withChannel client ctyp body = withChannel' (clientRpcClient client)
                                             (clientStatus client)
                                             ctyp
                                             body
+
+getChannelAcquaintances :: Client -> Channel -> IO [User]
+getChannelAcquaintances client chan = case channelType chan of
+    (Pair user      ) -> return [user]
+    (PinPoint _ user) -> return [user]
+    (Group talk     ) -> getTalkAcquaintances client talk
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,

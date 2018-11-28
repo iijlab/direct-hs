@@ -9,7 +9,7 @@ module Web.Direct.Api
     )
 where
 
-import           Control.Monad                            (when)
+import           Control.Monad                            (forM_, when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (fromMaybe)
@@ -125,36 +125,16 @@ withClient config pInfo action = do
                 when active $ do
                     -- fixme: "notify_update_domain_users"
                     -- fixme: "notify_update_read_statuses"
-                    me <- getMe client
-                    let myid = userId me
-                    when (method == "notify_create_message") $ case objs of
-                        M.ObjectMap rsp : _ -> case decodeMessage rsp of
-                            Just (msg, msgid, tid, uid)
-                                | uid /= myid && uid /= 0 -> do
-                                    mchan <- findChannel client (tid, Just uid)
-                                    Just user <- findUser uid client
-                                    Just room <- findTalkRoom tid client
-                                    case mchan of
-                                        Just chan ->
-                                            dispatch chan msg msgid room user
-                                        Nothing -> do
-                                            mchan' <- findChannel
-                                                client
-                                                (tid, Nothing)
-                                            case mchan' of
-                                                Just chan' -> dispatch
-                                                    chan'
-                                                    msg
-                                                    msgid
-                                                    room
-                                                    user
-                                                Nothing ->
-                                                    directCreateMessageHandler
-                                                        config
-                                                        client
-                                                        (msg, msgid, room, user)
-                            _ -> return ()
-                        _ -> return ()
+                    let
+                        handlers = NotificationHandlers
+                            { onNotifyCreateMessage = handleNotifyCreateMessage
+                                config
+                                client
+                            , onNotifyDeleteTalk = handleNotifyDeleteTalk client
+                            , onNotifyDeleteTalker = handleNotifyDeleteTalker
+                                client
+                            }
+                    handleNotification method objs handlers
         , RPC.logger             = directLogger config
         , RPC.formatter          = directFormatter config
         , RPC.waitRequestHandler = directWaitCreateMessageHandler config
@@ -198,3 +178,49 @@ subscribeNotification client = do
 
 sendAck :: RPC.Client -> R.MessageId -> IO ()
 sendAck rpcClient mid = RPC.reply rpcClient mid $ Right $ M.ObjectBool True
+
+----------------------------------------------------------------
+
+handleNotifyCreateMessage
+    :: Config -> Client -> Message -> MessageId -> TalkId -> UserId -> IO ()
+handleNotifyCreateMessage config client msg msgid tid uid = do
+    me <- getMe client
+    let myid = userId me
+    when (uid /= myid && uid /= 0) $ do
+        mchan     <- findChannel client (tid, Just uid)
+        Just user <- findUser uid client
+        Just room <- findTalkRoom tid client
+        case mchan of
+            Just chan -> dispatch chan msg msgid room user
+            Nothing   -> do
+                mchan' <- findChannel client (tid, Nothing)
+                case mchan' of
+                    Just chan' -> dispatch chan' msg msgid room user
+                    Nothing    -> directCreateMessageHandler
+                        config
+                        client
+                        (msg, msgid, room, user)
+
+handleNotifyDeleteTalk :: Client -> TalkId -> IO ()
+handleNotifyDeleteTalk client tid = do
+    -- Remove talk
+    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
+    -- Close channels for talk
+    let chanDB = clientChannels client
+    getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
+
+handleNotifyDeleteTalker
+    :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+handleNotifyDeleteTalker client _ tid uids leftUids = do
+    -- Update talk users
+    modifyTalkRooms client $ \talks -> (map updateTalkUserIds talks, ())
+    -- Close channels that has no users
+    let chanDB = clientChannels client
+    chans <- getChannels chanDB tid
+    forM_ chans $ \chan -> do
+        chanAcqs <- getChannelAcquaintances client chan
+        let newChanAcqUids = filter (`notElem` leftUids) $ map userId chanAcqs
+        when (null newChanAcqUids) $ haltChannel chanDB chan
+  where
+    updateTalkUserIds talk =
+        if talkId talk == tid then talk { talkUserIds = uids } else talk
