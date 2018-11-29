@@ -48,7 +48,7 @@ module Web.Direct
   -- * Sending
     , sendMessage
   -- ** File Upload
-    , File
+    , File(..)
     , UploadFile(..)
     , readToUpload
     , uploadFile
