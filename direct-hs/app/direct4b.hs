@@ -1,31 +1,49 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Applicative    (optional, (<**>), (<|>))
-import qualified Control.Exception      as E
-import           Control.Monad          (forM_, join, void, (>=>))
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.ByteString.Lazy   as B
-import           Data.List              (intercalate)
-import           Data.Maybe             (fromMaybe)
-import qualified Data.MessagePack       as M
-import qualified Data.MessagePack.RPC   as Msg
-import           Data.Monoid            ((<>))
-import qualified Data.Text              as T
-import qualified Data.Text.Encoding     as TE
-import qualified Data.Text.IO           as T
-import qualified Data.Text.Lazy         as TL
-import qualified Data.Text.Lazy.IO      as TL
-import           Network.Mime           (defaultMimeLookup)
-import qualified Options.Applicative    as Opt
-import qualified System.Directory       as Dir
-import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
-import           System.Exit            (die)
-import           System.FilePath        ((</>))
-import           System.IO              (BufferMode (NoBuffering), hGetEcho,
-                                         hSetBuffering, hSetEcho, stderr, stdin,
-                                         stdout)
+import           Control.Applicative                      ( optional
+                                                          , (<**>)
+                                                          , (<|>)
+                                                          )
+import qualified Control.Exception             as E
+import           Control.Monad                            ( forM_
+                                                          , join
+                                                          , void
+                                                          , (>=>)
+                                                          )
+import           Control.Monad.IO.Class                   ( liftIO )
+import qualified Data.ByteString.Lazy          as B
+import           Data.List                                ( intercalate )
+import           Data.Maybe                               ( fromMaybe )
+import qualified Data.MessagePack              as M
+import qualified Data.MessagePack.RPC          as Msg
+import           Data.Monoid                              ( (<>) )
+import qualified Data.Text                     as T
+import qualified Data.Text.Encoding            as TE
+import qualified Data.Text.IO                  as T
+import qualified Data.Text.Lazy                as TL
+import qualified Data.Text.Lazy.IO             as TL
+import           Network.Mime                             ( defaultMimeLookup )
+import qualified Options.Applicative           as Opt
+import qualified System.Directory              as Dir
+import           System.Envy                              ( FromEnv
+                                                          , decodeEnv
+                                                          , env
+                                                          , fromEnv
+                                                          )
+import           System.Exit                              ( die )
+import           System.FilePath                          ( (</>) )
+import           System.IO                                ( BufferMode
+                                                              ( NoBuffering
+                                                              )
+                                                          , hGetEcho
+                                                          , hSetBuffering
+                                                          , hSetEcho
+                                                          , stderr
+                                                          , stdin
+                                                          , stdout
+                                                          )
 
-import qualified Web.Direct             as D
+import qualified Web.Direct                    as D
 
 main :: IO ()
 main = join $ Opt.execParser optionsInfo
