@@ -40,22 +40,30 @@ main = join $ Opt.execParser optionsInfo
 
     options :: Opt.Parser (IO ())
     options =
-        Opt.subparser
-            $  Opt.command "login" (Opt.info (pure login) Opt.briefDesc)
+        Opt.hsubparser
+            $  Opt.command
+                   "login"
+                   (Opt.info
+                       (login <$> loginInfoOption)
+                       (Opt.briefDesc <> Opt.progDesc
+                            "Create a JSON file required to login."
+                       )
+                   )
             <> Opt.command
                    "send"
                    (Opt.info
                        (   sendText
-                       <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       <$> loginInfoOption
+                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        )
                        (Opt.fullDesc <> Opt.progDesc
-                           "Send a message from stdin as the logged-in user."
+                           "Send a message from stdin."
                        )
                    )
             <> Opt.command
                    "observe"
                    (Opt.info
-                       (pure observe)
+                       (observe <$> loginInfoOption)
                        (Opt.fullDesc <> Opt.progDesc
                            "Observe all messages for the logged-in user."
                        )
@@ -64,44 +72,45 @@ main = join $ Opt.execParser optionsInfo
                    "upload"
                    (Opt.info
                        (   uploadFile
-                       <$> optional
-                               (Opt.strOption
-                                   (  Opt.short 't'
-                                   <> Opt.metavar "[MESSAGE_TEXT]"
-                                   )
-                               )
+                       <$> loginInfoOption
                        <*> optional
-                               (Opt.strOption
-                                   (  Opt.short 'm'
-                                   <> Opt.metavar "[MIME_TYPE]"
-                                   <> Opt.help
-                                          "Default \"application/octet-stream\""
-                                   )
-                               )
+                              (Opt.strOption
+                                  (  Opt.short 't'
+                                  <> Opt.metavar "MESSAGE_TEXT"
+                                  <> Opt.help "Message text attached to the uploaded file."
+                                  )
+                              )
                        <*> optional
-                               (Opt.option
-                                   Opt.auto
-                                   (Opt.short 'd' <> Opt.metavar "[DOMAIN_ID]"
-                                   )
-                               )
+                              (Opt.strOption
+                                  (  Opt.short 'm'
+                                  <> Opt.metavar "MIME_TYPE"
+                                  <> Opt.help
+                                         "MIME type for the uploaded file (default: \"application/octet-stream\")."
+                                  )
+                              )
+                       <*> domainIdOption
                        <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        <*> Opt.strArgument (Opt.metavar "FILE_PATH")
                        )
                        (Opt.fullDesc <> Opt.progDesc
-                           "Send a message from stdin as the logged-in user."
+                           "Send a file specified as FILE_PATH."
                        )
                    )
             <> Opt.command
                    "leave"
                    (Opt.info
-                       (leave <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID"))
+                       (   leave
+                       <$> loginInfoOption
+                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       )
                        (Opt.fullDesc <> Opt.progDesc "Leave the talk room.")
                    )
             <> Opt.command
                    "ban"
                    (Opt.info
                        (   ban
-                       <$> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       <$> loginInfoOption
+                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        <*> Opt.argument Opt.auto (Opt.metavar "USER_ID")
                        )
                        (Opt.fullDesc <> Opt.progDesc
@@ -111,47 +120,32 @@ main = join $ Opt.execParser optionsInfo
             <> Opt.command
                    "get"
                    (Opt.info
-                       (    Opt.subparser
-                               (  Opt.command
-                                     "domains"
-                                     (Opt.info
-                                         (pure printDomains <**> Opt.helper)
-                                         Opt.briefDesc
-                                     )
-                               <> Opt.command
-                                      "users"
-                                      (Opt.info
-                                          (    printUsers
-                                          <$>  optional
-                                                   (Opt.option
-                                                       Opt.auto
-                                                       (  Opt.short 'd'
-                                                       <> Opt.metavar
-                                                              "DOMAIN_ID"
-                                                       )
-                                                   )
-                                          <**> Opt.helper
-                                          )
-                                          Opt.briefDesc
+                       (Opt.hsubparser
+                           (  Opt.command
+                                 "domains"
+                                 (Opt.info
+                                     (printDomains <$> loginInfoOption)
+                                     Opt.briefDesc
+                                 )
+                           <> Opt.command
+                                  "users"
+                                  (Opt.info
+                                      (   printUsers
+                                      <$> loginInfoOption
+                                      <*> domainIdOption
                                       )
-                               <> Opt.command
-                                      "talks"
-                                      (Opt.info
-                                          (    printTalkRooms
-                                          <$>  optional
-                                                   (Opt.option
-                                                       Opt.auto
-                                                       (  Opt.short 'd'
-                                                       <> Opt.metavar
-                                                              "DOMAIN_ID"
-                                                       )
-                                                   )
-                                          <**> Opt.helper
-                                          )
-                                          Opt.briefDesc
+                                      Opt.briefDesc
+                                  )
+                           <> Opt.command
+                                  "talks"
+                                  (Opt.info
+                                      (    printTalkRooms
+                                      <$>  loginInfoOption
+                                      <*>  domainIdOption
                                       )
-                               )
-                       <**> Opt.helper
+                                      Opt.briefDesc
+                                  )
+                           )
                        )
                        (  Opt.fullDesc
                        <> Opt.progDesc
@@ -159,6 +153,27 @@ main = join $ Opt.execParser optionsInfo
                        <> Opt.header ""
                        )
                    )
+
+
+domainIdOption :: Opt.Parser (Maybe D.DomainId)
+domainIdOption =
+    optional
+        $ Opt.option
+            Opt.auto
+            (  Opt.short 'd'
+            <> Opt.metavar "DOMAIN_ID"
+            <> Opt.help "Target Domain ID (default: the first domain obtained by `get_domains` RPC function)."
+            )
+
+
+loginInfoOption :: Opt.Parser FilePath
+loginInfoOption =
+    Opt.strOption
+        ( Opt.short 'l'
+        <> Opt.metavar "LOGIN_INFO_FILE"
+        <> Opt.help ("File to save/read information required to login direct4b.com (default: \"" ++ defaultJsonFileName ++ "\").")
+        )
+    <|> pure defaultJsonFileName
 
 
 newtype EndpointUrl = EndpointUrl { getEndpointUrl :: String } deriving Show
@@ -195,8 +210,8 @@ instance FromEnv Env where
         return t
 
 
-login :: IO ()
-login = do
+login :: FilePath -> IO ()
+login jsonFileName = do
     hSetBuffering stdin  NoBuffering
     hSetBuffering stdout NoBuffering
     hSetBuffering stderr NoBuffering
@@ -214,8 +229,8 @@ login = do
     cd <- Dir.getCurrentDirectory
     putStrLn $ "Saved access token at '" ++ (cd </> jsonFileName) ++ "'."
 
-sendText :: D.TalkId -> IO ()
-sendText tid = do
+sendText :: FilePath -> D.TalkId -> IO ()
+sendText jsonFileName tid = do
     txt <- TL.stripEnd <$> TL.getContents
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
@@ -225,8 +240,8 @@ sendText tid = do
     D.withClient config pInfo $ \client -> forM_ (TL.chunksOf 1024 txt)
         $ \chunk -> D.sendMessage client (D.Txt $ TL.toStrict chunk) tid
 
-observe :: IO ()
-observe = do
+observe :: FilePath -> IO ()
+observe jsonFileName = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient
@@ -243,8 +258,9 @@ dieWhenLeft = either exitError return
 exitError :: String -> IO a
 exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
 
-jsonFileName :: FilePath
-jsonFileName = ".direct4b.json"
+defaultJsonFileName :: FilePath
+defaultJsonFileName = ".direct4b.json"
+
 
 showObjs :: [M.Object] -> String
 showObjs objs = "[" ++ intercalate "," (map showObj objs) ++ "]"
@@ -273,13 +289,14 @@ showMsg (Msg.NotificationMessage method objs) =
 
 
 uploadFile
-    :: Maybe T.Text     -- ^ Text message sent with the file.
+    :: FilePath         -- ^ The path to login info.
+    -> Maybe T.Text     -- ^ Text message sent with the file.
     -> Maybe T.Text     -- ^ MIME type of the file.
     -> Maybe D.DomainId -- ^ The ID of domain onto which the file is uploaded. Default: the first domain obtained by `get_domains` RPC.
     -> D.TalkId         -- ^ The ID of talk room onto which the file is uploaded.
     -> FilePath         -- ^ The path to file.
     -> IO ()
-uploadFile mtxt mmime mdid tid path = do
+uploadFile jsonFileName mtxt mmime mdid tid path = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let config = D.defaultConfig { D.directEndpointUrl              = url
@@ -294,8 +311,8 @@ uploadFile mtxt mmime mdid tid path = do
         void (either E.throwIO return =<< D.uploadFile client upf tid)
 
 
-leave :: D.TalkId -> IO ()
-leave tid = do
+leave :: FilePath -> D.TalkId -> IO ()
+leave jsonFileName tid = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let config = D.defaultConfig { D.directEndpointUrl              = url
@@ -308,8 +325,8 @@ leave tid = do
             Left  D.InvalidTalkId -> die "Talk room not found."
             Left  e               -> die $ "Unexpected Error: " ++ show e
 
-ban :: D.TalkId -> D.UserId -> IO ()
-ban tid uid = do
+ban :: FilePath -> D.TalkId -> D.UserId -> IO ()
+ban jsonFileName tid uid = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let config = D.defaultConfig { D.directEndpointUrl              = url
@@ -326,8 +343,8 @@ ban tid uid = do
             Left e               -> die $ "Unexpected Error: " ++ show e
 
 
-printDomains :: IO ()
-printDomains = do
+printDomains :: FilePath -> IO ()
+printDomains jsonFileName = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let config = D.defaultConfig { D.directEndpointUrl              = url
@@ -335,8 +352,8 @@ printDomains = do
                                  }
     D.withClient config pInfo $ D.getDomains >=> mapM_ (putStrLn . showDomain)
 
-printUsers :: Maybe D.DomainId -> IO ()
-printUsers mdid = do
+printUsers :: FilePath -> Maybe D.DomainId -> IO ()
+printUsers jsonFileName mdid = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let config = D.defaultConfig { D.directEndpointUrl              = url
@@ -345,8 +362,8 @@ printUsers mdid = do
                                  }
     D.withClient config pInfo $ D.getUsers >=> mapM_ (putStrLn . showUser)
 
-printTalkRooms :: Maybe D.DomainId -> IO ()
-printTalkRooms mdid = do
+printTalkRooms :: FilePath -> Maybe D.DomainId -> IO ()
+printTalkRooms jsonFileName mdid = do
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     let config = D.defaultConfig { D.directEndpointUrl              = url
