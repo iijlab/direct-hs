@@ -1,31 +1,49 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Applicative    (optional, (<**>), (<|>))
-import qualified Control.Exception      as E
-import           Control.Monad          (forM_, join, void, (>=>))
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.ByteString.Lazy   as B
-import           Data.List              (intercalate)
-import           Data.Maybe             (fromMaybe)
-import qualified Data.MessagePack       as M
-import qualified Data.MessagePack.RPC   as Msg
-import           Data.Monoid            ((<>))
-import qualified Data.Text              as T
-import qualified Data.Text.Encoding     as TE
-import qualified Data.Text.IO           as T
-import qualified Data.Text.Lazy         as TL
-import qualified Data.Text.Lazy.IO      as TL
-import           Network.Mime           (defaultMimeLookup)
-import qualified Options.Applicative    as Opt
-import qualified System.Directory       as Dir
-import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
-import           System.Exit            (die)
-import           System.FilePath        ((</>))
-import           System.IO              (BufferMode (NoBuffering), hGetEcho,
-                                         hSetBuffering, hSetEcho, stderr, stdin,
-                                         stdout)
+import           Control.Applicative                      ( optional
+                                                          , (<**>)
+                                                          , (<|>)
+                                                          )
+import qualified Control.Exception             as E
+import           Control.Monad                            ( forM_
+                                                          , join
+                                                          , void
+                                                          , (>=>)
+                                                          )
+import           Control.Monad.IO.Class                   ( liftIO )
+import qualified Data.ByteString.Lazy          as B
+import           Data.List                                ( intercalate )
+import           Data.Maybe                               ( fromMaybe )
+import qualified Data.MessagePack              as M
+import qualified Data.MessagePack.RPC          as Msg
+import           Data.Monoid                              ( (<>) )
+import qualified Data.Text                     as T
+import qualified Data.Text.Encoding            as TE
+import qualified Data.Text.IO                  as T
+import qualified Data.Text.Lazy                as TL
+import qualified Data.Text.Lazy.IO             as TL
+import           Network.Mime                             ( defaultMimeLookup )
+import qualified Options.Applicative           as Opt
+import qualified System.Directory              as Dir
+import           System.Envy                              ( FromEnv
+                                                          , decodeEnv
+                                                          , env
+                                                          , fromEnv
+                                                          )
+import           System.Exit                              ( die )
+import           System.FilePath                          ( (</>) )
+import           System.IO                                ( BufferMode
+                                                              ( NoBuffering
+                                                              )
+                                                          , hGetEcho
+                                                          , hSetBuffering
+                                                          , hSetEcho
+                                                          , stderr
+                                                          , stdin
+                                                          , stdout
+                                                          )
 
-import qualified Web.Direct             as D
+import qualified Web.Direct                    as D
 
 main :: IO ()
 main = join $ Opt.execParser optionsInfo
@@ -46,18 +64,18 @@ main = join $ Opt.execParser optionsInfo
                    (Opt.info
                        (login <$> loginInfoOption)
                        (Opt.briefDesc <> Opt.progDesc
-                            "Create a JSON file required to login."
+                           "Create a JSON file required to login."
                        )
                    )
             <> Opt.command
                    "send"
                    (Opt.info
-                       (   sendText
-                       <$> loginInfoOption
-                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       (sendText <$> loginInfoOption <*> Opt.argument
+                           Opt.auto
+                           (Opt.metavar "TALK_ID")
                        )
-                       (Opt.fullDesc <> Opt.progDesc
-                           "Send a message from stdin."
+                       (  Opt.fullDesc
+                       <> Opt.progDesc "Send a message from stdin."
                        )
                    )
             <> Opt.command
@@ -74,20 +92,21 @@ main = join $ Opt.execParser optionsInfo
                        (   uploadFile
                        <$> loginInfoOption
                        <*> optional
-                              (Opt.strOption
-                                  (  Opt.short 't'
-                                  <> Opt.metavar "MESSAGE_TEXT"
-                                  <> Opt.help "Message text attached to the uploaded file."
-                                  )
-                              )
+                               (Opt.strOption
+                                   (  Opt.short 't'
+                                   <> Opt.metavar "MESSAGE_TEXT"
+                                   <> Opt.help
+                                          "Message text attached to the uploaded file."
+                                   )
+                               )
                        <*> optional
-                              (Opt.strOption
-                                  (  Opt.short 'm'
-                                  <> Opt.metavar "MIME_TYPE"
-                                  <> Opt.help
-                                         "MIME type for the uploaded file (default: \"application/octet-stream\")."
-                                  )
-                              )
+                               (Opt.strOption
+                                   (  Opt.short 'm'
+                                   <> Opt.metavar "MIME_TYPE"
+                                   <> Opt.help
+                                          "MIME type for the uploaded file (default: \"application/octet-stream\")."
+                                   )
+                               )
                        <*> domainIdOption
                        <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
                        <*> Opt.strArgument (Opt.metavar "FILE_PATH")
@@ -99,9 +118,9 @@ main = join $ Opt.execParser optionsInfo
             <> Opt.command
                    "leave"
                    (Opt.info
-                       (   leave
-                       <$> loginInfoOption
-                       <*> Opt.argument Opt.auto (Opt.metavar "TALK_ID")
+                       (leave <$> loginInfoOption <*> Opt.argument
+                           Opt.auto
+                           (Opt.metavar "TALK_ID")
                        )
                        (Opt.fullDesc <> Opt.progDesc "Leave the talk room.")
                    )
@@ -139,9 +158,9 @@ main = join $ Opt.execParser optionsInfo
                            <> Opt.command
                                   "talks"
                                   (Opt.info
-                                      (    printTalkRooms
-                                      <$>  loginInfoOption
-                                      <*>  domainIdOption
+                                      (   printTalkRooms
+                                      <$> loginInfoOption
+                                      <*> domainIdOption
                                       )
                                       Opt.briefDesc
                                   )
@@ -156,24 +175,25 @@ main = join $ Opt.execParser optionsInfo
 
 
 domainIdOption :: Opt.Parser (Maybe D.DomainId)
-domainIdOption =
-    optional
-        $ Opt.option
-            Opt.auto
-            (  Opt.short 'd'
-            <> Opt.metavar "DOMAIN_ID"
-            <> Opt.help "Target Domain ID (default: the first domain obtained by `get_domains` RPC function)."
-            )
+domainIdOption = optional $ Opt.option
+    Opt.auto
+    (  Opt.short 'd'
+    <> Opt.metavar "DOMAIN_ID"
+    <> Opt.help
+           "Target Domain ID (default: the first domain obtained by `get_domains` RPC function)."
+    )
 
 
 loginInfoOption :: Opt.Parser FilePath
 loginInfoOption =
     Opt.strOption
-        ( Opt.short 'l'
-        <> Opt.metavar "LOGIN_INFO_FILE"
-        <> Opt.help ("File to save/read information required to login direct4b.com (default: \"" ++ defaultJsonFileName ++ "\").")
-        )
-    <|> pure defaultJsonFileName
+            (Opt.short 'l' <> Opt.metavar "LOGIN_INFO_FILE" <> Opt.help
+                ("File to save/read information required to login direct4b.com (default: \""
+                ++ defaultJsonFileName
+                ++ "\")."
+                )
+            )
+        <|> pure defaultJsonFileName
 
 
 newtype EndpointUrl = EndpointUrl { getEndpointUrl :: String } deriving Show
