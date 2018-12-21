@@ -1,13 +1,9 @@
-import           Control.Applicative                      ( (<|>) )
-import qualified Data.ByteString.Lazy          as B
-import           System.Envy                              ( FromEnv
-                                                          , decodeEnv
-                                                          , env
-                                                          , fromEnv
-                                                          )
-import           Text.Pretty.Simple                       ( pPrint )
+import           Control.Applicative  ((<|>))
+import qualified Data.ByteString.Lazy as B
+import           System.Envy          (FromEnv, decodeEnv, env, fromEnv)
+import           Text.Pretty.Simple   (pPrint)
 
-import qualified Web.Direct                    as D
+import qualified Web.Direct           as D
 
 import           Common
 

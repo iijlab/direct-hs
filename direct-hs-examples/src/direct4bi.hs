@@ -1,23 +1,21 @@
-import           Control.Arrow                            ( second )
-import           Control.Concurrent                       ( threadDelay )
-import           Control.Monad                            ( when )
-import           Control.Monad.IO.Class                   ( liftIO )
-import qualified Data.ByteString.Lazy          as B
-import           Data.Char                                ( isSpace )
-import           Data.List                                ( break )
-import qualified Data.Text                     as T
-import qualified System.Console.Haskeline      as Hl
-import           System.Environment                       ( getArgs )
-import qualified System.FilePath               as FP
-import           System.IO                                ( hPutStrLn
-                                                          , stderr
-                                                          )
-import           Text.Pretty.Simple                       ( pPrint )
-import           Text.Read                                ( readMaybe )
+import           Control.Arrow            (second)
+import           Control.Concurrent       (threadDelay)
+import           Control.Monad            (when)
+import           Control.Monad.IO.Class   (liftIO)
+import qualified Data.ByteString.Lazy     as B
+import           Data.Char                (isSpace)
+import           Data.List                (break)
+import qualified Data.Text                as T
+import qualified System.Console.Haskeline as Hl
+import           System.Environment       (getArgs)
+import qualified System.FilePath          as FP
+import           System.IO                (hPutStrLn, stderr)
+import           Text.Pretty.Simple       (pPrint)
+import           Text.Read                (readMaybe)
 
-import qualified Web.Direct                    as D
+import qualified Web.Direct               as D
 
-import           Common                            hiding ( jsonFileName )
+import           Common                   hiding (jsonFileName)
 
 
 main :: IO ()
