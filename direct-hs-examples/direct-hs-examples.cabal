@@ -1,65 +1,76 @@
+cabal-version:       2.2
 name:                direct-hs-examples
 version:             0.1.0.0
 synopsis:            Direct BOT examples
 description:         Example BOTs of Direct in Haskell
 homepage:            https://github.com/iij-ii/direct-hs/tree/master/direct-hs-examples
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Kazu Yamamoto
 maintainer:          kazu@iij.ad.jp
 category:            Web
 build-type:          Simple
-cabal-version:       >=1.10
 
-executable login
-  main-is: login.hs
-  hs-source-dirs: src
-  ghc-options: -Wall -threaded
+common deps
   build-depends:
       base >=4.7 && <5
     , bytestring
     , direct-hs
-    , directory
+
+executable login
+  import: deps
+  main-is: login.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -threaded
+  build-depends:
+      directory
     , filepath
     , text
   default-language: Haskell2010
   other-modules: Common
 
 executable ping
+  import: deps
   main-is: ping.hs
   hs-source-dirs: src
   ghc-options: -Wall -threaded
   build-depends:
-      base >=4.7 && <5
-    , bytestring
-    , direct-hs
-    , text
+      text
   default-language: Haskell2010
   other-modules: Common
 
 executable nippo
+  import: deps
   main-is: nippo.hs
   hs-source-dirs: src
   ghc-options: -Wall -threaded
   build-depends:
-      base >=4.7 && <5
-    , bytestring
-    , direct-hs
-    , signal
+      signal
     , text
   default-language: Haskell2010
   other-modules: Common
 
 executable observe-pretty
+  import: deps
   main-is: observe-pretty.hs
   hs-source-dirs: src
   ghc-options: -Wall -threaded
   build-depends:
-      base >=4.7 && <5
-    , bytestring
-    , direct-hs
-    , pretty-simple
+      pretty-simple
     , envy
+  default-language: Haskell2010
+  other-modules: Common
+
+executable direct4bi
+  import: deps
+  main-is: direct4bi.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -threaded
+  build-depends:
+      pretty-simple
+    , filepath
+    , haskeline
+    , text
   default-language: Haskell2010
   other-modules: Common
 
