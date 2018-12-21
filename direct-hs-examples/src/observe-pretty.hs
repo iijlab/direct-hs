@@ -21,8 +21,9 @@ main = do
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient
         D.defaultConfig
-            { D.directEndpointUrl = url
-            , D.directCreateMessageHandler = \_client (msg, _, _, _) -> pPrint msg
+            { D.directEndpointUrl          = url
+            , D.directCreateMessageHandler = \_client (msg, _, _, _) ->
+                                                 pPrint msg
             }
         pInfo
         (\_ -> return ())
