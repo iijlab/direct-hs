@@ -1,9 +1,13 @@
-import           Control.Applicative  ((<|>))
-import qualified Data.ByteString.Lazy as B
-import           System.Envy          (FromEnv, decodeEnv, env, fromEnv)
-import           Text.Pretty.Simple   (pPrint)
+import           Control.Applicative                      ( (<|>) )
+import qualified Data.ByteString.Lazy          as B
+import           System.Envy                              ( FromEnv
+                                                          , decodeEnv
+                                                          , env
+                                                          , fromEnv
+                                                          )
+import           Text.Pretty.Simple                       ( pPrint )
 
-import qualified Web.Direct           as D
+import qualified Web.Direct                    as D
 
 import           Common
 
@@ -21,8 +25,9 @@ main = do
     (EndpointUrl url) <- dieWhenLeft =<< decodeEnv
     D.withClient
         D.defaultConfig
-            { D.directEndpointUrl = url
-            , D.directCreateMessageHandler = \_client (msg, _, _, _) -> pPrint msg
+            { D.directEndpointUrl          = url
+            , D.directCreateMessageHandler = \_client (msg, _, _, _) ->
+                                                 pPrint msg
             }
         pInfo
         (\_ -> return ())
