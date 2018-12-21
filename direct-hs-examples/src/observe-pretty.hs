@@ -1,10 +1,11 @@
 import           Control.Applicative  ((<|>))
 import qualified Data.ByteString.Lazy as B
 import           System.Envy          (FromEnv, decodeEnv, env, fromEnv)
-import           System.Exit          (die)
 import           Text.Pretty.Simple   (pPrint)
 
 import qualified Web.Direct           as D
+
+import           Common
 
 
 newtype EndpointUrl = EndpointUrl String deriving Show
@@ -25,15 +26,3 @@ main = do
             }
         pInfo
         (\_ -> return ())
-
-
-dieWhenLeft :: Either String a -> IO a
-dieWhenLeft = either exitError return
-
-
-exitError :: String -> IO a
-exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
-
-
-jsonFileName :: FilePath
-jsonFileName = ".direct4b.json"
