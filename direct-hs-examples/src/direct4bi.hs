@@ -97,12 +97,11 @@ runCommand st client "p" arg = do
                         ++ show mid
                         ++ "."
                 Left ex -> putStrLn $ "ERROR creating a message: " ++ show ex
-        _ -> do
-            hPutStrLn stderr
-                $ "No room ID configured! Run r <room_id> to configure current room ID!"
+        _ ->
+            hPutStrLn stderr "No room ID configured! Run r <room_id> to configure current room ID!"
     return st
 runCommand st _client "sleep" arg = do
-    case (readMaybe arg) :: Maybe Double of
+    case readMaybe arg :: Maybe Double of
         Just seconds -> threadDelay $ round $ seconds * 1000 * 1000
         _            -> hPutStrLn stderr $ "Invalid <seconds>: " ++ show arg
     return st
