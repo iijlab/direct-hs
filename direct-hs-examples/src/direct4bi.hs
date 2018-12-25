@@ -44,8 +44,8 @@ type State = Maybe D.TalkId
 type Prompt = String
 
 
-consolePrompt :: String
-consolePrompt = "direct4bi> "
+consolePrompt :: String -> String
+consolePrompt = (++ "@direct4bi> ")
 
 
 startLoop :: Prompt -> D.Client -> Hl.InputT IO ()
@@ -124,7 +124,7 @@ printMessage (msg, mid, room, user) = do
     putStrLn
         $  "\nMessage#"
         ++ show mid
-        ++ "at room#"
+        ++ " at room#"
         ++ show (D.talkId room)
         ++ " by user#"
         ++ show (D.userId user)
