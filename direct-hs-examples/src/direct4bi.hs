@@ -9,7 +9,7 @@ import qualified Data.Text                as T
 import qualified System.Console.Haskeline as Hl
 import           System.Environment       (getArgs)
 import qualified System.FilePath          as FP
-import           System.IO                (hPutStrLn, stderr)
+import           System.IO                (hFlush, hPutStrLn, stderr, stdout)
 import           Text.Pretty.Simple       (pPrint)
 import           Text.Read                (readMaybe)
 
@@ -21,14 +21,16 @@ import           Common                   hiding (jsonFileName)
 main :: IO ()
 main = do
     jsonFileName <- head <$> getArgs
-    let histFile = FP.takeBaseName jsonFileName ++ ".history.txt"
+    let jsonBaseName = FP.takeBaseName jsonFileName
+        histFile = jsonBaseName ++ ".history.txt"
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     hasT  <- Hl.runInputT Hl.defaultSettings Hl.haveTerminalUI
-    let prompt = if hasT then consolePrompt else ""
+    let prompt = if hasT then consolePrompt jsonBaseName else ""
+
     D.withClient
         D.defaultConfig
             { D.directCreateMessageHandler     =
-                \_client msg -> printMessage msg >> putStrLn prompt
+                \_client msg -> printMessage msg >> putStr prompt >> hFlush stdout
             , D.directWaitCreateMessageHandler = False
             }
         pInfo
