@@ -68,6 +68,7 @@ executable direct4bi
   ghc-options: -Wall -threaded
   build-depends:
       pretty-simple
+    , errors
     , filepath
     , haskeline
     , text
