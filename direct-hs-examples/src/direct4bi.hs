@@ -30,7 +30,7 @@ main :: IO ()
 main = do
     jsonFileName <- head <$> getArgs
     let jsonBaseName = FP.takeBaseName jsonFileName
-        histFile = jsonBaseName ++ ".history.txt"
+        histFile     = jsonBaseName ++ ".history.txt"
     pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile jsonFileName
     hasT  <- Hl.runInputT Hl.defaultSettings Hl.haveTerminalUI
     let prompt = if hasT then consolePrompt jsonBaseName else ""
@@ -38,7 +38,8 @@ main = do
     D.withClient
         D.defaultConfig
             { D.directCreateMessageHandler     =
-                \_client msg -> printMessage msg >> putStr prompt >> hFlush stdout
+                \_client msg ->
+                    printMessage msg >> putStr prompt >> hFlush stdout
             , D.directWaitCreateMessageHandler = False
             }
         pInfo
@@ -100,19 +101,17 @@ runCommand st client "p" arg = do
     case st of
         Just roomId -> do
             sendMessageLogging client (D.Txt $ T.pack arg) roomId
-        _ ->
-            hPutStrLn stderr noRoomIdConfigured
+        _ -> hPutStrLn stderr noRoomIdConfigured
     return st
 runCommand st client "post" arg = do
     let result = do
-            roomId <- note noRoomIdConfigured st
-            selectA <- note ("Invalid Message object: " ++ show arg) $ readMaybe arg
+            roomId  <- note noRoomIdConfigured st
+            selectA <- note ("Invalid Message object: " ++ show arg)
+                $ readMaybe arg
             return (roomId, selectA)
     case result of
-        Right (roomId, selectA) ->
-            sendMessageLogging client selectA roomId
-        Left emsg     ->
-            hPutStrLn stderr emsg
+        Right (roomId, selectA) -> sendMessageLogging client selectA roomId
+        Left  emsg              -> hPutStrLn stderr emsg
     return st
 runCommand st _client "sleep" arg = do
     case readMaybe arg :: Maybe Double of
@@ -121,7 +120,8 @@ runCommand st _client "sleep" arg = do
     return st
 runCommand st _client "help" _arg = do
     putStrLn "r <talk_room_id>: Switch the current talk room by <talk_room_id>"
-    putStrLn "p <message>: Post <message> as a text message to the current talk room."
+    putStrLn
+        "p <message>: Post <message> as a text message to the current talk room."
     putStrLn "post <message>: Post <message> to the current talk room."
     putStrLn "sleep <seconds>: Sleep for <seconds> seconds."
     putStrLn "quit: Quit this application."
@@ -137,15 +137,13 @@ sendMessageLogging client msg roomId = do
     result <- D.sendMessage client msg roomId
     case result of
         Right mid ->
-            putStrLn
-                $  "Successfully created message#"
-                ++ show mid
-                ++ "."
+            putStrLn $ "Successfully created message#" ++ show mid ++ "."
         Left ex -> putStrLn $ "ERROR creating a message: " ++ show ex
 
 
 noRoomIdConfigured :: String
-noRoomIdConfigured = "No room ID configured! Run r <room_id> to configure current room ID!"
+noRoomIdConfigured =
+    "No room ID configured! Run r <room_id> to configure current room ID!"
 
 
 printMessage :: (D.Message, D.MessageId, D.TalkRoom, D.User) -> IO ()
