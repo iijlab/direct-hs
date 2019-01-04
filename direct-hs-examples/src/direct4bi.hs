@@ -1,5 +1,9 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 import           Control.Arrow            (second)
 import           Control.Concurrent       (threadDelay)
+import           Control.Error            (note)
 import           Control.Monad            (when)
 import           Control.Monad.IO.Class   (liftIO)
 import qualified Data.ByteString.Lazy     as B
@@ -16,6 +20,10 @@ import           Text.Read                (readMaybe)
 import qualified Web.Direct               as D
 
 import           Common                   hiding (jsonFileName)
+
+deriving instance Read D.File
+
+deriving instance Read D.Message
 
 
 main :: IO ()
@@ -91,16 +99,20 @@ runCommand st client "r" arg = case readMaybe arg of
 runCommand st client "p" arg = do
     case st of
         Just roomId -> do
-            result <- D.sendMessage client (D.Txt $ T.pack arg) roomId
-            case result of
-                Right mid ->
-                    putStrLn
-                        $  "Successfully created message#"
-                        ++ show mid
-                        ++ "."
-                Left ex -> putStrLn $ "ERROR creating a message: " ++ show ex
+            sendMessageLogging client (D.Txt $ T.pack arg) roomId
         _ ->
-            hPutStrLn stderr "No room ID configured! Run r <room_id> to configure current room ID!"
+            hPutStrLn stderr noRoomIdConfigured
+    return st
+runCommand st client "post" arg = do
+    let result = do
+            roomId <- note noRoomIdConfigured st
+            selectA <- note ("Invalid Message object: " ++ show arg) $ readMaybe arg
+            return (roomId, selectA)
+    case result of
+        Right (roomId, selectA) ->
+            sendMessageLogging client selectA roomId
+        Left emsg     ->
+            hPutStrLn stderr emsg
     return st
 runCommand st _client "sleep" arg = do
     case readMaybe arg :: Maybe Double of
@@ -109,7 +121,8 @@ runCommand st _client "sleep" arg = do
     return st
 runCommand st _client "help" _arg = do
     putStrLn "r <talk_room_id>: Switch the current talk room by <talk_room_id>"
-    putStrLn "p <message>: Post <message> to the current talk room."
+    putStrLn "p <message>: Post <message> as a text message to the current talk room."
+    putStrLn "post <message>: Post <message> to the current talk room."
     putStrLn "sleep <seconds>: Sleep for <seconds> seconds."
     putStrLn "quit: Quit this application."
     putStrLn "help: Print this message."
@@ -117,6 +130,22 @@ runCommand st _client "help" _arg = do
 runCommand st _client other _arg = do
     hPutStrLn stderr $ "Unknown command " ++ show other ++ "."
     return st
+
+
+sendMessageLogging :: D.Client -> D.Message -> D.TalkId -> IO ()
+sendMessageLogging client msg roomId = do
+    result <- D.sendMessage client msg roomId
+    case result of
+        Right mid ->
+            putStrLn
+                $  "Successfully created message#"
+                ++ show mid
+                ++ "."
+        Left ex -> putStrLn $ "ERROR creating a message: " ++ show ex
+
+
+noRoomIdConfigured :: String
+noRoomIdConfigured = "No room ID configured! Run r <room_id> to configure current room ID!"
 
 
 printMessage :: (D.Message, D.MessageId, D.TalkRoom, D.User) -> IO ()
