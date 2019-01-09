@@ -1,31 +1,25 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-import           Control.Applicative                      ( (<**>) )
-import           Control.Arrow                            ( second )
-import           Control.Concurrent                       ( threadDelay )
-import           Control.Error                            ( note )
-import           Control.Monad                            ( when )
-import           Control.Monad.IO.Class                   ( liftIO )
-import qualified Data.ByteString.Lazy          as B
-import           Data.Char                                ( isSpace )
-import           Data.List                                ( break )
-import qualified Data.Text                     as T
-import qualified Data.Text.Lazy                as TL
-import qualified Options.Applicative           as Opt
-import qualified System.Console.Haskeline      as Hl
-import qualified System.FilePath               as FP
-import           System.IO                                ( hFlush
-                                                          , hPutStrLn
-                                                          , stderr
-                                                          , stdout
-                                                          )
-import           Text.Pretty.Simple                       ( pPrint
-                                                          , pShow
-                                                          )
-import           Text.Read                                ( readMaybe )
+import           Control.Applicative      ((<**>))
+import           Control.Arrow            (second)
+import           Control.Concurrent       (threadDelay)
+import           Control.Error            (note)
+import           Control.Monad            (when)
+import           Control.Monad.IO.Class   (liftIO)
+import qualified Data.ByteString.Lazy     as B
+import           Data.Char                (isSpace)
+import           Data.List                (break)
+import qualified Data.Text                as T
+import qualified Data.Text.Lazy           as TL
+import qualified Options.Applicative      as Opt
+import qualified System.Console.Haskeline as Hl
+import qualified System.FilePath          as FP
+import           System.IO                (hFlush, hPutStrLn, stderr, stdout)
+import           Text.Pretty.Simple       (pPrint, pShow)
+import           Text.Read                (readMaybe)
 
-import qualified Web.Direct                    as D
+import qualified Web.Direct               as D
 
 import           Common
 
