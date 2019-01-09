@@ -143,6 +143,7 @@ data NotificationHandlers = NotificationHandlers
     { onNotifyCreateMessage :: Message -> MessageId -> TalkId -> UserId -> IO ()
     , onNotifyDeleteTalk :: TalkId -> IO ()
     , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+    , onNotifyDeleteAcquaintance :: DomainId -> UserId -> IO ()
     }
 
 handleNotification
@@ -152,6 +153,8 @@ handleNotification method params handlers = case (method, params) of
         Just (msg, msgid, tid, uid) ->
             onNotifyCreateMessage handlers msg msgid tid uid
         _ -> return ()
+    ("notify_delete_acquaintance", M.ObjectWord did : M.ObjectWord uid : _) ->
+        onNotifyDeleteAcquaintance handlers did uid
     ("notify_delete_talk", M.ObjectWord tid : _) ->
         onNotifyDeleteTalk handlers tid
     ("notify_delete_talker", obj : _) -> case decodeTalker obj of

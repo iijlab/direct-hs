@@ -17,6 +17,7 @@ module Web.Direct.Client
     , getMe
     , setAcquaintances
     , getAcquaintances
+    , modifyAcquaintances
     , getUsers
     , getCurrentDomain
     , setCurrentDomain
@@ -97,7 +98,7 @@ setDomains = I.writeIORef . clientDomains
 getDomains :: Client -> IO [Domain]
 getDomains client = I.readIORef (clientDomains client)
 
-modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], ())) -> IO ()
+modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], r)) -> IO r
 modifyTalkRooms client = I.atomicModifyIORef' (clientTalkRooms client)
 
 setTalkRooms :: Client -> [TalkRoom] -> IO ()
@@ -117,6 +118,9 @@ setAcquaintances = I.writeIORef . clientAcquaintances
 
 getAcquaintances :: Client -> IO [User]
 getAcquaintances = I.readIORef . clientAcquaintances
+
+modifyAcquaintances :: Client -> ([User] -> ([User], r)) -> IO r
+modifyAcquaintances client = I.atomicModifyIORef' (clientAcquaintances client)
 
 --- | Getting acquaintances and me. The head of the list is myself.
 getUsers :: Client -> IO [User]

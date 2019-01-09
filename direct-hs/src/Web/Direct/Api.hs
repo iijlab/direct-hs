@@ -131,6 +131,7 @@ withClient config pInfo action = do
                             , onNotifyDeleteTalk = handleNotifyDeleteTalk client
                             , onNotifyDeleteTalker = handleNotifyDeleteTalker
                                 client
+                            , onNotifyDeleteAcquaintance = handleNotifyDeleteAcquaintance client
                             }
                     handleNotification method objs handlers
         , RPC.logger             = directLogger config
@@ -222,3 +223,7 @@ handleNotifyDeleteTalker client _ tid uids leftUids = do
   where
     updateTalkUserIds talk =
         if talkId talk == tid then talk { talkUserIds = uids } else talk
+
+handleNotifyDeleteAcquaintance :: Client -> DomainId -> UserId -> IO ()
+handleNotifyDeleteAcquaintance client _did uid =
+    modifyAcquaintances client (\users -> (filter ((/= uid) . userId) users, ()))
