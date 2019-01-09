@@ -41,28 +41,25 @@ main = do
 
     let jsonBaseName = FP.takeBaseName $ loginInfoFile args
         histFile     = jsonBaseName ++ ".history.txt"
-    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile (loginInfoFile args)
-    hasT  <- Hl.runInputT Hl.defaultSettings Hl.haveTerminalUI
+    pInfo <- dieWhenLeft . D.deserializeLoginInfo =<< B.readFile
+        (loginInfoFile args)
+    hasT <- Hl.runInputT Hl.defaultSettings Hl.haveTerminalUI
     let prompt = if hasT then consolePrompt jsonBaseName else ""
 
     D.withClient
         D.defaultConfig
             { D.directCreateMessageHandler     =
                 if logMessage args
-                  then
-                    \_client msg ->
+                    then \_client msg ->
                         printMessage msg >> putStr prompt >> hFlush stdout
-                  else
-                    D.directCreateMessageHandler D.defaultConfig
+                    else D.directCreateMessageHandler D.defaultConfig
             , D.directWaitCreateMessageHandler = False
-            , D.directLogger =
-                if dumpMsgpack args
-                  then putStrLn
-                  else D.directLogger D.defaultConfig
-            , D.directFormatter =
-                if dumpMsgpack args
-                  then TL.unpack . pShow
-                  else D.directFormatter D.defaultConfig
+            , D.directLogger                   = if dumpMsgpack args
+                                                     then putStrLn
+                                                     else D.directLogger D.defaultConfig
+            , D.directFormatter                = if dumpMsgpack args
+                                                     then TL.unpack . pShow
+                                                     else D.directFormatter D.defaultConfig
             }
         pInfo
         ( Hl.runInputT Hl.defaultSettings { Hl.historyFile = Just histFile }
@@ -75,10 +72,24 @@ main = do
         <> Opt.progDesc "Interactive command line client for direct4b.com"
         <> Opt.header ""
         )
-    options = Args
-        <$> Opt.strArgument (Opt.metavar "LOGIN_INFO_FILE" <> Opt.help "login info file created by \"direct4b login\".")
-        <*> Opt.flag True False (Opt.long "no-print-message" <> Opt.short 'q' <> Opt.help "Disable printing received messages")
-        <*> Opt.flag False True (Opt.long "dump-msgpack" <> Opt.short 'm' <> Opt.help "Dump all received MsgPack RPC messages")
+    options =
+        Args
+            <$> Opt.strArgument
+                    (Opt.metavar "LOGIN_INFO_FILE" <> Opt.help
+                        "login info file created by \"direct4b login\"."
+                    )
+            <*> Opt.flag
+                    True
+                    False
+                    (Opt.long "no-print-message" <> Opt.short 'q' <> Opt.help
+                        "Disable printing received messages"
+                    )
+            <*> Opt.flag
+                    False
+                    True
+                    (Opt.long "dump-msgpack" <> Opt.short 'm' <> Opt.help
+                        "Dump all received MsgPack RPC messages"
+                    )
 
 
 type State = Maybe D.TalkId
