@@ -75,19 +75,15 @@ decodeTalkRoom (M.ObjectMap m) = do
                 Just (M.ObjectStr tname) -> GroupTalk tname
                 _                        -> GroupTalk ""
             | otherwise = UnknownTalk
-    M.ObjectArray uids <- look "user_ids" m
-    let userIds = mapMaybe extract uids
+    userIds <- decodeUserIds =<< look "user_ids" m
     Just $ TalkRoom tid typ userIds
-  where
-    extract (M.ObjectWord uid) = Just uid
-    extract _                  = Nothing
 decodeTalkRoom _ = Nothing
 
 decodeUploadAuth :: [(M.Object, M.Object)] -> Maybe UploadAuth
 decodeUploadAuth rspMap = do
-    M.ObjectStr uploadAuthGetUrl <- lookup (M.ObjectStr "get_url") rspMap
-    M.ObjectStr uploadAuthPutUrl <- lookup (M.ObjectStr "put_url") rspMap
-    M.ObjectWord uploadAuthFileId <- lookup (M.ObjectStr "file_id") rspMap
+    M.ObjectStr  uploadAuthGetUrl <- look "get_url" rspMap
+    M.ObjectStr  uploadAuthPutUrl <- look "put_url" rspMap
+    M.ObjectWord uploadAuthFileId <- look "file_id" rspMap
 
     M.ObjectMap formObj <- lookup (M.ObjectStr "post_form") rspMap
     M.ObjectStr uploadAuthContentDisposition <- lookup
