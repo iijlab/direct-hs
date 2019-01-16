@@ -93,14 +93,30 @@ decodeUploadAuth rspMap = do
 
 ----------------------------------------------------------------
 
-decodeTalker :: M.Object -> Maybe (DomainId, TalkId, [UserId], [UserId])
-decodeTalker (M.ObjectMap m) = do
+decodeAddTalkers :: M.Object -> Maybe (DomainId, TalkRoom)
+decodeAddTalkers (M.ObjectMap m) = do
+    (did, talk) <- decodeTalkRoomWithDomainId $ M.ObjectMap m
+    return (did, talk)
+decodeAddTalkers _ = Nothing
+
+----------------------------------------------------------------
+
+decodeAddAcquaintance :: M.Object -> Maybe (DomainId, User)
+decodeAddAcquaintance (M.ObjectMap m) = do
+    M.ObjectWord did <- look "domain_id" m
+    user <- decodeUser $ M.ObjectMap m
+    return (did, user)
+decodeAddAcquaintance _ = Nothing
+
+----------------------------------------------------------------
+decodeDeleteTalker :: M.Object -> Maybe (DomainId, TalkId, [UserId], [UserId])
+decodeDeleteTalker (M.ObjectMap m) = do
     M.ObjectWord did <- look "domain_id" m
     M.ObjectWord tid <- look "talk_id" m
     userIds          <- decodeUserIds =<< look "user_ids" m
     leftUsers        <- decodeLeftUsers =<< look "left_users" m
     return (did, tid, userIds, leftUsers)
-decodeTalker _ = Nothing
+decodeDeleteTalker _ = Nothing
 
 decodeUserIds :: M.Object -> Maybe [UserId]
 decodeUserIds (M.ObjectArray arr) = Just $ mapMaybe decodeUserId arr

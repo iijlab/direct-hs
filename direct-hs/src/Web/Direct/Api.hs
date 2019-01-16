@@ -7,7 +7,7 @@ module Web.Direct.Api
     )
 where
 
-import           Control.Monad                            (forM_, when)
+import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (fromMaybe)
@@ -128,6 +128,8 @@ withClient config pInfo action = do
                             { onNotifyCreateMessage = handleNotifyCreateMessage
                                 config
                                 client
+                            , onNotifyAddTalkers = handleAddTalkers client
+                            , onNotifyAddAcquaintance = handleAddAcquaintance client
                             , onNotifyDeleteTalk = handleNotifyDeleteTalk client
                             , onNotifyDeleteTalker = handleNotifyDeleteTalker
                                 client
@@ -199,6 +201,17 @@ handleNotifyCreateMessage config client msg msgid tid uid = do
                         config
                         client
                         (msg, msgid, room, user)
+
+handleAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
+handleAddTalkers client _did newTalk =
+    modifyTalkRooms client $ \talks -> (map updateTalk talks, ())
+  where
+    updateTalk talk =
+        if talkId talk == talkId newTalk then newTalk else talk
+
+handleAddAcquaintance :: Client -> DomainId -> User -> IO ()
+handleAddAcquaintance client _did newUser =
+    modifyAcquaintances client $ \users -> (newUser : users, ())
 
 handleNotifyDeleteTalk :: Client -> TalkId -> IO ()
 handleNotifyDeleteTalk client tid = do
