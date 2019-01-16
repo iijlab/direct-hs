@@ -143,7 +143,7 @@ runCommand st client "r" arg = case readMaybe arg of
         return st
 runCommand st client "p" arg = do
     case st of
-        Just roomId -> do
+        Just roomId ->
             sendMessageLogging client (D.Txt $ T.pack arg) roomId
         _ -> hPutStrLn stderr noRoomIdConfigured
     return st
