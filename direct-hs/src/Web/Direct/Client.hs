@@ -164,9 +164,9 @@ getTalkAcquaintances client talk = do
 
 leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
 leaveTalkRoom client tid = runExceptT $ do
-    talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    _ <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
     me   <- liftIO $ getMe client
-    ExceptT $ deleteTalker (clientRpcClient client) talk me
+    ExceptT $ deleteTalker (clientRpcClient client) tid (userId me)
 
 removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
 removeUserFromTalkRoom client tid uid = runExceptT $ do
@@ -176,7 +176,7 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     user     <- failWith InvalidUserId =<< liftIO (findUser uid client)
     talkAcqs <- liftIO $ getTalkAcquaintances client talk
     when (user `notElem` talkAcqs) $ throwError InvalidUserId
-    ExceptT $ deleteTalker (clientRpcClient client) talk user
+    ExceptT $ deleteTalker (clientRpcClient client) tid uid
 
 ----------------------------------------------------------------
 
@@ -193,7 +193,7 @@ uploadFile client upf@UploadFile {..} tid = runExceptT $ do
         uploadFileName
         uploadFileMimeType
         uploadFileSize
-        (getCurrentDomain client)
+        (domainId $ getCurrentDomain client)
     ExceptT $ runUploadFile upf ua
     let files = Files
             [ File uploadAuthGetUrl

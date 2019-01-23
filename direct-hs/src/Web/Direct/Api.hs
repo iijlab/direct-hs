@@ -7,7 +7,7 @@ module Web.Direct.Api
     )
 where
 
-import           Control.Monad                            (when)
+import           Control.Monad                            (forM_, when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (fromMaybe)
