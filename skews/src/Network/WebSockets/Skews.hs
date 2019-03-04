@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -40,7 +41,13 @@ import           Control.Monad        (mapM_)
 import qualified Data.ByteString.Lazy as B
 import qualified Data.IORef           as IOR
 import           Data.Monoid          (mempty)
+#if MIN_VERSION_deque(0, 3, 0)
+import qualified Deque.Lazy           as Q
+import           GHC.Exts             (fromList)
+#else
+import           Deque                (fromList)
 import qualified Deque                as Q
+#endif
 import qualified Network.WebSockets   as WS
 
 
@@ -143,7 +150,7 @@ setDefaultRequestHandler Server {..} =
 -- | Reset the request handler queue.
 replaceRequestHandlers :: Server -> [RequestHandler] -> IO ()
 replaceRequestHandlers Server {..} =
-  IOR.atomicWriteIORef requestHandlerQueue . Q.fromList
+  IOR.atomicWriteIORef requestHandlerQueue . fromList
 
 
 -- | Configure the response called when no request handlers are queued.
