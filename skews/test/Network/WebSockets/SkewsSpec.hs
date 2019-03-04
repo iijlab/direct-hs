@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.WebSockets.SkewsSpec
@@ -11,7 +12,11 @@ import           Control.Concurrent.Async (async, replicateConcurrently,
 import           Data.ByteString.Char8    ()
 import           Data.Foldable            (toList)
 import           Data.Traversable         (for)
+#if MIN_VERSION_deque(0, 3, 0)
+import           Deque.Lazy               ()
+#else
 import           Deque                    ()
+#endif
 import           System.Envy              (FromEnv, decodeEnv, env, fromEnv)
 import           Test.Hspec
 import           Text.Read                (readMaybe)
@@ -31,7 +36,7 @@ instance FromEnv PortNumber where
 
 spec :: Spec
 spec = context "After running Skews.start and starting a client" $ do
-  Right (PortNumber pn) <- runIO decodeEnv
+  PortNumber pn <- either fail return =<< runIO decodeEnv
 
   let host = "127.0.0.1"
   server <- runIO $ Skews.start $ Skews.Args host pn
