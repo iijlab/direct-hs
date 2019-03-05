@@ -7,21 +7,15 @@ module Network.WebSockets.ClientSpec
 where
 
 
-import           Control.Applicative                      ( empty
-                                                          , (<|>)
-                                                          )
-import qualified Data.ByteString.Lazy.Char8    as BS
-import qualified Data.Text                     as T
-import qualified Network.WebSockets.Skews      as Skews
-import           System.Envy                              ( FromEnv
-                                                          , decodeEnv
-                                                          , env
-                                                          , fromEnv
-                                                          )
+import           Control.Applicative        (empty, (<|>))
+import qualified Data.ByteString.Lazy.Char8 as BS
+import qualified Data.Text                  as T
+import qualified Network.WebSockets.Skews   as Skews
+import           System.Envy                (FromEnv, decodeEnv, env, fromEnv)
 import           Test.Hspec
-import           Text.Read                                ( readMaybe )
+import           Text.Read                  (readMaybe)
 
-import qualified Network.WebSockets.Client     as WS
+import qualified Network.WebSockets.Client  as WS
 
 
 -- `main` is here so that this module can be run from GHCi on its own.  It is
