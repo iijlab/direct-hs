@@ -1,5 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Web.Direct.Client
     ( Client
@@ -93,7 +92,7 @@ newClient pinfo rpcClient initialDomain me =
 ----------------------------------------------------------------
 
 setDomains :: Client -> [Domain] -> IO ()
-setDomains client domains = I.writeIORef (clientDomains client) domains
+setDomains = I.writeIORef . clientDomains
 
 getDomains :: Client -> IO [Domain]
 getDomains client = I.readIORef (clientDomains client)
@@ -102,22 +101,22 @@ modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], ())) -> IO ()
 modifyTalkRooms client = I.atomicModifyIORef' (clientTalkRooms client)
 
 setTalkRooms :: Client -> [TalkRoom] -> IO ()
-setTalkRooms client talks = I.writeIORef (clientTalkRooms client) talks
+setTalkRooms = I.writeIORef . clientTalkRooms
 
 getTalkRooms :: Client -> IO [TalkRoom]
-getTalkRooms client = I.readIORef (clientTalkRooms client)
+getTalkRooms = I.readIORef . clientTalkRooms
 
 setMe :: Client -> User -> IO ()
-setMe client user = I.writeIORef (clientMe client) user
+setMe = I.writeIORef . clientMe
 
 getMe :: Client -> IO User
-getMe client = I.readIORef (clientMe client)
+getMe = I.readIORef . clientMe
 
 setAcquaintances :: Client -> [User] -> IO ()
-setAcquaintances client users = I.writeIORef (clientAcquaintances client) users
+setAcquaintances = I.writeIORef . clientAcquaintances
 
 getAcquaintances :: Client -> IO [User]
-getAcquaintances client = I.readIORef (clientAcquaintances client)
+getAcquaintances = I.readIORef . clientAcquaintances
 
 --- | Getting acquaintances and me. The head of the list is myself.
 getUsers :: Client -> IO [User]
@@ -179,7 +178,7 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
 
 -- | Sending a message in the main 'IO' or 'directCreateMessageHandler'.
 sendMessage :: Client -> Message -> TalkId -> IO (Either Exception MessageId)
-sendMessage client req tid = createMessage (clientRpcClient client) req tid
+sendMessage = createMessage . clientRpcClient
 
 ----------------------------------------------------------------
 
@@ -203,10 +202,10 @@ uploadFile client upf@UploadFile {..} tid = runExceptT $ do
     ExceptT $ sendMessage client files tid
 
 isActive :: Client -> IO Bool
-isActive client = S.atomically $ isActiveSTM $ clientStatus client
+isActive = S.atomically . isActiveSTM . clientStatus
 
 findChannel :: Client -> ChannelKey -> IO (Maybe Channel)
-findChannel client ckey = findChannel' (clientChannels client) ckey
+findChannel = findChannel' . clientChannels
 
 -- | A new channel is created according to the first three arguments.
 --   Then the fourth argument runs in a new thread with the channel.
@@ -219,13 +218,10 @@ withChannel
     -> Maybe User -- ^ limit of who to talk with; 'Nothing' means everyone (no limits)
     -> (Channel -> IO ())
     -> IO Bool
-withChannel client room partner body = withChannel'
+withChannel client = withChannel'
     (clientRpcClient client)
     (clientChannels client)
     (clientStatus client)
-    room
-    partner
-    body
 
 getChannelAcquaintances :: Client -> Channel -> IO [User]
 getChannelAcquaintances client chan = case channelUserLimit chan of
@@ -236,7 +232,6 @@ getChannelAcquaintances client chan = case channelUserLimit chan of
 --   then sends the maintenance message to all channels,
 --   and finnaly waits that all channels are closed.
 shutdown :: Client -> Message -> IO ()
-shutdown client msg = shutdown' (clientRpcClient client)
-                                (clientChannels client)
-                                (clientStatus client)
-                                msg
+shutdown client = shutdown' (clientRpcClient client)
+                            (clientChannels client)
+                            (clientStatus client)

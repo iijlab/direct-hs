@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Web.Direct.Api
     ( Config(..)
     , defaultConfig
