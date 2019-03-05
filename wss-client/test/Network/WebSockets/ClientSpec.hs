@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.WebSockets.ClientSpec
-  ( main
-  , spec
-  ) where
+    ( main
+    , spec
+    )
+where
 
 
 import           Control.Applicative        (empty, (<|>))
@@ -14,7 +15,7 @@ import           System.Envy                (FromEnv, decodeEnv, env, fromEnv)
 import           Test.Hspec
 import           Text.Read                  (readMaybe)
 
-import qualified Network.WebSockets.Client as WS
+import qualified Network.WebSockets.Client  as WS
 
 
 -- `main` is here so that this module can be run from GHCi on its own.  It is
@@ -33,23 +34,24 @@ instance FromEnv PortNumber where
 
 spec :: Spec
 spec = describe "withConnection" $ do
-  Right (PortNumber pn) <- runIO decodeEnv
+    PortNumber pn <- either fail return =<< runIO decodeEnv
 
-  let host = "localhost"
-  server <- runIO $ Skews.start $ Skews.Args host pn
+    let host = "localhost"
+    server <- runIO $ Skews.start $ Skews.Args host pn
 
-  let withConnection = WS.withConnection ("ws://" ++ host ++ ":" ++ show pn)
-      payload = "response"
-      response = WS.DataMessage False False False (WS.Binary payload)
-      beforeAction = do
-        Skews.reinit server
-        Skews.setDefaultResponse server payload
+    let withConnection = WS.withConnection ("ws://" ++ host ++ ":" ++ show pn)
+        payload        = "response"
+        response       = WS.DataMessage False False False (WS.Binary payload)
+        beforeAction   = do
+            Skews.reinit server
+            Skews.setDefaultResponse server payload
 
-  before_ beforeAction $
-    it "can send and receive messages via the connection" $ do
-      actualResponse <- withConnection $ \conn -> do
-        WS.sendTextData conn ("client data" :: T.Text)
-        r <- WS.receive conn
-        WS.sendClose conn ("Bye" :: BS.ByteString)
-        return r
-      actualResponse `shouldBe` response
+    before_ beforeAction
+        $ it "can send and receive messages via the connection"
+        $ do
+              actualResponse <- withConnection $ \conn -> do
+                  WS.sendTextData conn ("client data" :: T.Text)
+                  r <- WS.receive conn
+                  WS.sendClose conn ("Bye" :: BS.ByteString)
+                  return r
+              actualResponse `shouldBe` response
