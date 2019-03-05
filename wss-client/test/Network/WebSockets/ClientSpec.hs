@@ -14,7 +14,7 @@ import           System.Envy                (FromEnv, decodeEnv, env, fromEnv)
 import           Test.Hspec
 import           Text.Read                  (readMaybe)
 
-import qualified Network.WebSockets.Client as WS
+import qualified Network.WebSockets.Client  as WS
 
 
 -- `main` is here so that this module can be run from GHCi on its own.  It is
@@ -33,7 +33,7 @@ instance FromEnv PortNumber where
 
 spec :: Spec
 spec = describe "withConnection" $ do
-  Right (PortNumber pn) <- runIO decodeEnv
+  PortNumber pn <- either fail return =<< runIO decodeEnv
 
   let host = "localhost"
   server <- runIO $ Skews.start $ Skews.Args host pn
