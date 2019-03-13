@@ -5,22 +5,22 @@ module Network.MessagePack.RPC.Client.WebSocketSpec
   , spec
   ) where
 
-import           Control.Applicative                        (empty, (<|>))
-import           Control.Concurrent                         (threadDelay)
-import           Control.Concurrent.Async                   (async,
-                                                             forConcurrently,
-                                                             wait)
-import           Data.ByteString.Char8                      ()
-import qualified Data.MessagePack                           as MsgPack
-import qualified Data.Text                                  ()
-import qualified Network.WebSockets.Skews                   as Skews
-import           System.Envy                                (FromEnv, decodeEnv,
-                                                             env, fromEnv)
+import           Control.Applicative                      (empty, (<|>))
+import           Control.Concurrent                       (threadDelay)
+import           Control.Concurrent.Async                 (async,
+                                                           forConcurrently,
+                                                           wait)
+import           Data.ByteString.Char8                    ()
+import qualified Data.MessagePack                         as MsgPack
+import qualified Data.Text                                ()
+import qualified Network.WebSockets.Skews                 as Skews
+import           System.Envy                              (FromEnv, decodeEnv,
+                                                           env, fromEnv)
 import           Test.Hspec
-import           Text.Read                                  (readMaybe)
+import           Text.Read                                (readMaybe)
 
-import qualified Data.MessagePack.RPC                       as Rpc
-import qualified Network.MessagePack.RPC.Client.WebSocket   as Rpc
+import qualified Data.MessagePack.RPC                     as Rpc
+import qualified Network.MessagePack.RPC.Client.WebSocket as Rpc
 
 
 -- `main` is here so that this module can be run from GHCi on its own.  It is
@@ -33,13 +33,13 @@ newtype PortNumber = PortNumber Int deriving (Eq, Show)
 
 instance FromEnv PortNumber where
     fromEnv = do
-        mpn <- (readMaybe <$> env "WSS_CLIENT_TEST_SERVER_PORT") <|> pure (Just 8614)
+        mpn <- (readMaybe <$> env "MESSAGE_PACK_RPC_TEST_SERVER_PORT") <|> pure (Just 8615)
         PortNumber <$> maybe empty pure mpn
 
 
 spec :: Spec
 spec = describe "call" $ do
-    Right (PortNumber pn) <- runIO decodeEnv
+    PortNumber pn <- either fail return =<< runIO decodeEnv
 
     let host = "localhost"
     server <- runIO $ Skews.start $ Skews.Args host pn
