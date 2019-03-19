@@ -75,7 +75,6 @@ encodeMessage (Files files mtext) tid =
         $ (M.ObjectStr "files", M.ObjectArray $ map encodeFile files)
         : maybeToList
               (fmap (\text -> (M.ObjectStr "text", M.ObjectStr text)) mtext)
-        -- TODO: Try <$> [multiple files, single file] <*> [has text, no text]
     ]
 encodeMessage (YesNoQ qst) tid =
     [ M.ObjectWord tid
