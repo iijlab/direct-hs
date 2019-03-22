@@ -57,11 +57,7 @@ module Web.Direct
     , leaveTalkRoom
     , removeUserFromTalkRoom
   -- * Channel
-  -- ** Channel type
-    , ChannelType
-    , pairChannel
-    , pinPointChannel
-    , groupChannel
+    , Partner (..)
   -- ** Creating channel
     , Channel
     , withChannel

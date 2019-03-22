@@ -33,15 +33,12 @@ module Web.Direct.Client
     , shutdown
     -- re-exporting
     , dispatch
-    , ChannelType
     , Channel
-    , pairChannel
-    , pinPointChannel
-    , groupChannel
     , haltChannel
     , getChannels
     , send
     , recv
+    , Partner (..)
     )
 where
 
@@ -217,19 +214,19 @@ findChannel client ckey = findChannel' (clientChannels client) ckey
 --   In this case, 'True' is returned.
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
-withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
-withChannel client ctyp body = withChannel' (clientRpcClient client)
-                                            (clientCurrentDomain client)
+withChannel :: Client -> TalkRoom -> Partner -> (Channel -> IO ()) -> IO Bool
+withChannel client room partner body = withChannel' (clientRpcClient client)
                                             (clientChannels client)
                                             (clientStatus client)
-                                            ctyp
+                                            room
+                                            partner
                                             body
 
 getChannelAcquaintances :: Client -> Channel -> IO [User]
-getChannelAcquaintances client chan = case channelType chan of
-    (Pair user      ) -> return [user]
-    (PinPoint _ user) -> return [user]
-    (Group talk     ) -> getTalkAcquaintances client talk
+getChannelAcquaintances client chan =
+    case channelPartner chan of
+        Only user -> return [user]
+        Anyone -> getTalkAcquaintances client $ channelTalkRoom chan
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,

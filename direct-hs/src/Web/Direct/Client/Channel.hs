@@ -7,16 +7,12 @@ module Web.Direct.Client.Channel
     , getChannels
     , findChannel'
     -- re-exporting
-    , Channel
-    , channelType
+    , Channel (..)
     , send
     , recv
-    , ChannelType(..)
-    , pairChannel
-    , pinPointChannel
-    , groupChannel
     , dispatch
     , ChannelKey
+    , Partner (..)
     )
 where
 
@@ -28,7 +24,6 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel.Types
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC                     hiding (getDomains)
 import           Web.Direct.Message
 import           Web.Direct.Types
 
@@ -45,20 +40,18 @@ newChannelDB = S.newTVarIO HM.empty
 --   This returns 'Nothing' after 'shutdown'.
 allocateChannel
     :: RPC.Client
-    -> Domain
     -> ChannelDB
     -> StatusVar
-    -> ChannelType
+    -> TalkRoom
+    -> Partner
     -> IO (Maybe Channel)
-allocateChannel rpcclient dom chanDB tvar ctyp = do
-    (room, muser) <- case ctyp of
-        Pair user -> do
-            room <- createPairTalk rpcclient dom user
-            return (room, Just user)
-        PinPoint room user -> return (room, Just user)
-        Group room         -> return (room, Nothing)
-    let ckey = (talkId room, userId <$> muser)
-    chan <- newChannel rpcclient ctyp ckey
+allocateChannel rpcclient chanDB tvar room partner = do
+    let mUserId =
+            case partner of
+                Only user -> Just $ userId user
+                Anyone -> Nothing
+    let ckey = (talkId room, mUserId)
+    chan <- newChannel rpcclient room partner ckey
     S.atomically $ do
         active <- isActiveSTM tvar
         if active
@@ -97,14 +90,14 @@ wait chanDB = S.atomically $ do
 
 withChannel'
     :: RPC.Client
-    -> Domain
     -> ChannelDB
     -> StatusVar
-    -> ChannelType
+    -> TalkRoom
+    -> Partner
     -> (Channel -> IO ())
     -> IO Bool
-withChannel' rpcclient dom chanDB tvar ctyp body = do
-    mchan <- allocateChannel rpcclient dom chanDB tvar ctyp
+withChannel' rpcclient chanDB tvar room partner body = do
+    mchan <- allocateChannel rpcclient chanDB tvar room partner
     case mchan of
         Nothing   -> return False
         Just chan -> do
