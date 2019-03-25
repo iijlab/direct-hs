@@ -21,6 +21,6 @@ module Web.Direct.Internal
     )
 where
 
-import           Web.Direct.Types
-import           Web.Direct.Exception
 import           Web.Direct.DirectRPC.Map
+import           Web.Direct.Exception
+import           Web.Direct.Types
