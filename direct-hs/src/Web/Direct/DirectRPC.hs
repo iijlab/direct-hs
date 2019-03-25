@@ -106,15 +106,6 @@ getTalkStatuses :: RPC.Client -> IO ()
 getTalkStatuses rpcclient =
     void $ callRpcThrow rpcclient "get_talk_statuses" []
 
-createPairTalk :: RPC.Client -> Domain -> User -> IO TalkRoom
-createPairTalk rpcclient dom peer = do
-    let methodName = "create_pair_talk"
-        did        = domainId dom
-        uid        = userId peer
-        dat        = [M.ObjectWord did, M.ObjectWord uid]
-    rsp <- callRpcThrow rpcclient methodName dat
-    convertOrThrow methodName decodeTalkRoom rsp
-
 deleteTalker :: RPC.Client -> TalkRoom -> User -> IO (Either Exception ())
 deleteTalker rpcclient talk user = do
     let methodName = "delete_talker"
