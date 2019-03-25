@@ -38,27 +38,29 @@ module Web.Direct.Client
     , getChannels
     , send
     , recv
-    , Partner (..)
+    , Partner(..)
     )
 where
 
-import qualified Control.Concurrent.STM                   as S
-import           Control.Error.Util                       (failWith)
-import           Control.Monad                            (when)
-import           Control.Monad.Except                     (ExceptT (ExceptT),
-                                                           runExceptT,
-                                                           throwError)
-import           Control.Monad.IO.Class                   (liftIO)
-import qualified Data.IORef                               as I
-import qualified Data.List                                as L
-import           Data.Maybe                               (catMaybes)
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import qualified Control.Concurrent.STM        as S
+import           Control.Error.Util                       ( failWith )
+import           Control.Monad                            ( when )
+import           Control.Monad.Except                     ( ExceptT(ExceptT)
+                                                          , runExceptT
+                                                          , throwError
+                                                          )
+import           Control.Monad.IO.Class                   ( liftIO )
+import qualified Data.IORef                    as I
+import qualified Data.List                     as L
+import           Data.Maybe                               ( catMaybes )
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
 
 import           Web.Direct.Client.Channel
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC                     hiding
-                                                           (getAcquaintances,
-                                                           getDomains)
+import           Web.Direct.DirectRPC              hiding ( getAcquaintances
+                                                          , getDomains
+                                                          )
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Message
@@ -215,18 +217,18 @@ findChannel client ckey = findChannel' (clientChannels client) ckey
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
 withChannel :: Client -> TalkRoom -> Partner -> (Channel -> IO ()) -> IO Bool
-withChannel client room partner body = withChannel' (clientRpcClient client)
-                                            (clientChannels client)
-                                            (clientStatus client)
-                                            room
-                                            partner
-                                            body
+withChannel client room partner body = withChannel'
+    (clientRpcClient client)
+    (clientChannels client)
+    (clientStatus client)
+    room
+    partner
+    body
 
 getChannelAcquaintances :: Client -> Channel -> IO [User]
-getChannelAcquaintances client chan =
-    case channelPartner chan of
-        Only user -> return [user]
-        Anyone -> getTalkAcquaintances client $ channelTalkRoom chan
+getChannelAcquaintances client chan = case channelPartner chan of
+    Only user -> return [user]
+    Anyone    -> getTalkAcquaintances client $ channelTalkRoom chan
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,

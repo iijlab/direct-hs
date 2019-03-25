@@ -7,20 +7,21 @@ module Web.Direct.Client.Channel
     , getChannels
     , findChannel'
     -- re-exporting
-    , Channel (..)
+    , Channel(..)
     , send
     , recv
     , dispatch
     , ChannelKey
-    , Partner (..)
+    , Partner(..)
     )
 where
 
-import qualified Control.Concurrent                       as C
-import qualified Control.Concurrent.STM                   as S
-import           Control.Monad                            (void)
-import qualified Data.Map.Strict                          as HM
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import qualified Control.Concurrent            as C
+import qualified Control.Concurrent.STM        as S
+import           Control.Monad                            ( void )
+import qualified Data.Map.Strict               as HM
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
 
 import           Web.Direct.Client.Channel.Types
 import           Web.Direct.Client.Status
@@ -46,10 +47,9 @@ allocateChannel
     -> Partner
     -> IO (Maybe Channel)
 allocateChannel rpcclient chanDB tvar room partner = do
-    let mUserId =
-            case partner of
-                Only user -> Just $ userId user
-                Anyone -> Nothing
+    let mUserId = case partner of
+            Only user -> Just $ userId user
+            Anyone    -> Nothing
     let ckey = (talkId room, mUserId)
     chan <- newChannel rpcclient room partner ckey
     S.atomically $ do
