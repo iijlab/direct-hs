@@ -1,5 +1,5 @@
 module Web.Direct.Client.Channel.Types
-    ( Channel (..)
+    ( Channel(..)
     , channelTalkId
     , newChannel
     , dispatch
@@ -7,7 +7,7 @@ module Web.Direct.Client.Channel.Types
     , send
     , recv
     , ChannelKey
-    , Partner (..)
+    , Partner(..)
     )
 where
 

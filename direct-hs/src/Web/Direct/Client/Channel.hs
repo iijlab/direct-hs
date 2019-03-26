@@ -7,12 +7,12 @@ module Web.Direct.Client.Channel
     , getChannels
     , findChannel'
     -- re-exporting
-    , Channel (..)
+    , Channel(..)
     , send
     , recv
     , dispatch
     , ChannelKey
-    , Partner (..)
+    , Partner(..)
     )
 where
 
@@ -46,10 +46,9 @@ allocateChannel
     -> Partner
     -> IO (Maybe Channel)
 allocateChannel rpcclient chanDB tvar room partner = do
-    let mUserId =
-            case partner of
-                Only user -> Just $ userId user
-                Anyone -> Nothing
+    let mUserId = case partner of
+            Only user -> Just $ userId user
+            Anyone    -> Nothing
     let ckey = (talkId room, mUserId)
     chan <- newChannel rpcclient room partner ckey
     S.atomically $ do
