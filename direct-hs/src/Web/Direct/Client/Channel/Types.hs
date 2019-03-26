@@ -84,6 +84,7 @@ send chan msg = createMessage (channelRPCClient chan) msg $ channelTalkId chan
 
 type ChannelKey = (TalkId, Maybe UserId)
 
+-- | User(s) with whome you want to talk.
 data Partner =
       Only User
     | Anyone

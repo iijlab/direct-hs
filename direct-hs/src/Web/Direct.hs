@@ -57,6 +57,7 @@ module Web.Direct
     , leaveTalkRoom
     , removeUserFromTalkRoom
   -- * Channel
+  -- ** Channel partner
     , Partner(..)
   -- ** Creating channel
     , Channel
@@ -66,7 +67,7 @@ module Web.Direct
     , send
   -- * Terminating
     , shutdown
-  -- *Exceptions
+  -- * Exceptions
     , Exception(..)
     )
 where

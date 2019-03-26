@@ -209,8 +209,8 @@ isActive client = S.atomically $ isActiveSTM $ clientStatus client
 findChannel :: Client -> ChannelKey -> IO (Maybe Channel)
 findChannel client ckey = findChannel' (clientChannels client) ckey
 
--- | A new channel is created according to the first and second arguments.
---   Then the third argument runs in a new thread with the channel.
+-- | A new channel is created according to the first three arguments.
+--   Then the fourth argument runs in a new thread with the channel.
 --   In this case, 'True' is returned.
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
