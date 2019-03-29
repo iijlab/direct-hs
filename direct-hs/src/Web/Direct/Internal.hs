@@ -12,6 +12,10 @@ module Web.Direct.Internal
     , User(..)
     , UploadAuth(..)
 
+    -- * 'Web.Direct.Client'
+    , Client
+    , clientRpcClient
+
     -- * 'Web.Direct.Exception'
     , callRpcThrow
     , convertOrThrow
@@ -21,6 +25,7 @@ module Web.Direct.Internal
     )
 where
 
+import           Web.Direct.Client
 import           Web.Direct.DirectRPC.Map
 import           Web.Direct.Exception
 import           Web.Direct.Types
