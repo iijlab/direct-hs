@@ -15,12 +15,11 @@ module Web.Direct.Client.Channel
     )
 where
 
-import qualified Control.Concurrent            as C
-import qualified Control.Concurrent.STM        as S
-import           Control.Monad                            ( void )
-import qualified Data.Map.Strict               as HM
-import qualified Network.MessagePack.RPC.Client.WebSocket
-                                               as RPC
+import qualified Control.Concurrent                       as C
+import qualified Control.Concurrent.STM                   as S
+import           Control.Monad                            (void)
+import qualified Data.Map.Strict                          as HM
+import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel.Types
 import           Web.Direct.Client.Status

@@ -10,11 +10,10 @@ module Web.Direct.Client.Channel.Types
     )
 where
 
-import qualified Control.Concurrent            as C
-import qualified Control.Exception             as E
-import           Control.Monad                            ( void )
-import qualified Network.MessagePack.RPC.Client.WebSocket
-                                               as RPC
+import qualified Control.Concurrent                       as C
+import qualified Control.Exception                        as E
+import           Control.Monad                            (void)
+import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
