@@ -214,11 +214,11 @@ findChannel client ckey = findChannel' (clientChannels client) ckey
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
 withChannel
-  :: Client
-  -> TalkRoom -- ^ where to talk
-  -> Maybe User -- ^ limit of who to talk with; 'Nothing' means everyone (no limits)
-  -> (Channel -> IO ())
-  -> IO Bool
+    :: Client
+    -> TalkRoom -- ^ where to talk
+    -> Maybe User -- ^ limit of who to talk with; 'Nothing' means everyone (no limits)
+    -> (Channel -> IO ())
+    -> IO Bool
 withChannel client room partner body = withChannel'
     (clientRpcClient client)
     (clientChannels client)

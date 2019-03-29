@@ -46,7 +46,7 @@ allocateChannel
     -> IO (Maybe Channel)
 allocateChannel rpcclient chanDB tvar room userLimit = do
     let mUserId = userId <$> userLimit
-    let ckey = (talkId room, mUserId)
+    let ckey    = (talkId room, mUserId)
     chan <- newChannel rpcclient room userLimit ckey
     S.atomically $ do
         active <- isActiveSTM tvar
