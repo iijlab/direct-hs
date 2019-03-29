@@ -12,7 +12,6 @@ module Web.Direct.Client.Channel
     , recv
     , dispatch
     , ChannelKey
-    , Partner(..)
     )
 where
 
@@ -43,14 +42,12 @@ allocateChannel
     -> ChannelDB
     -> StatusVar
     -> TalkRoom
-    -> Partner
+    -> Maybe User
     -> IO (Maybe Channel)
-allocateChannel rpcclient chanDB tvar room partner = do
-    let mUserId = case partner of
-            Only user -> Just $ userId user
-            Anyone    -> Nothing
+allocateChannel rpcclient chanDB tvar room userLimit = do
+    let mUserId = userId <$> userLimit
     let ckey = (talkId room, mUserId)
-    chan <- newChannel rpcclient room partner ckey
+    chan <- newChannel rpcclient room userLimit ckey
     S.atomically $ do
         active <- isActiveSTM tvar
         if active
@@ -92,11 +89,11 @@ withChannel'
     -> ChannelDB
     -> StatusVar
     -> TalkRoom
-    -> Partner
+    -> Maybe User
     -> (Channel -> IO ())
     -> IO Bool
-withChannel' rpcclient chanDB tvar room partner body = do
-    mchan <- allocateChannel rpcclient chanDB tvar room partner
+withChannel' rpcclient chanDB tvar room userLimit body = do
+    mchan <- allocateChannel rpcclient chanDB tvar room userLimit
     case mchan of
         Nothing   -> return False
         Just chan -> do

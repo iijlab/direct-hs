@@ -7,7 +7,6 @@ module Web.Direct.Client.Channel.Types
     , send
     , recv
     , ChannelKey
-    , Partner(..)
     )
 where
 
@@ -28,7 +27,7 @@ data Channel = Channel {
       toWorker         :: C.MVar (Either Control (Message, MessageId, TalkRoom, User))
     , channelRPCClient :: RPC.Client
     , channelTalkRoom  :: TalkRoom
-    , channelPartner   :: Partner
+    , channelUserLimit :: Maybe User
     , channelKey       :: ChannelKey
     }
 
@@ -38,14 +37,14 @@ channelTalkId = fst . channelKey
 ----------------------------------------------------------------
 
 -- | Creating a new channel.
-newChannel :: RPC.Client -> TalkRoom -> Partner -> ChannelKey -> IO Channel
-newChannel rpcclient room partner ckey = do
+newChannel :: RPC.Client -> TalkRoom -> Maybe User -> ChannelKey -> IO Channel
+newChannel rpcclient room userLimit ckey = do
     mvar <- C.newEmptyMVar
     return Channel
         { toWorker         = mvar
         , channelRPCClient = rpcclient
         , channelTalkRoom  = room
-        , channelPartner   = partner
+        , channelUserLimit = userLimit
         , channelKey       = ckey
         }
 
@@ -83,9 +82,3 @@ send chan msg = createMessage (channelRPCClient chan) msg $ channelTalkId chan
 ----------------------------------------------------------------
 
 type ChannelKey = (TalkId, Maybe UserId)
-
--- | User(s) with whome you want to talk.
-data Partner =
-      Only User
-    | Anyone
-    deriving (Show, Eq)
