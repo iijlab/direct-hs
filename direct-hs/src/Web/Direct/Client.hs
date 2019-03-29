@@ -33,11 +33,7 @@ module Web.Direct.Client
     , shutdown
     -- re-exporting
     , dispatch
-    , ChannelType
     , Channel
-    , pairChannel
-    , pinPointChannel
-    , groupChannel
     , haltChannel
     , getChannels
     , send
@@ -212,24 +208,29 @@ isActive client = S.atomically $ isActiveSTM $ clientStatus client
 findChannel :: Client -> ChannelKey -> IO (Maybe Channel)
 findChannel client ckey = findChannel' (clientChannels client) ckey
 
--- | A new channel is created according to the first and second arguments.
---   Then the third argument runs in a new thread with the channel.
+-- | A new channel is created according to the first three arguments.
+--   Then the fourth argument runs in a new thread with the channel.
 --   In this case, 'True' is returned.
 --   If 'shutdown' is already called, a new thread is not spawned
 --   and 'False' is returned.
-withChannel :: Client -> ChannelType -> (Channel -> IO ()) -> IO Bool
-withChannel client ctyp body = withChannel' (clientRpcClient client)
-                                            (clientCurrentDomain client)
-                                            (clientChannels client)
-                                            (clientStatus client)
-                                            ctyp
-                                            body
+withChannel
+    :: Client
+    -> TalkRoom -- ^ where to talk
+    -> Maybe User -- ^ limit of who to talk with; 'Nothing' means everyone (no limits)
+    -> (Channel -> IO ())
+    -> IO Bool
+withChannel client room partner body = withChannel'
+    (clientRpcClient client)
+    (clientChannels client)
+    (clientStatus client)
+    room
+    partner
+    body
 
 getChannelAcquaintances :: Client -> Channel -> IO [User]
-getChannelAcquaintances client chan = case channelType chan of
-    (Pair user      ) -> return [user]
-    (PinPoint _ user) -> return [user]
-    (Group talk     ) -> getTalkAcquaintances client talk
+getChannelAcquaintances client chan = case channelUserLimit chan of
+    Just user -> return [user]
+    Nothing   -> getTalkAcquaintances client $ channelTalkRoom chan
 
 -- | This function lets 'directCreateMessageHandler' to not accept any message,
 --   then sends the maintenance message to all channels,

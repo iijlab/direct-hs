@@ -1,18 +1,12 @@
 module Web.Direct.Client.Channel.Types
-    ( Channel
-    , channelType
+    ( Channel(..)
     , channelTalkId
     , newChannel
     , dispatch
     , die
     , send
     , recv
-    , ChannelType(..)
-    , pairChannel
-    , pinPointChannel
-    , groupChannel
     , ChannelKey
-    , channelKey
     )
 where
 
@@ -32,7 +26,8 @@ import           Web.Direct.Types
 data Channel = Channel {
       toWorker         :: C.MVar (Either Control (Message, MessageId, TalkRoom, User))
     , channelRPCClient :: RPC.Client
-    , channelType      :: ChannelType
+    , channelTalkRoom  :: TalkRoom
+    , channelUserLimit :: Maybe User
     , channelKey       :: ChannelKey
     }
 
@@ -42,13 +37,14 @@ channelTalkId = fst . channelKey
 ----------------------------------------------------------------
 
 -- | Creating a new channel.
-newChannel :: RPC.Client -> ChannelType -> ChannelKey -> IO Channel
-newChannel rpcclient ctyp ckey = do
+newChannel :: RPC.Client -> TalkRoom -> Maybe User -> ChannelKey -> IO Channel
+newChannel rpcclient room userLimit ckey = do
     mvar <- C.newEmptyMVar
     return Channel
         { toWorker         = mvar
         , channelRPCClient = rpcclient
-        , channelType      = ctyp
+        , channelTalkRoom  = room
+        , channelUserLimit = userLimit
         , channelKey       = ckey
         }
 
@@ -84,26 +80,5 @@ send :: Channel -> Message -> IO (Either Exception MessageId)
 send chan msg = createMessage (channelRPCClient chan) msg $ channelTalkId chan
 
 ----------------------------------------------------------------
-
--- | Type of channel.
-data ChannelType = Pair               !User
-                 | PinPoint !TalkRoom !User
-                 | Group    !TalkRoom
-                 deriving (Eq, Show)
-
--- | Pair channel with the user.
---   A pair talk room is created if necessary.
---   The conversation is NOT seen by other users.
-pairChannel :: User -> ChannelType
-pairChannel user = Pair user
-
--- | One-to-one channel with the user in the talk room.
---   The conversation is seen by other users.
-pinPointChannel :: TalkRoom -> User -> ChannelType
-pinPointChannel room user = PinPoint room user
-
--- | Group channel in the talk room.
-groupChannel :: TalkRoom -> ChannelType
-groupChannel room = Group room
 
 type ChannelKey = (TalkId, Maybe UserId)
