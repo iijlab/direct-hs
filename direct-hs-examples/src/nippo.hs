@@ -5,11 +5,11 @@ module Main
     )
 where
 
-import           Control.Monad        (void)
-import qualified Data.ByteString.Lazy as B
-import qualified Data.Text            as T
-import qualified System.Signal        as S
-import qualified Web.Direct           as D
+import           Control.Monad                            ( void )
+import qualified Data.ByteString.Lazy          as B
+import qualified Data.Text                     as T
+import qualified System.Signal                 as S
+import qualified Web.Direct                    as D
 
 import           Common
 
