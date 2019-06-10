@@ -31,7 +31,11 @@ module Web.Direct.Client
     , withChannel
     , getChannelAcquaintances
     , shutdown
-    -- re-exporting
+    -- * Hooks when some changes are made in talk room members.
+    , onAddTalkers
+    , onDeleteTalk
+    , onDeleteTalker
+    -- * re-exporting
     , dispatch
     , Channel
     , haltChannel
@@ -43,11 +47,12 @@ where
 
 import qualified Control.Concurrent.STM                   as S
 import           Control.Error.Util                       (failWith)
-import           Control.Monad                            (when)
+import           Control.Monad                            (mapM_, when)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
                                                            runExceptT,
                                                            throwError)
 import           Control.Monad.IO.Class                   (liftIO)
+import           Data.Foldable                            (for_)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (catMaybes)
@@ -60,7 +65,6 @@ import           Web.Direct.DirectRPC                     hiding
                                                            getDomains)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Message
 import           Web.Direct.Types
 import           Web.Direct.Upload
 
@@ -177,6 +181,10 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     talkAcqs <- liftIO $ getTalkAcquaintances client talk
     when (user `notElem` talkAcqs) $ throwError InvalidUserId
     ExceptT $ deleteTalker (clientRpcClient client) tid uid
+    liftIO $ do
+        let did = domainId $ getCurrentDomain client
+        muidsAfterDeleted <- fmap (filter (/= uid) . talkUserIds) <$> findTalkRoom tid client
+        for_ muidsAfterDeleted $ \uidsAfterDeleted -> onDeleteTalker client did tid uidsAfterDeleted [uid]
 
 ----------------------------------------------------------------
 
@@ -239,3 +247,26 @@ shutdown :: Client -> Message -> IO ()
 shutdown client = shutdown' (clientRpcClient client)
                             (clientChannels client)
                             (clientStatus client)
+
+onAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
+onAddTalkers client _did newTalk =
+    modifyTalkRooms client $ \talks -> (map updateTalk talks, ())
+  where
+    updateTalk talk =
+        if talkId talk == talkId newTalk then newTalk else talk
+
+onDeleteTalk :: Client -> TalkId -> IO ()
+onDeleteTalk client tid = do
+    -- Remove talk
+    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
+    -- Close channels for talk
+    let chanDB = clientChannels client
+    getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
+
+onDeleteTalker
+    :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+onDeleteTalker client _ tid uidsAfterDeleted _leftUids =
+    modifyTalkRooms client $ \talks -> (map updateTalkUserIds talks, ())
+  where
+    updateTalkUserIds talk =
+        if talkId talk == tid then talk { talkUserIds = uidsAfterDeleted } else talk

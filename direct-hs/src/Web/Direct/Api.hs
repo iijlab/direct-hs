@@ -1,13 +1,14 @@
 module Web.Direct.Api
     ( Config(..)
     , defaultConfig
+    , defaultNotificationHandlers
     , login
     , RPC.URL
     , withClient
     )
 where
 
-import           Control.Monad                            (forM_, when)
+import           Control.Monad                            (when)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (fromMaybe)
@@ -24,7 +25,6 @@ import           Web.Direct.Client                        hiding
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Message
 import           Web.Direct.Types
 
 ----------------------------------------------------------------
@@ -48,6 +48,8 @@ data Config = Config {
     --   If @Nothing@, the first domain obtained by @get_domains@ RPC function is used.
     --   If you want to change the target domain in the 'withClient' block,
     --   Use 'setCurrentDomainId' for 'Client'.
+  , directNotificationHandlers     :: NotificationHandlers
+    -- ^ Called every time after receiving a notification.
   }
 
 -- | The default configuration.
@@ -63,6 +65,18 @@ defaultConfig = Config
     , directEndpointUrl = "wss://api.direct4b.com/albero-app-server/api"
     , directWaitCreateMessageHandler = True
     , directInitialDomainId          = Nothing
+    , directNotificationHandlers     = defaultNotificationHandlers
+    }
+
+-- | The default notification handlers. Do nothing by default.
+defaultNotificationHandlers :: NotificationHandlers
+defaultNotificationHandlers = NotificationHandlers
+    { onNotifyCreateMessage = \_ _ _ _ -> return ()
+    , onNotifyAddTalkers = \_ _ -> return ()
+    , onNotifyAddAcquaintance = \_ _ -> return ()
+    , onNotifyDeleteTalk = \_ -> return ()
+    , onNotifyDeleteTalker = \_ _ _ _ -> return ()
+    , onNotifyDeleteAcquaintance = \_ _ -> return ()
     }
 
 ----------------------------------------------------------------
@@ -124,16 +138,26 @@ withClient config pInfo action = do
                     -- fixme: "notify_update_domain_users"
                     -- fixme: "notify_update_read_statuses"
                     let
+                        userNH = directNotificationHandlers config
                         handlers = NotificationHandlers
-                            { onNotifyCreateMessage = handleNotifyCreateMessage
-                                config
-                                client
-                            , onNotifyAddTalkers = handleAddTalkers client
-                            , onNotifyAddAcquaintance = handleAddAcquaintance client
-                            , onNotifyDeleteTalk = handleNotifyDeleteTalk client
-                            , onNotifyDeleteTalker = handleNotifyDeleteTalker
-                                client
-                            , onNotifyDeleteAcquaintance = handleNotifyDeleteAcquaintance client
+                            { onNotifyCreateMessage = \msg msdId tid uid -> do
+                                handleNotifyCreateMessage config client msg msdId tid uid
+                                onNotifyCreateMessage userNH msg msdId tid uid
+                            , onNotifyAddTalkers = \did room -> do
+                                onAddTalkers client did room
+                                onNotifyAddTalkers userNH did room
+                            , onNotifyAddAcquaintance = \did user -> do
+                                handleAddAcquaintance client did user
+                                onNotifyAddAcquaintance userNH did user
+                            , onNotifyDeleteTalk = \tid -> do
+                                onDeleteTalk client tid
+                                onNotifyDeleteTalk userNH tid
+                            , onNotifyDeleteTalker = \did tid uids leftUids -> do
+                                onDeleteTalker client did tid uids leftUids
+                                onNotifyDeleteTalker userNH did tid uids leftUids
+                            , onNotifyDeleteAcquaintance = \did uid -> do
+                                handleNotifyDeleteAcquaintance client did uid
+                                onNotifyDeleteAcquaintance userNH did uid
                             }
                     handleNotification method objs handlers
         , RPC.logger             = directLogger config
@@ -202,41 +226,14 @@ handleNotifyCreateMessage config client msg msgid tid uid = do
                         client
                         (msg, msgid, room, user)
 
-handleAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
-handleAddTalkers client _did newTalk =
-    modifyTalkRooms client $ \talks -> (map updateTalk talks, ())
-  where
-    updateTalk talk =
-        if talkId talk == talkId newTalk then newTalk else talk
-
+-- TODO: Check if this kind notification is sent to the user who makes the trigger of the notification:
+ --      i.e. called addTalkers
 handleAddAcquaintance :: Client -> DomainId -> User -> IO ()
 handleAddAcquaintance client _did newUser =
     modifyAcquaintances client $ \users -> (newUser : users, ())
 
-handleNotifyDeleteTalk :: Client -> TalkId -> IO ()
-handleNotifyDeleteTalk client tid = do
-    -- Remove talk
-    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
-    -- Close channels for talk
-    let chanDB = clientChannels client
-    getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
-
-handleNotifyDeleteTalker
-    :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
-handleNotifyDeleteTalker client _ tid uids leftUids = do
-    -- Update talk users
-    modifyTalkRooms client $ \talks -> (map updateTalkUserIds talks, ())
-    -- Close channels that has no users
-    let chanDB = clientChannels client
-    chans <- getChannels chanDB tid
-    forM_ chans $ \chan -> do
-        chanAcqs <- getChannelAcquaintances client chan
-        let newChanAcqUids = filter (`notElem` leftUids) $ map userId chanAcqs
-        when (null newChanAcqUids) $ haltChannel chanDB chan
-  where
-    updateTalkUserIds talk =
-        if talkId talk == tid then talk { talkUserIds = uids } else talk
-
+-- TODO: Check if this kind notification is sent to the user who makes the trigger of the notification:
+--       i.e. called removeUserFromTalkRoom, leaveTalkRoom
 handleNotifyDeleteAcquaintance :: Client -> DomainId -> UserId -> IO ()
 handleNotifyDeleteAcquaintance client _did uid =
     modifyAcquaintances client (\users -> (filter ((/= uid) . userId) users, ()))

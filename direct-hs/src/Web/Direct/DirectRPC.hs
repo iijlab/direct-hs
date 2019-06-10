@@ -2,6 +2,7 @@
 
 module Web.Direct.DirectRPC where
 
+import           Control.Concurrent                       (threadDelay)
 import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
@@ -109,6 +110,7 @@ getTalkStatuses rpcclient =
 
 deleteTalker :: RPC.Client -> TalkId -> UserId -> IO (Either Exception ())
 deleteTalker rpcclient tid uid = do
+    throttleDown
     let methodName = "delete_talker"
         dat        = [M.ObjectWord tid, M.ObjectWord uid]
     void <$> callRpc rpcclient methodName dat
@@ -138,15 +140,6 @@ createUploadAuth rpcclient fn mimeType fileSize did = do
 
 ----------------------------------------------------------------
 
-data NotificationHandlers = NotificationHandlers
-    { onNotifyCreateMessage :: Message -> MessageId -> TalkId -> UserId -> IO ()
-    , onNotifyAddTalkers :: DomainId -> TalkRoom -> IO ()
-    , onNotifyAddAcquaintance :: DomainId -> User -> IO ()
-    , onNotifyDeleteTalk :: TalkId -> IO ()
-    , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
-    , onNotifyDeleteAcquaintance :: DomainId -> UserId -> IO ()
-    }
-
 handleNotification
     :: R.MethodName -> [M.Object] -> NotificationHandlers -> IO ()
 handleNotification method params handlers = case (method, params) of
@@ -171,3 +164,11 @@ handleNotification method params handlers = case (method, params) of
             onNotifyDeleteTalker handlers did tid uids leftUids
         _ -> return ()
     _ -> return ()
+
+-- | Run this action before executing private or heavily-loaded APIs.
+--   The 500 msec is the time for which direct-js actually sleeps
+--   before executing "delete_talker".
+--   So I guess this is the suitable time for other private APIs.
+-- TODO: Make private
+throttleDown :: IO ()
+throttleDown = threadDelay (500 * 1000)

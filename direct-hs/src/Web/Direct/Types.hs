@@ -45,6 +45,29 @@ data TalkRoom = TalkRoom {
     , talkUserIds :: [UserId]
     } deriving (Eq, Show, Read)
 
+-- | Type for Direct messages.
+data Message =
+      Txt       !T.Text
+    | Location  !T.Text !T.Text -- Address, GoogleMap URL
+    | Stamp     !Word64 !Word64 !(Maybe T.Text)
+    | YesNoQ    !T.Text
+    | YesNoA    !T.Text Bool
+    | SelectQ   !T.Text ![T.Text]
+    | SelectA   !T.Text ![T.Text] T.Text
+    | TaskQ     !T.Text Bool -- False: anyone, True: everyone
+    | TaskA     !T.Text Bool Bool -- done
+    | Files     ![File] !(Maybe T.Text)
+    | Other     !T.Text
+    deriving (Eq, Show)
+
+data File = File
+    { fileUrl         :: !T.Text
+    , fileContentType :: !T.Text
+    , fileContentSize :: !Word64
+    , fileName        :: !T.Text
+    , fileId          :: !FileId
+    } deriving (Eq, Show)
+
 -- | Created from the response of direct's RPC function @create_upload_auth@.
 --   Contains information to upload/download a file to/from direct.
 data UploadAuth = UploadAuth
@@ -53,3 +76,12 @@ data UploadAuth = UploadAuth
     , uploadAuthFileId             :: !FileId
     , uploadAuthContentDisposition :: !T.Text
     } deriving (Eq, Show, Read)
+
+data NotificationHandlers = NotificationHandlers
+    { onNotifyCreateMessage :: Message -> MessageId -> TalkId -> UserId -> IO ()
+    , onNotifyAddTalkers :: DomainId -> TalkRoom -> IO ()
+    , onNotifyAddAcquaintance :: DomainId -> User -> IO ()
+    , onNotifyDeleteTalk :: TalkId -> IO ()
+    , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+    , onNotifyDeleteAcquaintance :: DomainId -> UserId -> IO ()
+    }

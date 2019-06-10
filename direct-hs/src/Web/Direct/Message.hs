@@ -16,31 +16,6 @@ import           Web.Direct.Utils
 
 ----------------------------------------------------------------
 
--- | Type for Direct messages.
-data Message =
-    Txt       !T.Text
-  | Location  !T.Text !T.Text -- Address, GoogleMap URL
-  | Stamp     !Word64 !Word64 !(Maybe T.Text)
-  | YesNoQ    !T.Text
-  | YesNoA    !T.Text Bool
-  | SelectQ   !T.Text ![T.Text]
-  | SelectA   !T.Text ![T.Text] T.Text
-  | TaskQ     !T.Text Bool -- False: anyone, True: everyone
-  | TaskA     !T.Text Bool Bool -- done
-  | Files     ![File] !(Maybe T.Text)
-  | Other     !T.Text
-  deriving (Eq, Show)
-
-data File = File
-    { fileUrl         :: !T.Text
-    , fileContentType :: !T.Text
-    , fileContentSize :: !Word64
-    , fileName        :: !T.Text
-    , fileId          :: !FileId
-    } deriving (Eq, Show)
-
-----------------------------------------------------------------
-
 encodeMessage :: Message -> TalkId -> [M.Object]
 encodeMessage (Txt text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
