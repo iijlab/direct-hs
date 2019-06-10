@@ -101,6 +101,7 @@ defaultConfig = Config
     }
 
 -- | Backend IO functions.
+--   Any receiving / sending actions are performed by calling these functions.
 data Backend = Backend {
     backendSend  :: B.ByteString -> IO () -- ^ Sending
   , backendRecv  :: IO B.ByteString -- ^ Receiving
