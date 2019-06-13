@@ -61,21 +61,6 @@ executable observe-pretty
   default-language: Haskell2010
   other-modules: Common
 
-executable direct4bi
-  import: deps
-  main-is: direct4bi.hs
-  hs-source-dirs: src
-  ghc-options: -Wall -threaded
-  build-depends:
-      errors
-    , filepath
-    , haskeline
-    , optparse-applicative
-    , pretty-simple
-    , text
-  default-language: Haskell2010
-  other-modules: Common
-
 source-repository head
   type:     git
   location: https://github.com/iij-ii/direct-hs
