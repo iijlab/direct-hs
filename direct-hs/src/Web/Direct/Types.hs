@@ -22,28 +22,28 @@ type FileSize  = Word64
 
 -- | Type for users.
 data User = User {
-    userId                       :: !UserId
-  , displayName                  :: !T.Text
-  , canonicalDisplayName         :: !T.Text
-  , phoneticDisplayName          :: !T.Text
-  , canonicalPhoneticDisplayName :: !T.Text
-  } deriving (Eq, Show)
+      userId                       :: !UserId
+    , displayName                  :: !T.Text
+    , canonicalDisplayName         :: !T.Text
+    , phoneticDisplayName          :: !T.Text
+    , canonicalPhoneticDisplayName :: !T.Text
+    } deriving (Eq, Show, Read)
 
 -- | Type for domains.
 data Domain = Domain {
-    domainId   :: !DomainId
-  , domainName :: !T.Text
-  } deriving (Eq, Show)
+      domainId   :: !DomainId
+    , domainName :: !T.Text
+    } deriving (Eq, Show, Read)
 
 -- | Talk room types.
-data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show)
+data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show, Read)
 
 -- | Type for talk rooms.
 data TalkRoom = TalkRoom {
-    talkId      :: !TalkId
-  , talkType    :: !TalkType
-  , talkUserIds :: [UserId]
-  } deriving (Eq, Show)
+      talkId      :: !TalkId
+    , talkType    :: !TalkType
+    , talkUserIds :: [UserId]
+    } deriving (Eq, Show, Read)
 
 -- | Created from the response of direct's RPC function @create_upload_auth@.
 --   Contains information to upload/download a file to/from direct.
@@ -52,4 +52,4 @@ data UploadAuth = UploadAuth
     , uploadAuthPutUrl             :: !T.Text
     , uploadAuthFileId             :: !FileId
     , uploadAuthContentDisposition :: !T.Text
-    }
+    } deriving (Eq, Show, Read)
