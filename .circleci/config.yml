@@ -13,7 +13,7 @@ jobs:
         keys:
         - 'dependencies-{{ checksum "stack.yaml" }}'
         - 'dependencies-'
-    - run: stack --compiler=ghc-8.6.5 --no-terminal build --pedantic
+    - run: stack --compiler=ghc-8.6.5 --no-terminal test --pedantic --no-run-tests
 
     - save_cache:
         key: 'dependencies-{{ checksum "stack.yaml" }}'
