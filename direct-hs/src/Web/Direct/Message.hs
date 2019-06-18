@@ -3,13 +3,13 @@
 
 module Web.Direct.Message where
 
-import           Control.Applicative                      ( (<|>) )
-import           Control.Monad                            ( mapM )
-import           Data.List                                ( elemIndex )
-import           Data.Maybe                               ( maybeToList )
-import qualified Data.MessagePack              as M
-import qualified Data.Text                     as T
-import           Data.Word                                ( Word64 )
+import           Control.Applicative ((<|>))
+import           Control.Monad       (mapM)
+import           Data.List           (elemIndex)
+import           Data.Maybe          (maybeToList)
+import qualified Data.MessagePack    as M
+import qualified Data.Text           as T
+import           Data.Word           (Word64)
 
 import           Web.Direct.Types
 import           Web.Direct.Utils
