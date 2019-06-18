@@ -8,20 +8,21 @@ module Web.Direct.Api
     )
 where
 
-import           Control.Monad                            (when)
-import qualified Data.IORef                               as I
-import qualified Data.List                                as L
-import           Data.Maybe                               (fromMaybe)
-import qualified Data.MessagePack                         as M
-import qualified Data.MessagePack.RPC                     as R
-import qualified Data.Text                                as T
-import qualified Data.UUID                                as Uuid
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
-import qualified System.Random.MWC                        as Random
+import           Control.Monad                            ( when )
+import qualified Data.IORef                    as I
+import qualified Data.List                     as L
+import           Data.Maybe                               ( fromMaybe )
+import qualified Data.MessagePack              as M
+import qualified Data.MessagePack.RPC          as R
+import qualified Data.Text                     as T
+import qualified Data.UUID                     as Uuid
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
+import qualified System.Random.MWC             as Random
 
-import           Web.Direct.Client                        hiding
-                                                           (getAcquaintances,
-                                                           getDomains)
+import           Web.Direct.Client                 hiding ( getAcquaintances
+                                                          , getDomains
+                                                          )
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
