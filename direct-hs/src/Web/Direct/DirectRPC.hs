@@ -148,13 +148,11 @@ handleNotification method params handlers = case (method, params) of
             onNotifyCreateMessage handlers msg msgid tid uid
         _ -> return ()
     ("notify_add_talkers", obj : _) -> case decodeAddTalkers obj of
-        Just (did, talk) ->
-            onNotifyAddTalkers handlers did talk
-        _ -> return ()
+        Just (did, talk) -> onNotifyAddTalkers handlers did talk
+        _                -> return ()
     ("notify_add_acquaintance", obj : _) -> case decodeAddAcquaintance obj of
-        Just (did, user) ->
-            onNotifyAddAcquaintance handlers did user
-        _ -> return ()
+        Just (did, user) -> onNotifyAddAcquaintance handlers did user
+        _                -> return ()
     ("notify_delete_acquaintance", M.ObjectWord did : M.ObjectWord uid : _) ->
         onNotifyDeleteAcquaintance handlers did uid
     ("notify_delete_talk", M.ObjectWord tid : _) ->

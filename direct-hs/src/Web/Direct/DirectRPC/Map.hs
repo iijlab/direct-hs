@@ -81,12 +81,12 @@ decodeTalkRoom _ = Nothing
 
 decodeUploadAuth :: [(M.Object, M.Object)] -> Maybe UploadAuth
 decodeUploadAuth rspMap = do
-    M.ObjectStr  uploadAuthGetUrl <- look "get_url" rspMap
-    M.ObjectStr  uploadAuthPutUrl <- look "put_url" rspMap
-    M.ObjectWord uploadAuthFileId <- look "file_id" rspMap
+    M.ObjectStr  uploadAuthGetUrl             <- look "get_url" rspMap
+    M.ObjectStr  uploadAuthPutUrl             <- look "put_url" rspMap
+    M.ObjectWord uploadAuthFileId             <- look "file_id" rspMap
 
     M.ObjectMap formObj <- lookup (M.ObjectStr "post_form") rspMap
-    M.ObjectStr uploadAuthContentDisposition <- lookup
+    M.ObjectStr  uploadAuthContentDisposition <- lookup
         (M.ObjectStr "Content-Disposition")
         formObj
     return UploadAuth {..}
@@ -104,7 +104,7 @@ decodeAddTalkers _ = Nothing
 decodeAddAcquaintance :: M.Object -> Maybe (DomainId, User)
 decodeAddAcquaintance (M.ObjectMap m) = do
     M.ObjectWord did <- look "domain_id" m
-    user <- decodeUser $ M.ObjectMap m
+    user             <- decodeUser $ M.ObjectMap m
     return (did, user)
 decodeAddAcquaintance _ = Nothing
 
