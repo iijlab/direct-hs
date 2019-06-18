@@ -2,12 +2,13 @@
 
 module Web.Direct.DirectRPC where
 
-import           Control.Concurrent                       (threadDelay)
-import           Control.Monad                            (void)
-import qualified Data.MessagePack                         as M
-import qualified Data.MessagePack.RPC                     as R
-import           Data.Text                                (Text)
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import           Control.Concurrent                       ( threadDelay )
+import           Control.Monad                            ( void )
+import qualified Data.MessagePack              as M
+import qualified Data.MessagePack.RPC          as R
+import           Data.Text                                ( Text )
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
 
 import           Web.Direct.DirectRPC.Map
 import           Web.Direct.Exception
@@ -148,13 +149,11 @@ handleNotification method params handlers = case (method, params) of
             onNotifyCreateMessage handlers msg msgid tid uid
         _ -> return ()
     ("notify_add_talkers", obj : _) -> case decodeAddTalkers obj of
-        Just (did, talk) ->
-            onNotifyAddTalkers handlers did talk
-        _ -> return ()
+        Just (did, talk) -> onNotifyAddTalkers handlers did talk
+        _                -> return ()
     ("notify_add_acquaintance", obj : _) -> case decodeAddAcquaintance obj of
-        Just (did, user) ->
-            onNotifyAddAcquaintance handlers did user
-        _ -> return ()
+        Just (did, user) -> onNotifyAddAcquaintance handlers did user
+        _                -> return ()
     ("notify_delete_acquaintance", M.ObjectWord did : M.ObjectWord uid : _) ->
         onNotifyDeleteAcquaintance handlers did uid
     ("notify_delete_talk", M.ObjectWord tid : _) ->

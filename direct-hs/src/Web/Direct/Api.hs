@@ -8,20 +8,21 @@ module Web.Direct.Api
     )
 where
 
-import           Control.Monad                            (when)
-import qualified Data.IORef                               as I
-import qualified Data.List                                as L
-import           Data.Maybe                               (fromMaybe)
-import qualified Data.MessagePack                         as M
-import qualified Data.MessagePack.RPC                     as R
-import qualified Data.Text                                as T
-import qualified Data.UUID                                as Uuid
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
-import qualified System.Random.MWC                        as Random
+import           Control.Monad                            ( when )
+import qualified Data.IORef                    as I
+import qualified Data.List                     as L
+import           Data.Maybe                               ( fromMaybe )
+import qualified Data.MessagePack              as M
+import qualified Data.MessagePack.RPC          as R
+import qualified Data.Text                     as T
+import qualified Data.UUID                     as Uuid
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
+import qualified System.Random.MWC             as Random
 
-import           Web.Direct.Client                        hiding
-                                                           (getAcquaintances,
-                                                           getDomains)
+import           Web.Direct.Client                 hiding ( getAcquaintances
+                                                          , getDomains
+                                                          )
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
@@ -71,11 +72,11 @@ defaultConfig = Config
 -- | The default notification handlers. Do nothing by default.
 defaultNotificationHandlers :: NotificationHandlers
 defaultNotificationHandlers = NotificationHandlers
-    { onNotifyCreateMessage = \_ _ _ _ -> return ()
-    , onNotifyAddTalkers = \_ _ -> return ()
-    , onNotifyAddAcquaintance = \_ _ -> return ()
-    , onNotifyDeleteTalk = \_ -> return ()
-    , onNotifyDeleteTalker = \_ _ _ _ -> return ()
+    { onNotifyCreateMessage      = \_ _ _ _ -> return ()
+    , onNotifyAddTalkers         = \_ _ -> return ()
+    , onNotifyAddAcquaintance    = \_ _ -> return ()
+    , onNotifyDeleteTalk         = \_ -> return ()
+    , onNotifyDeleteTalker       = \_ _ _ _ -> return ()
     , onNotifyDeleteAcquaintance = \_ _ -> return ()
     }
 
@@ -137,11 +138,15 @@ withClient config pInfo action = do
                 when active $ do
                     -- fixme: "notify_update_domain_users"
                     -- fixme: "notify_update_read_statuses"
-                    let
-                        userNH = directNotificationHandlers config
+                    let userNH   = directNotificationHandlers config
                         handlers = NotificationHandlers
                             { onNotifyCreateMessage = \msg msdId tid uid -> do
-                                handleNotifyCreateMessage config client msg msdId tid uid
+                                handleNotifyCreateMessage config
+                                                          client
+                                                          msg
+                                                          msdId
+                                                          tid
+                                                          uid
                                 onNotifyCreateMessage userNH msg msdId tid uid
                             , onNotifyAddTalkers = \did room -> do
                                 onAddTalkers client did room
@@ -152,9 +157,14 @@ withClient config pInfo action = do
                             , onNotifyDeleteTalk = \tid -> do
                                 onDeleteTalk client tid
                                 onNotifyDeleteTalk userNH tid
-                            , onNotifyDeleteTalker = \did tid uids leftUids -> do
-                                onDeleteTalker client did tid uids leftUids
-                                onNotifyDeleteTalker userNH did tid uids leftUids
+                            , onNotifyDeleteTalker = \did tid uids leftUids ->
+                                do
+                                    onDeleteTalker client did tid uids leftUids
+                                    onNotifyDeleteTalker userNH
+                                                         did
+                                                         tid
+                                                         uids
+                                                         leftUids
                             , onNotifyDeleteAcquaintance = \did uid -> do
                                 handleNotifyDeleteAcquaintance client did uid
                                 onNotifyDeleteAcquaintance userNH did uid
@@ -235,5 +245,6 @@ handleAddAcquaintance client _did newUser =
 -- TODO: Check if this kind notification is sent to the user who makes the trigger of the notification:
 --       i.e. called removeUserFromTalkRoom, leaveTalkRoom
 handleNotifyDeleteAcquaintance :: Client -> DomainId -> UserId -> IO ()
-handleNotifyDeleteAcquaintance client _did uid =
-    modifyAcquaintances client (\users -> (filter ((/= uid) . userId) users, ()))
+handleNotifyDeleteAcquaintance client _did uid = modifyAcquaintances
+    client
+    (\users -> (filter ((/= uid) . userId) users, ()))

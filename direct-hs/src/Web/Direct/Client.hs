@@ -45,24 +45,28 @@ module Web.Direct.Client
     )
 where
 
-import qualified Control.Concurrent.STM                   as S
-import           Control.Error.Util                       (failWith)
-import           Control.Monad                            (mapM_, when)
-import           Control.Monad.Except                     (ExceptT (ExceptT),
-                                                           runExceptT,
-                                                           throwError)
-import           Control.Monad.IO.Class                   (liftIO)
-import           Data.Foldable                            (for_)
-import qualified Data.IORef                               as I
-import qualified Data.List                                as L
-import           Data.Maybe                               (catMaybes)
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import qualified Control.Concurrent.STM        as S
+import           Control.Error.Util                       ( failWith )
+import           Control.Monad                            ( mapM_
+                                                          , when
+                                                          )
+import           Control.Monad.Except                     ( ExceptT(ExceptT)
+                                                          , runExceptT
+                                                          , throwError
+                                                          )
+import           Control.Monad.IO.Class                   ( liftIO )
+import           Data.Foldable                            ( for_ )
+import qualified Data.IORef                    as I
+import qualified Data.List                     as L
+import           Data.Maybe                               ( catMaybes )
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
 
 import           Web.Direct.Client.Channel
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC                     hiding
-                                                           (getAcquaintances,
-                                                           getDomains)
+import           Web.Direct.DirectRPC              hiding ( getAcquaintances
+                                                          , getDomains
+                                                          )
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Types
@@ -168,8 +172,8 @@ getTalkAcquaintances client talk = do
 
 leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
 leaveTalkRoom client tid = runExceptT $ do
-    _ <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
-    me   <- liftIO $ getMe client
+    _  <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    me <- liftIO $ getMe client
     ExceptT $ deleteTalker (clientRpcClient client) tid (userId me)
 
 removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
@@ -183,8 +187,10 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     ExceptT $ deleteTalker (clientRpcClient client) tid uid
     liftIO $ do
         let did = domainId $ getCurrentDomain client
-        muidsAfterDeleted <- fmap (filter (/= uid) . talkUserIds) <$> findTalkRoom tid client
-        for_ muidsAfterDeleted $ \uidsAfterDeleted -> onDeleteTalker client did tid uidsAfterDeleted [uid]
+        muidsAfterDeleted <-
+            fmap (filter (/= uid) . talkUserIds) <$> findTalkRoom tid client
+        for_ muidsAfterDeleted $ \uidsAfterDeleted ->
+            onDeleteTalker client did tid uidsAfterDeleted [uid]
 
 ----------------------------------------------------------------
 
@@ -230,10 +236,9 @@ withChannel
     -> Maybe User -- ^ limit of who to talk with; 'Nothing' means everyone (no limits)
     -> (Channel -> IO ())
     -> IO Bool
-withChannel client = withChannel'
-    (clientRpcClient client)
-    (clientChannels client)
-    (clientStatus client)
+withChannel client = withChannel' (clientRpcClient client)
+                                  (clientChannels client)
+                                  (clientStatus client)
 
 getChannelAcquaintances :: Client -> Channel -> IO [User]
 getChannelAcquaintances client chan = case channelUserLimit chan of
@@ -249,11 +254,10 @@ shutdown client = shutdown' (clientRpcClient client)
                             (clientStatus client)
 
 onAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
-onAddTalkers client _did newTalk =
-    modifyTalkRooms client $ \talks -> (map updateTalk talks, ())
+onAddTalkers client _did newTalk = modifyTalkRooms client
+    $ \talks -> (map updateTalk talks, ())
   where
-    updateTalk talk =
-        if talkId talk == talkId newTalk then newTalk else talk
+    updateTalk talk = if talkId talk == talkId newTalk then newTalk else talk
 
 onDeleteTalk :: Client -> TalkId -> IO ()
 onDeleteTalk client tid = do
@@ -263,10 +267,10 @@ onDeleteTalk client tid = do
     let chanDB = clientChannels client
     getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
 
-onDeleteTalker
-    :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
-onDeleteTalker client _ tid uidsAfterDeleted _leftUids =
-    modifyTalkRooms client $ \talks -> (map updateTalkUserIds talks, ())
+onDeleteTalker :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+onDeleteTalker client _ tid uidsAfterDeleted _leftUids = modifyTalkRooms client
+    $ \talks -> (map updateTalkUserIds talks, ())
   where
-    updateTalkUserIds talk =
-        if talkId talk == tid then talk { talkUserIds = uidsAfterDeleted } else talk
+    updateTalkUserIds talk = if talkId talk == tid
+        then talk { talkUserIds = uidsAfterDeleted }
+        else talk
