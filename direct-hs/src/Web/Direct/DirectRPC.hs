@@ -169,6 +169,5 @@ handleNotification method params handlers = case (method, params) of
 --   The 500 msec is the time for which direct-js actually sleeps
 --   before executing "delete_talker".
 --   So I guess this is the suitable time for other private APIs.
--- TODO: Make private
 throttleDown :: IO ()
 throttleDown = threadDelay (500 * 1000)
