@@ -58,7 +58,7 @@ data Message =
     | TaskA     !T.Text Bool Bool -- done
     | Files     ![File] !(Maybe T.Text)
     | Other     !T.Text
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read)
 
 data File = File
     { fileUrl         :: !T.Text
@@ -66,7 +66,7 @@ data File = File
     , fileContentSize :: !Word64
     , fileName        :: !T.Text
     , fileId          :: !FileId
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Read)
 
 -- | Created from the response of direct's RPC function @create_upload_auth@.
 --   Contains information to upload/download a file to/from direct.
