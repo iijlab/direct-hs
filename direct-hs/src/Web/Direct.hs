@@ -76,7 +76,7 @@ module Web.Direct
     , onNotifyDeleteTalker
     , onNotifyDeleteAcquaintance
     , defaultNotificationHandlers
-  -- * Utlity
+  -- * Utility
     , throttleDown
     )
 where
