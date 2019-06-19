@@ -3,10 +3,10 @@
 
 module Web.Direct.DirectRPC.Map where
 
-import           Data.Function                            ( on )
-import qualified Data.List                     as L
-import           Data.Maybe                               ( mapMaybe )
-import qualified Data.MessagePack              as M
+import           Data.Function    (on)
+import qualified Data.List        as L
+import           Data.Maybe       (mapMaybe)
+import qualified Data.MessagePack as M
 
 
 import           Web.Direct.Types
