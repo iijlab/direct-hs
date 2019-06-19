@@ -2,12 +2,13 @@
 
 module Web.Direct.DirectRPC where
 
-import           Control.Concurrent                       (threadDelay)
-import           Control.Monad                            (void)
-import qualified Data.MessagePack                         as M
-import qualified Data.MessagePack.RPC                     as R
-import           Data.Text                                (Text)
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import           Control.Concurrent                       ( threadDelay )
+import           Control.Monad                            ( void )
+import qualified Data.MessagePack              as M
+import qualified Data.MessagePack.RPC          as R
+import           Data.Text                                ( Text )
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
 
 import           Web.Direct.DirectRPC.Map
 import           Web.Direct.Exception
