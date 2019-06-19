@@ -1,7 +1,7 @@
 module Web.Direct.Types where
 
-import qualified Data.Text                     as T
-import           Data.Word                                ( Word64 )
+import qualified Data.Text as T
+import           Data.Word (Word64)
 
 ----------------------------------------------------------------
 
