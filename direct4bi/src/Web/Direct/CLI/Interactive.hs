@@ -2,13 +2,12 @@ module Web.Direct.CLI.Interactive
     ( defaultMain
     , mainWith
     , noRoomIdConfigured
-
     , RunCommand
     , defaultRunCommand
-
     , HelpLine
     , defaultHelpLines
-    ) where
+    )
+where
 
 import           Control.Applicative      ((<**>))
 import           Control.Arrow            (second)
@@ -173,9 +172,8 @@ defaultRunCommand _hs st client "r" arg = case readMaybe arg of
         return st
 defaultRunCommand _hs st client "p" arg = do
     case st of
-        Just roomId ->
-            sendMessageLogging client (D.Txt $ T.pack arg) roomId
-        _ -> hPutStrLn stderr noRoomIdConfigured
+        Just roomId -> sendMessageLogging client (D.Txt $ T.pack arg) roomId
+        _           -> hPutStrLn stderr noRoomIdConfigured
     return st
 defaultRunCommand _hs st client "leave" _arg = do
     case st of
