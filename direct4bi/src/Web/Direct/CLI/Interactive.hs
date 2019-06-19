@@ -1,6 +1,7 @@
 module Web.Direct.CLI.Interactive
     ( defaultMain
     , mainWith
+    , noRoomIdConfigured
 
     , RunCommand
     , defaultRunCommand

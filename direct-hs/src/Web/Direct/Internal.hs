@@ -2,8 +2,11 @@ module Web.Direct.Internal
     (
     -- * 'Web.Direct.Client'
       clientRpcClient
+    , findTalkRoom
+    , onAddTalkers
 
     -- * 'Web.Direct.Exception'
+    , callRpc
     , callRpcThrow
     , convertOrThrow
 
