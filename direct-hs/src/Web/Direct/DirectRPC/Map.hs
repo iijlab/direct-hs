@@ -75,36 +75,48 @@ decodeTalkRoom (M.ObjectMap m) = do
                 Just (M.ObjectStr tname) -> GroupTalk tname
                 _                        -> GroupTalk ""
             | otherwise = UnknownTalk
-    M.ObjectArray uids <- look "user_ids" m
-    let userIds = mapMaybe extract uids
+    userIds <- decodeUserIds =<< look "user_ids" m
     Just $ TalkRoom tid typ userIds
-  where
-    extract (M.ObjectWord uid) = Just uid
-    extract _                  = Nothing
 decodeTalkRoom _ = Nothing
 
 decodeUploadAuth :: [(M.Object, M.Object)] -> Maybe UploadAuth
 decodeUploadAuth rspMap = do
-    M.ObjectStr uploadAuthGetUrl <- lookup (M.ObjectStr "get_url") rspMap
-    M.ObjectStr uploadAuthPutUrl <- lookup (M.ObjectStr "put_url") rspMap
-    M.ObjectWord uploadAuthFileId <- lookup (M.ObjectStr "file_id") rspMap
+    M.ObjectStr  uploadAuthGetUrl             <- look "get_url" rspMap
+    M.ObjectStr  uploadAuthPutUrl             <- look "put_url" rspMap
+    M.ObjectWord uploadAuthFileId             <- look "file_id" rspMap
 
     M.ObjectMap formObj <- lookup (M.ObjectStr "post_form") rspMap
-    M.ObjectStr uploadAuthContentDisposition <- lookup
+    M.ObjectStr  uploadAuthContentDisposition <- lookup
         (M.ObjectStr "Content-Disposition")
         formObj
     return UploadAuth {..}
 
 ----------------------------------------------------------------
 
-decodeTalker :: M.Object -> Maybe (DomainId, TalkId, [UserId], [UserId])
-decodeTalker (M.ObjectMap m) = do
+decodeAddTalkers :: M.Object -> Maybe (DomainId, TalkRoom)
+decodeAddTalkers (M.ObjectMap m) = do
+    (did, talk) <- decodeTalkRoomWithDomainId $ M.ObjectMap m
+    return (did, talk)
+decodeAddTalkers _ = Nothing
+
+----------------------------------------------------------------
+
+decodeAddAcquaintance :: M.Object -> Maybe (DomainId, User)
+decodeAddAcquaintance (M.ObjectMap m) = do
+    M.ObjectWord did <- look "domain_id" m
+    user             <- decodeUser $ M.ObjectMap m
+    return (did, user)
+decodeAddAcquaintance _ = Nothing
+
+----------------------------------------------------------------
+decodeDeleteTalker :: M.Object -> Maybe (DomainId, TalkId, [UserId], [UserId])
+decodeDeleteTalker (M.ObjectMap m) = do
     M.ObjectWord did <- look "domain_id" m
     M.ObjectWord tid <- look "talk_id" m
     userIds          <- decodeUserIds =<< look "user_ids" m
     leftUsers        <- decodeLeftUsers =<< look "left_users" m
     return (did, tid, userIds, leftUsers)
-decodeTalker _ = Nothing
+decodeDeleteTalker _ = Nothing
 
 decodeUserIds :: M.Object -> Maybe [UserId]
 decodeUserIds (M.ObjectArray arr) = Just $ mapMaybe decodeUserId arr

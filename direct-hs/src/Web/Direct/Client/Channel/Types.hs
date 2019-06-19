@@ -17,7 +17,6 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.DirectRPC
 import           Web.Direct.Exception
-import           Web.Direct.Message
 import           Web.Direct.Types
 
 ----------------------------------------------------------------

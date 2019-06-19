@@ -23,7 +23,6 @@ import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel.Types
 import           Web.Direct.Client.Status
-import           Web.Direct.Message
 import           Web.Direct.Types
 
 ----------------------------------------------------------------

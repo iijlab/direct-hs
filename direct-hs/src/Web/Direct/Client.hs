@@ -17,6 +17,7 @@ module Web.Direct.Client
     , getMe
     , setAcquaintances
     , getAcquaintances
+    , modifyAcquaintances
     , getUsers
     , getCurrentDomain
     , setCurrentDomain
@@ -30,7 +31,11 @@ module Web.Direct.Client
     , withChannel
     , getChannelAcquaintances
     , shutdown
-    -- re-exporting
+    -- * Hooks when some changes are made in talk room members.
+    , onAddTalkers
+    , onDeleteTalk
+    , onDeleteTalker
+    -- * re-exporting
     , dispatch
     , Channel
     , haltChannel
@@ -42,11 +47,12 @@ where
 
 import qualified Control.Concurrent.STM                   as S
 import           Control.Error.Util                       (failWith)
-import           Control.Monad                            (when)
+import           Control.Monad                            (mapM_, when)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
                                                            runExceptT,
                                                            throwError)
 import           Control.Monad.IO.Class                   (liftIO)
+import           Data.Foldable                            (for_)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (catMaybes)
@@ -59,7 +65,6 @@ import           Web.Direct.DirectRPC                     hiding
                                                            getDomains)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Message
 import           Web.Direct.Types
 import           Web.Direct.Upload
 
@@ -97,7 +102,7 @@ setDomains = I.writeIORef . clientDomains
 getDomains :: Client -> IO [Domain]
 getDomains client = I.readIORef (clientDomains client)
 
-modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], ())) -> IO ()
+modifyTalkRooms :: Client -> ([TalkRoom] -> ([TalkRoom], r)) -> IO r
 modifyTalkRooms client = I.atomicModifyIORef' (clientTalkRooms client)
 
 setTalkRooms :: Client -> [TalkRoom] -> IO ()
@@ -117,6 +122,9 @@ setAcquaintances = I.writeIORef . clientAcquaintances
 
 getAcquaintances :: Client -> IO [User]
 getAcquaintances = I.readIORef . clientAcquaintances
+
+modifyAcquaintances :: Client -> ([User] -> ([User], r)) -> IO r
+modifyAcquaintances client = I.atomicModifyIORef' (clientAcquaintances client)
 
 --- | Getting acquaintances and me. The head of the list is myself.
 getUsers :: Client -> IO [User]
@@ -160,9 +168,9 @@ getTalkAcquaintances client talk = do
 
 leaveTalkRoom :: Client -> TalkId -> IO (Either Exception ())
 leaveTalkRoom client tid = runExceptT $ do
-    talk <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
-    me   <- liftIO $ getMe client
-    ExceptT $ deleteTalker (clientRpcClient client) talk me
+    _  <- failWith InvalidTalkId =<< liftIO (findTalkRoom tid client)
+    me <- liftIO $ getMe client
+    ExceptT $ deleteTalker (clientRpcClient client) tid (userId me)
 
 removeUserFromTalkRoom :: Client -> TalkId -> UserId -> IO (Either Exception ())
 removeUserFromTalkRoom client tid uid = runExceptT $ do
@@ -172,7 +180,13 @@ removeUserFromTalkRoom client tid uid = runExceptT $ do
     user     <- failWith InvalidUserId =<< liftIO (findUser uid client)
     talkAcqs <- liftIO $ getTalkAcquaintances client talk
     when (user `notElem` talkAcqs) $ throwError InvalidUserId
-    ExceptT $ deleteTalker (clientRpcClient client) talk user
+    ExceptT $ deleteTalker (clientRpcClient client) tid uid
+    liftIO $ do
+        let did = domainId $ getCurrentDomain client
+        muidsAfterDeleted <-
+            fmap (filter (/= uid) . talkUserIds) <$> findTalkRoom tid client
+        for_ muidsAfterDeleted $ \uidsAfterDeleted ->
+            onDeleteTalker client did tid uidsAfterDeleted [uid]
 
 ----------------------------------------------------------------
 
@@ -189,7 +203,7 @@ uploadFile client upf@UploadFile {..} tid = runExceptT $ do
         uploadFileName
         uploadFileMimeType
         uploadFileSize
-        (getCurrentDomain client)
+        (domainId $ getCurrentDomain client)
     ExceptT $ runUploadFile upf ua
     let files = Files
             [ File uploadAuthGetUrl
@@ -218,10 +232,9 @@ withChannel
     -> Maybe User -- ^ limit of who to talk with; 'Nothing' means everyone (no limits)
     -> (Channel -> IO ())
     -> IO Bool
-withChannel client = withChannel'
-    (clientRpcClient client)
-    (clientChannels client)
-    (clientStatus client)
+withChannel client = withChannel' (clientRpcClient client)
+                                  (clientChannels client)
+                                  (clientStatus client)
 
 getChannelAcquaintances :: Client -> Channel -> IO [User]
 getChannelAcquaintances client chan = case channelUserLimit chan of
@@ -235,3 +248,25 @@ shutdown :: Client -> Message -> IO ()
 shutdown client = shutdown' (clientRpcClient client)
                             (clientChannels client)
                             (clientStatus client)
+
+onAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
+onAddTalkers client _did newTalk = modifyTalkRooms client
+    $ \talks -> (map updateTalk talks, ())
+  where
+    updateTalk talk = if talkId talk == talkId newTalk then newTalk else talk
+
+onDeleteTalk :: Client -> TalkId -> IO ()
+onDeleteTalk client tid = do
+    -- Remove talk
+    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
+    -- Close channels for talk
+    let chanDB = clientChannels client
+    getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
+
+onDeleteTalker :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
+onDeleteTalker client _ tid uidsAfterDeleted _leftUids = modifyTalkRooms client
+    $ \talks -> (map updateTalkUserIds talks, ())
+  where
+    updateTalkUserIds talk = if talkId talk == tid
+        then talk { talkUserIds = uidsAfterDeleted }
+        else talk

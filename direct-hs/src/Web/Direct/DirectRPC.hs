@@ -2,6 +2,7 @@
 
 module Web.Direct.DirectRPC where
 
+import           Control.Concurrent                       (threadDelay)
 import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
@@ -106,11 +107,11 @@ getTalkStatuses :: RPC.Client -> IO ()
 getTalkStatuses rpcclient =
     void $ callRpcThrow rpcclient "get_talk_statuses" []
 
-deleteTalker :: RPC.Client -> TalkRoom -> User -> IO (Either Exception ())
-deleteTalker rpcclient talk user = do
+
+deleteTalker :: RPC.Client -> TalkId -> UserId -> IO (Either Exception ())
+deleteTalker rpcclient tid uid = do
+    throttleDown
     let methodName = "delete_talker"
-        tid        = talkId talk
-        uid        = userId user
         dat        = [M.ObjectWord tid, M.ObjectWord uid]
     void <$> callRpc rpcclient methodName dat
 
@@ -119,15 +120,15 @@ createUploadAuth
     -> Text
     -> Text
     -> FileSize
-    -> Domain
+    -> DomainId
     -> IO (Either Exception UploadAuth)
-createUploadAuth rpcclient fn mimeType fileSize dom = do
+createUploadAuth rpcclient fn mimeType fileSize did = do
     let methodName = "create_upload_auth"
         obj =
             [ M.ObjectStr fn
             , M.ObjectStr mimeType
             , M.ObjectWord fileSize
-            , M.ObjectWord $ domainId dom
+            , M.ObjectWord did
             ]
     eres <- callRpc rpcclient methodName obj
     case eres of
@@ -139,12 +140,6 @@ createUploadAuth rpcclient fn mimeType fileSize dom = do
 
 ----------------------------------------------------------------
 
-data NotificationHandlers = NotificationHandlers
-    { onNotifyCreateMessage :: Message -> MessageId -> TalkId -> UserId -> IO ()
-    , onNotifyDeleteTalk :: TalkId -> IO ()
-    , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
-    }
-
 handleNotification
     :: R.MethodName -> [M.Object] -> NotificationHandlers -> IO ()
 handleNotification method params handlers = case (method, params) of
@@ -152,10 +147,25 @@ handleNotification method params handlers = case (method, params) of
         Just (msg, msgid, tid, uid) ->
             onNotifyCreateMessage handlers msg msgid tid uid
         _ -> return ()
+    ("notify_add_talkers", obj : _) -> case decodeAddTalkers obj of
+        Just (did, talk) -> onNotifyAddTalkers handlers did talk
+        _                -> return ()
+    ("notify_add_acquaintance", obj : _) -> case decodeAddAcquaintance obj of
+        Just (did, user) -> onNotifyAddAcquaintance handlers did user
+        _                -> return ()
+    ("notify_delete_acquaintance", M.ObjectWord did : M.ObjectWord uid : _) ->
+        onNotifyDeleteAcquaintance handlers did uid
     ("notify_delete_talk", M.ObjectWord tid : _) ->
         onNotifyDeleteTalk handlers tid
-    ("notify_delete_talker", obj : _) -> case decodeTalker obj of
+    ("notify_delete_talker", obj : _) -> case decodeDeleteTalker obj of
         Just (did, tid, uids, leftUids) ->
             onNotifyDeleteTalker handlers did tid uids leftUids
         _ -> return ()
     _ -> return ()
+
+-- | Run this action before executing private or heavily-loaded APIs.
+--   The 500 msec is the time for which direct-js actually sleeps
+--   before executing "delete_talker".
+--   So I guess this is the suitable time for other private APIs.
+throttleDown :: IO ()
+throttleDown = threadDelay (500 * 1000)

@@ -67,13 +67,24 @@ module Web.Direct
     , shutdown
   -- * Exceptions
     , Exception(..)
+  -- * Notifications
+    , NotificationHandlers
+    , onNotifyCreateMessage
+    , onNotifyAddTalkers
+    , onNotifyAddAcquaintance
+    , onNotifyDeleteTalk
+    , onNotifyDeleteTalker
+    , onNotifyDeleteAcquaintance
+    , defaultNotificationHandlers
+  -- * Utility
+    , throttleDown
     )
 where
 
 import           Web.Direct.Api
 import           Web.Direct.Client
+import           Web.Direct.DirectRPC (throttleDown)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
-import           Web.Direct.Message
 import           Web.Direct.Types
 import           Web.Direct.Upload
