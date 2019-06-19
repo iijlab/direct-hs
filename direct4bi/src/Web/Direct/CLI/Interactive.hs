@@ -9,35 +9,27 @@ module Web.Direct.CLI.Interactive
     )
 where
 
-import           Control.Applicative                      ( (<**>) )
-import           Control.Arrow                            ( second )
-import           Control.Concurrent                       ( threadDelay )
-import           Control.Error                            ( note )
-import           Control.Monad                            ( when )
-import           Control.Monad.IO.Class                   ( liftIO )
-import qualified Data.ByteString.Lazy          as B
-import           Data.Char                                ( isSpace )
-import           Data.Foldable                            ( for_ )
-import           Data.List                                ( break
-                                                          , sort
-                                                          )
-import qualified Data.Text                     as T
-import qualified Data.Text.Lazy                as TL
-import qualified Options.Applicative           as Opt
-import qualified System.Console.Haskeline      as Hl
-import           System.Exit                              ( die )
-import qualified System.FilePath               as FP
-import           System.IO                                ( hFlush
-                                                          , hPutStrLn
-                                                          , stderr
-                                                          , stdout
-                                                          )
-import           Text.Pretty.Simple                       ( pPrint
-                                                          , pShow
-                                                          )
-import           Text.Read                                ( readMaybe )
+import           Control.Applicative      ((<**>))
+import           Control.Arrow            (second)
+import           Control.Concurrent       (threadDelay)
+import           Control.Error            (note)
+import           Control.Monad            (when)
+import           Control.Monad.IO.Class   (liftIO)
+import qualified Data.ByteString.Lazy     as B
+import           Data.Char                (isSpace)
+import           Data.Foldable            (for_)
+import           Data.List                (break, sort)
+import qualified Data.Text                as T
+import qualified Data.Text.Lazy           as TL
+import qualified Options.Applicative      as Opt
+import qualified System.Console.Haskeline as Hl
+import           System.Exit              (die)
+import qualified System.FilePath          as FP
+import           System.IO                (hFlush, hPutStrLn, stderr, stdout)
+import           Text.Pretty.Simple       (pPrint, pShow)
+import           Text.Read                (readMaybe)
 
-import qualified Web.Direct                    as D
+import qualified Web.Direct               as D
 
 newtype ReadFile = ReadFile { unReadFile :: D.File } deriving Read
 
