@@ -45,24 +45,28 @@ module Web.Direct.Client
     )
 where
 
-import qualified Control.Concurrent.STM                   as S
-import           Control.Error.Util                       (failWith)
-import           Control.Monad                            (mapM_, when)
-import           Control.Monad.Except                     (ExceptT (ExceptT),
-                                                           runExceptT,
-                                                           throwError)
-import           Control.Monad.IO.Class                   (liftIO)
-import           Data.Foldable                            (for_)
-import qualified Data.IORef                               as I
-import qualified Data.List                                as L
-import           Data.Maybe                               (catMaybes)
-import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
+import qualified Control.Concurrent.STM        as S
+import           Control.Error.Util                       ( failWith )
+import           Control.Monad                            ( mapM_
+                                                          , when
+                                                          )
+import           Control.Monad.Except                     ( ExceptT(ExceptT)
+                                                          , runExceptT
+                                                          , throwError
+                                                          )
+import           Control.Monad.IO.Class                   ( liftIO )
+import           Data.Foldable                            ( for_ )
+import qualified Data.IORef                    as I
+import qualified Data.List                     as L
+import           Data.Maybe                               ( catMaybes )
+import qualified Network.MessagePack.RPC.Client.WebSocket
+                                               as RPC
 
 import           Web.Direct.Client.Channel
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC                     hiding
-                                                           (getAcquaintances,
-                                                           getDomains)
+import           Web.Direct.DirectRPC              hiding ( getAcquaintances
+                                                          , getDomains
+                                                          )
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Types
