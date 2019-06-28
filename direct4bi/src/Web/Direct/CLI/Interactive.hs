@@ -49,6 +49,12 @@ type RunCommand = State -> D.Client -> String -> String -> IO State
 type State = Maybe D.TalkId
 
 
+data TalkRoomAndParticipants = TalkRoomAndParticipants
+    { talkRoom         :: D.TalkRoom
+    , talkParticipants :: [D.User]
+    } deriving (Eq, Show)
+
+
 mainWith :: RunCommand -> IO ()
 mainWith runCommand = do
     args <- Opt.execParser argsInfo
@@ -149,6 +155,7 @@ defaultHelpLines =
     -- , "invite <user_ids>: Add users whose IDs are <user_ids> to the current talk room. <user_ids> are separated by spaces"
     , "post <message>: Post <message> to the current talk room."
     , "show users: Show the logged-in user and his/her acquaintances."
+    , "show rooms: Show the logged-in user's talk rooms and their participants."
     , "sleep <seconds>: Sleep for <seconds> seconds."
     , "quit: Quit this application."
     , "help: Print this message."
@@ -198,6 +205,13 @@ defaultRunCommand _hs st client "post" arg = do
     return st
 defaultRunCommand _hs st client "show" "users" = do
     pPrint =<< D.getUsers client
+    return st
+defaultRunCommand _hs st client "show" "rooms" = do
+    talks <- D.getTalkRooms client
+    for_ talks $ \talk -> do
+        talkUsers <- D.getTalkUsers client talk
+        pPrint $ TalkRoomAndParticipants talk talkUsers
+
     return st
 defaultRunCommand _hs st _client "sleep" arg = do
     case readMaybe arg :: Maybe Double of
