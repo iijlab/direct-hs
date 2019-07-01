@@ -3,6 +3,7 @@ module Web.Direct.CLI.Interactive
     , mainWith
     , noRoomIdConfigured
     , RunCommand
+    , State
     , defaultRunCommand
     , HelpLine
     , defaultHelpLines
@@ -30,10 +31,6 @@ import           Text.Pretty.Simple       (pPrint, pShow)
 import           Text.Read                (readMaybe)
 
 import qualified Web.Direct               as D
-
-newtype ReadFile = ReadFile { unReadFile :: D.File } deriving Read
-
-newtype ReadMessage = ReadMessage { unReadMessage :: D.Message } deriving Read
 
 
 data Args = Args
@@ -152,7 +149,6 @@ defaultHelpLines =
     [ "r <talk_room_id>: Switch the current talk room by <talk_room_id>"
     , "p <message>: Post <message> as a text message to the current talk room."
     , "leave: Leave the current talk room."
-    -- , "invite <user_ids>: Add users whose IDs are <user_ids> to the current talk room. <user_ids> are separated by spaces"
     , "post <message>: Post <message> to the current talk room."
     , "show users: Show the logged-in user and his/her acquaintances."
     , "show rooms: Show the logged-in user's talk rooms and their participants."
@@ -189,7 +185,7 @@ defaultRunCommand _hs st client "leave" _arg = do
             case result of
                 Right () ->
                     putStrLn $ "Successfully left room#" ++ show roomId ++ "."
-                Left ex -> putStrLn $ "ERROR leaving a room: " ++ show ex
+                Left ex -> hPutStrLn stderr $ "ERROR leaving a room: " ++ show ex
 
         _ -> hPutStrLn stderr noRoomIdConfigured
     return st
@@ -232,7 +228,7 @@ sendMessageLogging client msg roomId = do
     case result of
         Right mid ->
             putStrLn $ "Successfully created message#" ++ show mid ++ "."
-        Left ex -> putStrLn $ "ERROR creating a message: " ++ show ex
+        Left ex -> hPutStrLn stderr $ "ERROR creating a message: " ++ show ex
 
 
 noRoomIdConfigured :: String
