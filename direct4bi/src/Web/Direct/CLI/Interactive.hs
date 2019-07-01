@@ -140,7 +140,7 @@ loop runCommand st prompt client = do
 
 
 parseCommand :: String -> (String, String)
-parseCommand = second (dropWhile isSpace) . break isSpace
+parseCommand = second (dropWhile isSpace) . break isSpace . dropWhile isSpace
 
 type HelpLine = String
 
@@ -218,7 +218,7 @@ defaultRunCommand hs st _client "help" _arg = do
     for_ (sort hs) putStrLn
     return st
 defaultRunCommand _hs st _client other arg = do
-    hPutStrLn stderr $ "Unknown command " ++ show (other ++ arg) ++ "."
+    hPutStrLn stderr $ "Unknown command " ++ show (other ++ " " ++ arg) ++ "."
     return st
 
 
