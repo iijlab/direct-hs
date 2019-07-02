@@ -24,6 +24,7 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , Win32
     , bytestring
     , direct-hs
     , errors

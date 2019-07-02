@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Web.Direct.CLI.Interactive
     ( defaultMain
     , mainWith
@@ -26,9 +28,16 @@ import qualified Options.Applicative      as Opt
 import qualified System.Console.Haskeline as Hl
 import           System.Exit              (die)
 import qualified System.FilePath          as FP
-import           System.IO                (hFlush, hPutStrLn, stderr, stdout)
+import           System.IO                (hFlush, hPutStrLn, hSetEncoding,
+                                           stderr, stdout)
 import           Text.Pretty.Simple       (pPrint, pShow)
 import           Text.Read                (readMaybe)
+
+#ifdef mingw32_HOST_OS
+import           GHC.IO.Encoding.CodePage (mkLocaleEncoding)
+import           GHC.IO.Encoding.Failure  (CodingFailureMode (TransliterateCodingFailure))
+import qualified System.Win32.Console     as Win32
+#endif
 
 import qualified Web.Direct               as D
 
@@ -54,6 +63,8 @@ data TalkRoomAndParticipants = TalkRoomAndParticipants
 
 mainWith :: RunCommand -> IO ()
 mainWith runCommand = do
+    avoidCodingError
+
     args <- Opt.execParser argsInfo
 
     let jsonBaseName = FP.takeBaseName $ loginInfoFile args
@@ -253,3 +264,12 @@ dieWhenLeft = either exitError return
 
 exitError :: String -> IO a
 exitError emsg = die $ "[ERROR] " ++ emsg ++ "\n"
+
+
+avoidCodingError :: IO ()
+#ifdef mingw32_HOST_OS
+avoidCodingError =
+  hSetEncoding stdout $ mkLocaleEncoding TransliterateCodingFailure
+#else
+avoidCodingError = return ()
+#endif
