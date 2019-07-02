@@ -37,6 +37,7 @@ import           Data.IORef              (IORef)
 import qualified Data.IORef              as IORef
 import qualified Data.MessagePack        as MsgPack
 import           Data.Monoid             ((<>))
+import           System.IO               (hPrint, stderr)
 import           System.Timeout          (timeout)
 
 import           Data.MessagePack.RPC
@@ -95,7 +96,7 @@ defaultConfig = Config
     { notificationHandler = \_ _ _ -> return ()
     , requestHandler      = \_ _ _ _ -> return ()
     , logger              = \_ -> return ()
-    , exceptionHandlers   = [E.Handler $ \(E.SomeException _) -> return ()]
+    , exceptionHandlers   = [E.Handler $ \(E.SomeException e) -> hPrint stderr e]
     , formatter           = show
     , waitRequestHandler  = False
     }
