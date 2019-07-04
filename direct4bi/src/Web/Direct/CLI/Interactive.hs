@@ -36,7 +36,6 @@ import           Text.Read                (readMaybe)
 #ifdef mingw32_HOST_OS
 import           GHC.IO.Encoding.CodePage (mkLocaleEncoding)
 import           GHC.IO.Encoding.Failure  (CodingFailureMode (TransliterateCodingFailure))
-import qualified System.Win32.Console     as Win32
 #endif
 
 import qualified Web.Direct               as D
