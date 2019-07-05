@@ -56,6 +56,7 @@ import           Data.Foldable                            (for_)
 import qualified Data.IORef                               as I
 import qualified Data.List                                as L
 import           Data.Maybe                               (catMaybes)
+import           Data.Traversable                         (mapAccumL)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -251,9 +252,16 @@ shutdown client = shutdown' (clientRpcClient client)
 
 onAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
 onAddTalkers client _did newTalk = modifyTalkRooms client
-    $ \talks -> (map updateTalk talks, ())
+    $ \talks -> (updateTalks talks, ())
   where
-    updateTalk talk = if talkId talk == talkId newTalk then newTalk else talk
+    updateTalks talks =
+        let (found, newTalks) = mapAccumL updateTalk False talks
+         in if found then newTalks else newTalk : talks
+
+    updateTalk alreadyFound talk =
+        if not alreadyFound && talkId talk == talkId newTalk
+          then (True, newTalk)
+          else (alreadyFound, talk)
 
 onDeleteTalk :: Client -> TalkId -> IO ()
 onDeleteTalk client tid = do
