@@ -23,42 +23,21 @@ module Network.MessagePack.RPC.Client
     )
 where
 
-import           Control.Concurrent      (ThreadId, forkFinally, forkIO,
-                                          killThread)
-import           Control.Concurrent.MVar (MVar)
-import qualified Control.Concurrent.MVar as MVar
-import qualified Control.Exception.Safe  as E
-import           Control.Monad           (forever, void, when)
-import qualified Data.ByteString         as B
-import qualified Data.ByteString.Lazy    as BL
-import qualified Data.HashMap.Strict     as HM
-import           Data.IORef              (IORef)
-import qualified Data.IORef              as IORef
-import qualified Data.MessagePack        as MsgPack
-import           Data.Monoid             ((<>))
-import           System.IO               (hPrint, stderr)
-import           System.Timeout          (timeout)
+import           Control.Concurrent                      (forkFinally, forkIO,
+                                                          killThread)
+import qualified Control.Concurrent.MVar                 as MVar
+import qualified Control.Exception.Safe                  as E
+import           Control.Monad                           (forever, void, when)
+import qualified Data.ByteString.Lazy                    as BL
+import qualified Data.HashMap.Strict                     as HM
+import qualified Data.IORef                              as IORef
+import qualified Data.MessagePack                        as MsgPack
+import           Data.Monoid                             ((<>))
+import           System.IO                               (hPrint, stderr)
+import           System.Timeout                          (timeout)
 
 import           Data.MessagePack.RPC
-
--- | A client data type for MessagePack RPC.
-data Client = Client {
-    clientSessionState :: !SessionState
-  , clientBackend      :: !Backend
-  , clientLog          :: Logger
-  , clientFormat       :: Formatter
-  , clientHandlerTid   :: IORef (Maybe ThreadId)
-  }
-
-data SessionState = SessionState {
-    lastMessageId :: IORef MessageId
-  , dispatchTable :: IORef (HM.HashMap MessageId (MVar Result))
-  }
-
--- | Result type of a RPC call.
---   Described as "error" and "result" of "Response Message"
---   in [the spec of MessagePack RPC](https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md#response-message).
-type Result = Either MsgPack.Object MsgPack.Object
+import           Network.MessagePack.RPC.Client.Internal
 
 -- | Notification handler. The 3rd argument is response objects.
 type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
@@ -66,12 +45,6 @@ type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 -- | Notification handler. The 2nd argument is message id to be used
 --   for replying. The 3rd argument is response objects.
 type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
-
--- | Logger type. Should print out the message passed as a first argument somewhere.
-type Logger = String -> IO ()
-
--- | Convert 'Message' into a @String@ to print out by 'Logger'
-type Formatter = Message -> String
 
 -- | Configuration for MessagePack RPC.
 data Config = Config {
@@ -99,14 +72,6 @@ defaultConfig = Config
     , formatter           = show
     , waitRequestHandler  = False
     }
-
--- | Backend IO functions.
---   Any receiving / sending actions are performed by calling these functions.
-data Backend = Backend {
-    backendSend  :: B.ByteString -> IO () -- ^ Sending
-  , backendRecv  :: IO B.ByteString -- ^ Receiving
-  , backendClose :: IO () -- ^ Closing
-  }
 
 -- TODO: Returns any exception
 -- | Calling RPC.
@@ -173,10 +138,6 @@ receiverThread client config =
                                                params
     where ss = clientSessionState client
 
-initSessionState :: IO SessionState
-initSessionState =
-    SessionState <$> IORef.newIORef 0 <*> IORef.newIORef HM.empty
-
 -- | Executing the action in the 3rd argument with a 'Client'.
 withClient :: Config -> Backend -> (Client -> IO a) -> IO a
 withClient config backend action = do
@@ -192,6 +153,7 @@ withClient config backend action = do
   where
     takeAction client wait = do
         returned <- action client
+        -- TODO: Why not run these in `finally`?
         when (waitRequestHandler config) $ MVar.takeMVar wait
         return returned
 
