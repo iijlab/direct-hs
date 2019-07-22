@@ -14,6 +14,7 @@ jobs:
         - 'dependencies-{{ checksum "stack.yaml" }}'
         - 'dependencies-'
     - run: stack --compiler=ghc-8.6.5 --no-terminal test --pedantic --no-run-tests
+    - run: stack --compiler=ghc-8.6.5 --no-terminal test --pedantic direct-hs
 
     - save_cache:
         key: 'dependencies-{{ checksum "stack.yaml" }}'
