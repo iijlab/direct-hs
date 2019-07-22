@@ -200,9 +200,7 @@ subscribeNotification client = do
     getFriends rpcclient
 
     let did = domainId $ getCurrentDomain client
-    allAcqs <- getAcquaintances rpcclient
-    let acqs = fromMaybe [] $ lookup did allAcqs
-    setAcquaintances client acqs
+    _ <- initialiseAcquaintances client
     allTalks <- getTalks rpcclient
     let talks = fromMaybe [] $ lookup did allTalks
     setTalkRooms client talks
