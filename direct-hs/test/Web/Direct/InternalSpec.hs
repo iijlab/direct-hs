@@ -20,9 +20,10 @@ import           Test.Hspec
 import           Web.Direct
 import           Web.Direct.Internal
 
+
 spec :: Spec
-spec = do
-    describe "onAddTalkers" $ do
+spec =
+    describe "onAddTalkersTestable" $ do
         context "when client has the talk room with the same ID with the updated talk room's" $ do
             context "when SOME of the users in the updated talk room are new to the client" $
                 it "the talk room gets new users and invalidate the cache of acquaintances." $ do
@@ -180,6 +181,13 @@ getNewId = do
     x <- get
     put $ x + 1
     return x
+
+genTestUsers :: IdGen (User, User, [User])
+genTestUsers =
+    (,,)
+        <$> (mkTestUser "me" <$> getNewId)
+        <*> (mkTestUser "target user" <$> getNewId)
+        <*> replicateM 2 (mkTestUser "acquaintance" <$> getNewId)
 
 
 newtype HasCalled = HasCalled (IORef Bool)
