@@ -44,10 +44,8 @@ spec =
                     onAddTalkers client testDomainId newRoom
 
                     (updatedTalkRoom, otherRoomsAfterUpdated) <- getSameRoomWithOthers client newRoom
-
                     talkUserIds updatedTalkRoom
                         `shouldMatchList` (talkUserIds talkRoomBeforeUpdated ++ [userId newUser])
-
                     otherRoomsAfterUpdated `shouldBe` otherRoomsBeforeUpdated
 
                     hasAcquaintancesCached client `shouldReturn` False
@@ -71,10 +69,8 @@ spec =
                     onAddTalkers client testDomainId newRoom
 
                     (updatedTalkRoom, otherRoomsAfterUpdated) <- getSameRoomWithOthers client newRoom
-
                     talkUserIds updatedTalkRoom
                         `shouldMatchList` (talkUserIds talkRoomBeforeUpdated ++ [userId newUser])
-
                     otherRoomsAfterUpdated `shouldBe` otherRoomsBeforeUpdated
 
                     hasAcquaintancesCached client `shouldReturn` True
@@ -97,7 +93,6 @@ spec =
                     onAddTalkers client testDomainId newRoom
 
                     talkRoomsAfterUpdated <- getTalkRooms client
-
                     talkRoomsAfterUpdated `shouldMatchList` newRoom : talkRoomsBeforeUpdated
 
                     hasAcquaintancesCached client `shouldReturn` False
