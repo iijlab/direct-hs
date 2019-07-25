@@ -30,10 +30,10 @@ spec =
                     let (existingRooms, newRoom, me, newUser, acquaintances) = evalIdGen $ do
                             (me', newUser', acquaintances') <- genTestUsers
                             roomIdToUpdate <- getNewId
-                            let newRoom' = mkTestRoom (me' : newUser' : acquaintances) roomIdToUpdate
-                                roomToUpdate = mkTestRoom (me' : acquaintances) roomIdToUpdate
+                            let newRoom' = mkTestRoom (me' : newUser' : acquaintances') roomIdToUpdate
+                                roomToUpdate = mkTestRoom (me' : acquaintances') roomIdToUpdate
 
-                            otherRoom <- mkTestRoom [me', head acquaintances] <$> getNewId
+                            otherRoom <- mkTestRoom [me', head acquaintances'] <$> getNewId
 
                             return ([otherRoom, roomToUpdate], newRoom', me', newUser', acquaintances')
 
@@ -55,10 +55,10 @@ spec =
                     let (existingRooms, newRoom, me, newUser, acquaintances) = evalIdGen $ do
                             (me', newUser', acquaintances') <- genTestUsers
                             roomIdToUpdate <- getNewId
-                            let newRoom' = mkTestRoom (me' : newUser' : acquaintances) roomIdToUpdate
-                                roomToUpdate = mkTestRoom (me' : acquaintances) roomIdToUpdate
+                            let newRoom' = mkTestRoom (me' : newUser' : acquaintances') roomIdToUpdate
+                                roomToUpdate = mkTestRoom (me' : acquaintances') roomIdToUpdate
 
-                            otherRoom <- mkTestRoom [me', newUser', head acquaintances] <$> getNewId
+                            otherRoom <- mkTestRoom [me', newUser', head acquaintances'] <$> getNewId
 
                             return ([otherRoom, roomToUpdate], newRoom', me', newUser', newUser' : acquaintances')
 
@@ -80,9 +80,9 @@ spec =
                 it "the client gets the new room and invalidate the cache of acquaintances." $ do
                     let (existingRooms, newRoom, me, acquaintances) = evalIdGen $ do
                             (me', newUser', acquaintances') <- genTestUsers
-                            newRoom' <- mkTestRoom (me' : newUser' : acquaintances) <$> getNewId
-                            otherRoom1 <- mkTestRoom [me', head acquaintances] <$> getNewId
-                            otherRoom2 <- mkTestRoom [me', last acquaintances] <$> getNewId
+                            newRoom' <- mkTestRoom (me' : newUser' : acquaintances') <$> getNewId
+                            otherRoom1 <- mkTestRoom [me', head acquaintances'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
 
                             return ([otherRoom1, otherRoom2], newRoom', me', acquaintances')
 
@@ -101,9 +101,9 @@ spec =
                 it "the client gets the new room but doesn't invalidate the cache of acquaintances." $ do
                     let (existingRooms, newRoom, me, acquaintances) = evalIdGen $ do
                             (me', newUser', acquaintances') <- genTestUsers
-                            newRoom' <- mkTestRoom (me' : newUser' : acquaintances) <$> getNewId
-                            otherRoom1 <- mkTestRoom [me', newUser', head acquaintances] <$> getNewId
-                            otherRoom2 <- mkTestRoom [me', last acquaintances] <$> getNewId
+                            newRoom' <- mkTestRoom (me' : newUser' : acquaintances') <$> getNewId
+                            otherRoom1 <- mkTestRoom [me', newUser', head acquaintances'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
 
                             return ([otherRoom1, otherRoom2], newRoom', me', newUser' : acquaintances')
 
