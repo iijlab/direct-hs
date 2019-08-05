@@ -33,9 +33,10 @@ spec =
                             let newRoom' = mkTestRoom (me' : newUser' : acquaintances') roomIdToUpdate
                                 roomToUpdate = mkTestRoom (me' : acquaintances') roomIdToUpdate
 
-                            otherRoom <- mkTestRoom [me', head acquaintances'] <$> getNewId
+                            otherRoom1 <- mkTestRoom [me', head acquaintances'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
 
-                            return ([otherRoom, roomToUpdate], newRoom', me', newUser', acquaintances')
+                            return ([otherRoom1, roomToUpdate, otherRoom2], newRoom', me', newUser', acquaintances')
 
                     client <- newTestClient me acquaintances existingRooms
 
@@ -58,9 +59,10 @@ spec =
                             let newRoom' = mkTestRoom (me' : newUser' : acquaintances') roomIdToUpdate
                                 roomToUpdate = mkTestRoom (me' : acquaintances') roomIdToUpdate
 
-                            otherRoom <- mkTestRoom [me', newUser', head acquaintances'] <$> getNewId
+                            otherRoom1 <- mkTestRoom [me', head acquaintances'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
 
-                            return ([otherRoom, roomToUpdate], newRoom', me', newUser', newUser' : acquaintances')
+                            return ([otherRoom1, roomToUpdate, otherRoom2], newRoom', me', newUser', newUser' : acquaintances')
 
                     client <- newTestClient me acquaintances existingRooms
 
