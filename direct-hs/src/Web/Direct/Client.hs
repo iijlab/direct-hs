@@ -60,6 +60,7 @@ import           Data.List                                ((\\))
 import qualified Data.List                                as L
 import           Data.Maybe                               (catMaybes, fromMaybe)
 import           Data.Traversable                         (mapAccumL)
+import           Data.Tuple                               (swap)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -318,9 +319,14 @@ onDeleteTalk client tid = do
     getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
 
 onDeleteTalker :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
-onDeleteTalker client _ tid uidsAfterDeleted _leftUids = modifyTalkRooms client
-    $ \talks -> (map updateTalkUserIds talks, ())
+onDeleteTalker client _ tid uidsAfterDeleted deletedUids = do
+    someRoomIsUpdated <- modifyTalkRooms client $ \talks -> swap $ mapAccumL updateTalkUserIds False talks
+
+    sharesWithDeletedUsers <- any (any (`elem` deletedUids) . talkUserIds) <$> getTalkRooms client
+    when (someRoomIsUpdated && not sharesWithDeletedUsers) $
+        modifyAcquaintances client $ \acqs -> (filter ((`notElem` deletedUids) . userId) acqs, ())
   where
-    updateTalkUserIds talk = if talkId talk == tid
-        then talk { talkUserIds = uidsAfterDeleted }
-        else talk
+    updateTalkUserIds hasUpdated talk =
+        if not hasUpdated && talkId talk == tid
+            then (True      , talk { talkUserIds = uidsAfterDeleted })
+            else (hasUpdated, talk)

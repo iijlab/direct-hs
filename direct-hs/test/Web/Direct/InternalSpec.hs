@@ -9,9 +9,10 @@ import           Control.Arrow                           (first)
 import           Control.Monad                           (replicateM)
 import           Control.Monad.State.Strict              (State, evalState, get,
                                                           put)
+import           Data.Function                           (on)
 import           Data.IORef                              (IORef, newIORef,
                                                           readIORef, writeIORef)
-import           Data.List                               (partition)
+import           Data.List                               (deleteBy, partition)
 import qualified Data.Text                               as T
 import           Data.Word                               (Word64)
 import qualified Network.MessagePack.RPC.Client.Internal as RPC
@@ -22,7 +23,7 @@ import           Web.Direct.Internal
 
 
 spec :: Spec
-spec =
+spec = do
     describe "onAddTalkersTestable" $ do
         context "when client has the talk room with the same ID with the updated talk room's" $ do
             context "when SOME of the users in the updated talk room are new to the client" $
@@ -118,10 +119,96 @@ spec =
                     onAddTalkers client testDomainId newRoom
 
                     talkRoomsAfterUpdated <- getTalkRooms client
-
                     talkRoomsAfterUpdated `shouldMatchList` newRoom : talkRoomsBeforeUpdated
 
                     hasAcquaintancesCached client `shouldReturn` True
+
+    describe "onDeleteTalker" $ do
+        context "when client has the talk room with the same ID with the updated talk room's" $ do
+            context "when some of the users in the updated talk room DON'T SHARE any room with the client" $
+                it "the client deletes the talkers from the talk room and deletes the talkers from its acquaintances." $ do
+                    let (existingRooms, newRoom, me, userToDelete, acquaintances) = evalIdGen $ do
+                            (me', userToDelete', acquaintances') <- genTestUsers
+                            roomIdToUpdate <- getNewId
+                            let newRoom'     = mkTestRoom (me' : acquaintances') roomIdToUpdate
+                                roomToUpdate = mkTestRoom (me' : userToDelete' : acquaintances') roomIdToUpdate
+
+                            otherRoom1 <- mkTestRoom [me', head acquaintances'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
+
+                            return ([otherRoom1, roomToUpdate, otherRoom2], newRoom', me', userToDelete', userToDelete' : acquaintances')
+
+                    client <- newTestClient me acquaintances existingRooms
+
+                    acquaintancesBeforeUpdated <- getAcquaintances client
+                    otherRoomsBeforeUpdated <- filter ((/= talkId newRoom) . talkId) <$> getTalkRooms client
+
+                    let uidsAfterDeleted = talkUserIds newRoom
+                    onDeleteTalker client testDomainId (talkId newRoom) uidsAfterDeleted [userId userToDelete]
+
+                    (updatedTalkRoom, otherRoomsAfterUpdated) <- getSameRoomWithOthers client newRoom
+
+                    talkUserIds updatedTalkRoom `shouldMatchList` uidsAfterDeleted
+                    otherRoomsAfterUpdated `shouldBe` otherRoomsBeforeUpdated
+
+                    acquaintancesAfterUpdated <- getAcquaintances client
+                    acquaintancesAfterUpdated
+                        `shouldMatchList` deleteBy ((==) `on` userId) userToDelete acquaintancesBeforeUpdated
+
+            context "when one of the users in the updated talk room STILL SHARES some room with the client" $
+                it "the client deletes the talkers from the talk room but doesn't delete the talkers from its acquaintances." $ do
+                    let (existingRooms, newRoom, me, userToDelete, acquaintances) = evalIdGen $ do
+                            (me', userToDelete', acquaintances') <- genTestUsers
+                            roomIdToUpdate <- getNewId
+                            let newRoom' = mkTestRoom (me' : acquaintances') roomIdToUpdate
+                                roomToUpdate = mkTestRoom (me' : userToDelete' : acquaintances') roomIdToUpdate
+
+                            otherRoom1 <- mkTestRoom [me', userToDelete', head acquaintances'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
+
+                            return ([otherRoom1, roomToUpdate, otherRoom2], newRoom', me', userToDelete', userToDelete' : acquaintances')
+
+                    client <- newTestClient me acquaintances existingRooms
+
+                    acquaintancesBeforeUpdated <- getAcquaintances client
+                    otherRoomsBeforeUpdated <- filter ((/= talkId newRoom) . talkId) <$> getTalkRooms client
+
+                    let uidsAfterDeleted = talkUserIds newRoom
+                    onDeleteTalker client testDomainId (talkId newRoom) uidsAfterDeleted [userId userToDelete]
+
+                    (updatedTalkRoom, otherRoomsAfterUpdated) <- getSameRoomWithOthers client newRoom
+
+                    talkUserIds updatedTalkRoom `shouldMatchList` uidsAfterDeleted
+                    otherRoomsAfterUpdated `shouldBe` otherRoomsBeforeUpdated
+
+                    acquaintancesAfterUpdated <- getAcquaintances client
+                    acquaintancesAfterUpdated `shouldMatchList` acquaintancesBeforeUpdated
+
+        context "when client has NO talk room with the same ID with the updated talk room's" $
+            it "neither the client's talk rooms nor acquaintances change." $ do
+                let (existingRooms, newRoom, me, userToDelete, acquaintances) = evalIdGen $ do
+                        (me', userToDelete', acquaintances') <- genTestUsers
+                        roomIdToUpdate <- getNewId
+                        let newRoom' = mkTestRoom (me' : acquaintances') roomIdToUpdate
+
+                        otherRoom1 <- mkTestRoom [me', userToDelete', head acquaintances'] <$> getNewId
+                        otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
+
+                        return ([otherRoom1, otherRoom2], newRoom', me', userToDelete', userToDelete' : acquaintances')
+
+                client <- newTestClient me acquaintances existingRooms
+
+                acquaintancesBeforeUpdated <- getAcquaintances client
+                otherRoomsBeforeUpdated <- filter ((/= talkId newRoom) . talkId) <$> getTalkRooms client
+
+                let uidsAfterDeleted = talkUserIds newRoom
+                onDeleteTalker client testDomainId (talkId newRoom) uidsAfterDeleted [userId userToDelete]
+
+                otherRoomsAfterUpdated <- filter ((/= talkId newRoom) . talkId) <$> getTalkRooms client
+                otherRoomsAfterUpdated `shouldBe` otherRoomsBeforeUpdated
+
+                acquaintancesAfterUpdated <- getAcquaintances client
+                acquaintancesAfterUpdated `shouldMatchList` acquaintancesBeforeUpdated
 
 
 newTestClient :: User -> [User] -> [TalkRoom] -> IO Client
