@@ -233,14 +233,10 @@ handleNotifyCreateMessage config client msg msgid tid uid = do
                         client
                         (msg, msgid, room, user)
 
--- TODO: Check if this kind notification is sent to the user who makes the trigger of the notification:
- --      i.e. called addTalkers
 handleAddAcquaintance :: Client -> DomainId -> User -> IO ()
 handleAddAcquaintance client _did newUser =
     modifyAcquaintances client $ \users -> (newUser : users, ())
 
--- TODO: Check if this kind notification is sent to the user who makes the trigger of the notification:
---       i.e. called removeUserFromTalkRoom, leaveTalkRoom
 handleNotifyDeleteAcquaintance :: Client -> DomainId -> UserId -> IO ()
 handleNotifyDeleteAcquaintance client _did uid = modifyAcquaintances
     client
