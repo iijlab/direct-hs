@@ -313,7 +313,12 @@ onAddTalkers client _did newTalk = do
 onDeleteTalk :: Client -> TalkId -> IO ()
 onDeleteTalk client tid = do
     -- Remove talk
-    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
+    userIdsInLeftRooms <- modifyTalkRooms client $ \talks ->
+        let left = filter ((tid /=) . talkId) talks in (left, concatMap talkUserIds left)
+
+    -- Remove acquaintances who don't belong to same rooms with the client user anymore.
+    modifyAcquaintances client $ \acqs -> (filter ((`elem` userIdsInLeftRooms) . userId) acqs, ())
+
     -- Close channels for talk
     let chanDB = clientChannels client
     getChannels chanDB tid >>= mapM_ (haltChannel chanDB)

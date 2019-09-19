@@ -210,6 +210,46 @@ spec = do
                 acquaintancesAfterUpdated <- getAcquaintances client
                 acquaintancesAfterUpdated `shouldMatchList` acquaintancesBeforeUpdated
 
+    describe "onDeleteTalk" $
+        context "when client has the talk room with the same ID with the updated talk room's" $
+            context "when some of the users in the updated talk room DON'T SHARE any room with the client" $
+                it "the client deletes the talkers from the talk room and deletes the talkers from its acquaintances." $ do
+                    let (existingRooms, roomIdToDelete, me, otherAcquaintance, acquaintances) = evalIdGen $ do
+                            (me', otherAcquaintance', acquaintancesToDelete) <- genTestUsers
+                            roomToDelete' <- mkTestRoom (me' : otherAcquaintance' : acquaintancesToDelete) <$> getNewId
+
+                            otherRoom1 <- mkTestRoom [me', otherAcquaintance'] <$> getNewId
+                            otherRoom2 <- mkTestRoom [me', otherAcquaintance'] <$> getNewId
+
+                            return
+                                ( [otherRoom1, roomToDelete', otherRoom2]
+                                , talkId roomToDelete'
+                                , me'
+                                , otherAcquaintance'
+                                , acquaintancesToDelete ++ [otherAcquaintance']
+                                )
+
+                    client <- newTestClient me acquaintances existingRooms
+
+                    roomsBeforeUpdated <- getTalkRooms client
+
+                    onDeleteTalk client roomIdToDelete
+
+                    roomsAfterUpdated <- getTalkRooms client
+                    roomsAfterUpdated `shouldMatchList` filter ((/= roomIdToDelete) . talkId)  roomsBeforeUpdated
+
+                    acquaintancesAfterUpdated <- getAcquaintances client
+                    acquaintancesAfterUpdated `shouldMatchList` [otherAcquaintance]
+
+            -- This context is covered by the case above.
+            -- Because `otherAcquaintance` should be left after `onDeleteTalk` because it still shares other rooms with `me`.
+            -- context "when one of the users in the updated talk room STILL SHARES some room with the client" $
+                -- it "the client deletes the talkers from the talk room but doesn't delete the talkers from its acquaintances." $ do
+
+        -- As long as I experimented, on_delete_talk notification is sent only when a client calls `leaveTalkRoom`.
+        -- So this onDeleteTalk should not be called in this context.
+        -- context "when client has NO talk room with the same ID with the updated talk room's"
+
 
 newTestClient :: User -> [User] -> [TalkRoom] -> IO Client
 newTestClient user acqs rooms = do

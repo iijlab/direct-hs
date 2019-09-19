@@ -6,6 +6,7 @@ module Web.Direct.Internal
     -- ** Exposed for testing
     , onAddTalkers
     , onDeleteTalker
+    , onDeleteTalk
     , newClient
     , setTalkRooms
     , hasAcquaintancesCached
