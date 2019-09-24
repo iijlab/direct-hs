@@ -10,8 +10,7 @@ import           Control.Monad                           (replicateM)
 import           Control.Monad.State.Strict              (State, evalState, get,
                                                           put)
 import           Data.Function                           (on)
-import           Data.IORef                              (IORef, newIORef,
-                                                          readIORef, writeIORef)
+import           Data.IORef                              (newIORef)
 import           Data.List                               (deleteBy, partition)
 import qualified Data.Text                               as T
 import           Data.Word                               (Word64)
@@ -137,8 +136,6 @@ spec = do
                     client <- newTestClient me acquaintances existingRooms
 
                     talkRoomsBeforeUpdated <- getTalkRooms client
-
-                    hasReinitialised <- newHasCalled
 
                     onAddTalkers client testDomainId newRoom
 
@@ -336,18 +333,6 @@ genTestUsers =
         <$> (mkTestUser "me" <$> getNewId)
         <*> (mkTestUser "target user" <$> getNewId)
         <*> replicateM 2 (mkTestUser "acquaintance" <$> getNewId)
-
-
-newtype HasCalled = HasCalled (IORef Bool)
-
-newHasCalled :: IO HasCalled
-newHasCalled = HasCalled <$> newIORef False
-
-markAsCalled :: HasCalled -> IO ()
-markAsCalled (HasCalled ref) = writeIORef ref True
-
-askIfHasCalled :: HasCalled -> IO Bool
-askIfHasCalled (HasCalled ref) = readIORef ref
 
 
 tshow :: Show a => a -> T.Text
