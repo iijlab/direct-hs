@@ -23,17 +23,12 @@ module Network.MessagePack.RPC.Client
     )
 where
 
-import           Control.Concurrent      (ThreadId, forkFinally, forkIO,
-                                          killThread)
-import           Control.Concurrent.MVar (MVar)
+import           Control.Concurrent      (forkFinally, forkIO, killThread)
 import qualified Control.Concurrent.MVar as MVar
 import qualified Control.Exception.Safe  as E
 import           Control.Monad           (forever, void, when)
-import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as BL
-import           Data.HashMap.Strict     (HashMap)
 import qualified Data.HashMap.Strict     as HM
-import           Data.IORef              (IORef)
 import qualified Data.IORef              as IORef
 import qualified Data.MessagePack        as MsgPack
 import           Data.Monoid             ((<>))
@@ -188,12 +183,12 @@ withClient config backend action = do
     tid <- forkFinally (receiverThread client config)
         $ \_ -> MVar.putMVar wait ()
     IORef.writeIORef tidref $ Just tid
-    takeAction client wait `E.finally` killThread tid
+    takeAction client wait
+        `E.finally` (backendClose backend >> killThread tid)
   where
     takeAction client wait = do
         returned <- action client
         when (waitRequestHandler config) $ MVar.takeMVar wait
-        backendClose backend
         return returned
 
 -- | This function cleans up the internal states including
