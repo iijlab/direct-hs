@@ -23,12 +23,16 @@ module Network.MessagePack.RPC.Client
     )
 where
 
-import           Control.Concurrent      (forkFinally, forkIO, killThread)
+import           Control.Concurrent      (ThreadId, forkFinally, forkIO,
+                                          killThread)
+import           Control.Concurrent.MVar (MVar)
 import qualified Control.Concurrent.MVar as MVar
 import qualified Control.Exception.Safe  as E
 import           Control.Monad           (forever, void, when)
+import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as BL
 import qualified Data.HashMap.Strict     as HM
+import           Data.IORef              (IORef)
 import qualified Data.IORef              as IORef
 import qualified Data.MessagePack        as MsgPack
 import           Data.Monoid             ((<>))
@@ -48,7 +52,7 @@ data Client = Client {
 
 data SessionState = SessionState {
     lastMessageId :: IORef MessageId
-  , dispatchTable :: IORef (HashMap MessageId (MVar Result))
+  , dispatchTable :: IORef (HM.HashMap MessageId (MVar Result))
   }
 
 -- | Result type of a RPC call.
