@@ -52,7 +52,7 @@ spec = do
 
                     hasAcquaintancesCached client `shouldReturn` False
 
-            context "when NONE of the users in the updated talk room are new to the client" $
+            context "when NONE of the users in the updated talk room are new to the client" $ do
                 it "the talk room gets new users but doesn't invalidate the cache of acquaintances." $ do
                     let (existingRooms, newRoom, me, newUser, acquaintances) = evalIdGen $ do
                             (me', newUser', acquaintances') <- genTestUsers
@@ -77,6 +77,30 @@ spec = do
                     otherRoomsAfterUpdated `shouldBe` otherRoomsBeforeUpdated
 
                     hasAcquaintancesCached client `shouldReturn` True
+
+                context "and the updated talk room has already been updated with new users" $
+                    it "the talk room gets no new users and doesn't invalidate the cache of acquaintances." $ do
+                        let (existingRooms, newRoom, me, acquaintances) = evalIdGen $ do
+                                (me', newUser', acquaintances') <- genTestUsers
+                                roomIdToUpdate <- getNewId
+                                let newRoom' = mkTestRoom (me' : newUser' : acquaintances') roomIdToUpdate
+
+                                otherRoom1 <- mkTestRoom [me', head acquaintances'] <$> getNewId
+                                otherRoom2 <- mkTestRoom [me', last acquaintances'] <$> getNewId
+
+                                return ([otherRoom1, newRoom', otherRoom2], newRoom', me', newUser' : acquaintances')
+
+                        client <- newTestClient me acquaintances existingRooms
+
+                        roomsBeforeUpdated <- getTalkRooms client
+
+                        onAddTalkers client testDomainId newRoom
+
+                        roomsAfterUpdated <- getTalkRooms client
+
+                        roomsAfterUpdated `shouldMatchList` roomsBeforeUpdated
+
+                        hasAcquaintancesCached client `shouldReturn` True
 
         context "when client has NO talk room with the same ID with the updated talk room's" $ do
             context "when SOME of the users in the updated talk room are new to the client" $

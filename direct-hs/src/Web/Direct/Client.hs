@@ -89,7 +89,7 @@ data Client = Client {
   , clientCurrentDomain :: Domain
   }
 
-data Cached a = Invalidated | Cached a
+data Cached a = Invalidated | Cached a deriving Show
 
 newClient :: LoginInfo -> RPC.Client -> Domain -> User -> IO Client
 newClient pinfo rpcClient initialDomain me =
@@ -301,14 +301,22 @@ onAddTalkers client _did newTalk = do
         let (newUsers, newTalks) = mapAccumL updateTalk [] talks
          in
             if null newUsers
-              then (newTalk : talks, talkUserIds newTalk)
-              else (newTalks       , newUsers)
+              then
+                let newTalks' =
+                        if any ((talkId newTalk ==) . talkId) newTalks then newTalks else newTalk : newTalks
+                in (newTalks', talkUserIds newTalk)
+              else
+                (newTalks, newUsers)
 
     updateTalk :: [UserId] -> TalkRoom -> ([UserId], TalkRoom)
-    updateTalk newUserIds oldTalk =
-        if null newUserIds && talkId oldTalk == talkId newTalk
-          then (talkUserIds newTalk \\ talkUserIds oldTalk, newTalk)
-          else (newUserIds, oldTalk)
+    updateTalk foundUserIds oldTalk =
+        if talkId oldTalk == talkId newTalk
+          then
+            if null foundUserIds
+              then (talkUserIds newTalk \\ talkUserIds oldTalk, newTalk)
+              else (foundUserIds, newTalk)
+          else
+            (foundUserIds, oldTalk)
 
 onDeleteTalk :: Client -> TalkId -> IO ()
 onDeleteTalk client tid = do
