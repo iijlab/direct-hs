@@ -6,22 +6,16 @@ module Web.Direct.InternalSpec
     )
 where
 
-import           Control.Arrow                            ( first )
-import           Control.Monad                            ( replicateM )
-import           Control.Monad.State.Strict               ( State
-                                                          , evalState
-                                                          , get
-                                                          , put
-                                                          )
-import           Data.Function                            ( on )
-import           Data.IORef                               ( newIORef )
-import           Data.List                                ( deleteBy
-                                                          , partition
-                                                          )
-import qualified Data.Text                     as T
-import           Data.Word                                ( Word64 )
-import qualified Network.MessagePack.RPC.Client.Internal
-                                               as RPC
+import           Control.Arrow                           (first)
+import           Control.Monad                           (replicateM)
+import           Control.Monad.State.Strict              (State, evalState, get,
+                                                          put)
+import           Data.Function                           (on)
+import           Data.IORef                              (newIORef)
+import           Data.List                               (deleteBy, partition)
+import qualified Data.Text                               as T
+import           Data.Word                               (Word64)
+import qualified Network.MessagePack.RPC.Client.Internal as RPC
 import           Test.Hspec
 
 import           Web.Direct

@@ -23,25 +23,18 @@ module Network.MessagePack.RPC.Client
     )
 where
 
-import           Control.Concurrent                       ( forkFinally
-                                                          , forkIO
-                                                          , killThread
-                                                          )
-import qualified Control.Concurrent.MVar       as MVar
-import qualified Control.Exception.Safe        as E
-import           Control.Monad                            ( forever
-                                                          , void
-                                                          , when
-                                                          )
-import qualified Data.ByteString.Lazy          as BL
-import qualified Data.HashMap.Strict           as HM
-import qualified Data.IORef                    as IORef
-import qualified Data.MessagePack              as MsgPack
-import           Data.Monoid                              ( (<>) )
-import           System.IO                                ( hPrint
-                                                          , stderr
-                                                          )
-import           System.Timeout                           ( timeout )
+import           Control.Concurrent                      (forkFinally, forkIO,
+                                                          killThread)
+import qualified Control.Concurrent.MVar                 as MVar
+import qualified Control.Exception.Safe                  as E
+import           Control.Monad                           (forever, void, when)
+import qualified Data.ByteString.Lazy                    as BL
+import qualified Data.HashMap.Strict                     as HM
+import qualified Data.IORef                              as IORef
+import qualified Data.MessagePack                        as MsgPack
+import           Data.Monoid                             ((<>))
+import           System.IO                               (hPrint, stderr)
+import           System.Timeout                          (timeout)
 
 import           Data.MessagePack.RPC
 import           Network.MessagePack.RPC.Client.Internal

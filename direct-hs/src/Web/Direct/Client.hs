@@ -47,34 +47,28 @@ module Web.Direct.Client
     )
 where
 
-import qualified Control.Concurrent.STM        as S
-import           Control.Error.Util                       ( failWith )
-import           Control.Monad                            ( mapM_
-                                                          , when
-                                                          )
-import           Control.Monad.Except                     ( ExceptT(ExceptT)
-                                                          , runExceptT
-                                                          , throwError
-                                                          )
-import           Control.Monad.IO.Class                   ( liftIO )
-import           Data.Foldable                            ( for_ )
-import qualified Data.IORef                    as I
-import           Data.List                                ( (\\) )
-import qualified Data.List                     as L
-import           Data.Maybe                               ( catMaybes
-                                                          , fromMaybe
-                                                          )
-import           Data.Traversable                         ( mapAccumL )
-import           Data.Tuple                               ( swap )
-import qualified Network.MessagePack.RPC.Client.WebSocket
-                                               as RPC
+import qualified Control.Concurrent.STM                   as S
+import           Control.Error.Util                       (failWith)
+import           Control.Monad                            (mapM_, when)
+import           Control.Monad.Except                     (ExceptT (ExceptT),
+                                                           runExceptT,
+                                                           throwError)
+import           Control.Monad.IO.Class                   (liftIO)
+import           Data.Foldable                            (for_)
+import qualified Data.IORef                               as I
+import           Data.List                                ((\\))
+import qualified Data.List                                as L
+import           Data.Maybe                               (catMaybes, fromMaybe)
+import           Data.Traversable                         (mapAccumL)
+import           Data.Tuple                               (swap)
+import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
 import           Web.Direct.Client.Status
-import           Web.Direct.DirectRPC              hiding ( getAcquaintances
-                                                          , getDomains
-                                                          )
-import qualified Web.Direct.DirectRPC          as DirectRPC
+import           Web.Direct.DirectRPC                     hiding
+                                                           (getAcquaintances,
+                                                           getDomains)
+import qualified Web.Direct.DirectRPC                     as DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Types
