@@ -84,7 +84,7 @@ where
 
 import           Web.Direct.Api
 import           Web.Direct.Client
-import           Web.Direct.DirectRPC (throttleDown)
+import           Web.Direct.DirectRPC                     ( throttleDown )
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Types

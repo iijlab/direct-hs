@@ -1,13 +1,13 @@
 module Network.MessagePack.RPC.Client.Internal where
 
-import           Control.Concurrent      (ThreadId)
-import           Control.Concurrent.MVar (MVar)
-import qualified Data.ByteString         as B
-import           Data.HashMap.Strict     (HashMap)
-import qualified Data.HashMap.Strict     as HM
-import           Data.IORef              (IORef)
-import qualified Data.IORef              as IORef
-import qualified Data.MessagePack        as MsgPack
+import           Control.Concurrent                       ( ThreadId )
+import           Control.Concurrent.MVar                  ( MVar )
+import qualified Data.ByteString               as B
+import           Data.HashMap.Strict                      ( HashMap )
+import qualified Data.HashMap.Strict           as HM
+import           Data.IORef                               ( IORef )
+import qualified Data.IORef                    as IORef
+import qualified Data.MessagePack              as MsgPack
 
 import           Data.MessagePack.RPC
 
