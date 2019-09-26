@@ -139,34 +139,46 @@ withClient config pInfo action = do
                     -- fixme: "notify_update_read_statuses"
                     let userNH   = directNotificationHandlers config
                         handlers = NotificationHandlers
-                            { onNotifyCreateMessage = \msg msdId tid uid -> do
-                                handleNotifyCreateMessage config
-                                                          client
+                            { onNotifyCreateMessage      =
+                                \msg msdId tid uid -> do
+                                    handleNotifyCreateMessage config
+                                                              client
+                                                              msg
+                                                              msdId
+                                                              tid
+                                                              uid
+                                    onNotifyCreateMessage userNH
                                                           msg
                                                           msdId
                                                           tid
                                                           uid
-                                onNotifyCreateMessage userNH msg msdId tid uid
-                            , onNotifyAddTalkers = \did room -> do
-                                onAddTalkers client did room
-                                onNotifyAddTalkers userNH did room
-                            , onNotifyAddAcquaintance = \did user -> do
-                                handleAddAcquaintance client did user
-                                onNotifyAddAcquaintance userNH did user
-                            , onNotifyDeleteTalk = \tid -> do
-                                onDeleteTalk client tid
-                                onNotifyDeleteTalk userNH tid
-                            , onNotifyDeleteTalker = \did tid uids leftUids ->
-                                do
+                            , onNotifyAddTalkers         =
+                                \did room -> do
+                                    onAddTalkers client did room
+                                    onNotifyAddTalkers userNH did room
+                            , onNotifyAddAcquaintance    =
+                                \did user -> do
+                                    handleAddAcquaintance client did user
+                                    onNotifyAddAcquaintance userNH did user
+                            , onNotifyDeleteTalk         = \tid -> do
+                                                               onDeleteTalk client tid
+                                                               onNotifyDeleteTalk
+                                                                   userNH
+                                                                   tid
+                            , onNotifyDeleteTalker       =
+                                \did tid uids leftUids -> do
                                     onDeleteTalker client did tid uids leftUids
                                     onNotifyDeleteTalker userNH
                                                          did
                                                          tid
                                                          uids
                                                          leftUids
-                            , onNotifyDeleteAcquaintance = \did uid -> do
-                                handleNotifyDeleteAcquaintance client did uid
-                                onNotifyDeleteAcquaintance userNH did uid
+                            , onNotifyDeleteAcquaintance =
+                                \did uid -> do
+                                    handleNotifyDeleteAcquaintance client
+                                                                   did
+                                                                   uid
+                                    onNotifyDeleteAcquaintance userNH did uid
                             }
                     handleNotification method objs handlers
         , RPC.logger             = directLogger config
@@ -200,7 +212,7 @@ subscribeNotification client = do
     getFriends rpcclient
 
     let did = domainId $ getCurrentDomain client
-    _ <- initialiseAcquaintances client
+    _        <- initialiseAcquaintances client
     allTalks <- getTalks rpcclient
     let talks = fromMaybe [] $ lookup did allTalks
     setTalkRooms client talks

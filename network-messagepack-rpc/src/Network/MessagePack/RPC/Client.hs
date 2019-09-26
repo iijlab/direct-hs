@@ -44,7 +44,8 @@ type NotificationHandler = Client -> MethodName -> [MsgPack.Object] -> IO ()
 
 -- | Notification handler. The 2nd argument is message id to be used
 --   for replying. The 3rd argument is response objects.
-type RequestHandler = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
+type RequestHandler
+    = Client -> MessageId -> MethodName -> [MsgPack.Object] -> IO ()
 
 -- | Configuration for MessagePack RPC.
 data Config = Config {
@@ -68,7 +69,7 @@ defaultConfig = Config
     { notificationHandler = \_ _ _ -> return ()
     , requestHandler      = \_ _ _ _ -> return ()
     , logger              = \_ -> return ()
-    , exceptionHandlers   = [E.Handler $ \(E.SomeException e) -> hPrint stderr e]
+    , exceptionHandlers = [E.Handler $ \(E.SomeException e) -> hPrint stderr e]
     , formatter           = show
     , waitRequestHandler  = False
     }
@@ -148,8 +149,7 @@ withClient config backend action = do
     tid <- forkFinally (receiverThread client config)
         $ \_ -> MVar.putMVar wait ()
     IORef.writeIORef tidref $ Just tid
-    takeAction client wait
-        `E.finally` (backendClose backend >> killThread tid)
+    takeAction client wait `E.finally` (backendClose backend >> killThread tid)
   where
     takeAction client wait = do
         returned <- action client
