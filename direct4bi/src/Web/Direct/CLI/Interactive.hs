@@ -28,14 +28,14 @@ import qualified Options.Applicative      as Opt
 import qualified System.Console.Haskeline as Hl
 import           System.Exit              (die)
 import qualified System.FilePath          as FP
-import           System.IO                (hFlush, hPutStrLn, hSetEncoding,
-                                           stderr, stdout)
+import           System.IO                (hFlush, hPutStrLn, stderr, stdout)
 import           Text.Pretty.Simple       (pPrint, pShow)
 import           Text.Read                (readMaybe)
 
 #ifdef mingw32_HOST_OS
 import           GHC.IO.Encoding.CodePage (mkLocaleEncoding)
 import           GHC.IO.Encoding.Failure  (CodingFailureMode (TransliterateCodingFailure))
+import           System.IO                (hSetEncoding)
 #endif
 
 import qualified Web.Direct               as D
