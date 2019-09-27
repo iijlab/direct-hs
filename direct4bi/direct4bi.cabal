@@ -24,7 +24,6 @@ library
       src
   build-depends:
       base >=4.7 && <5
-    , Win32
     , bytestring
     , direct-hs
     , errors
@@ -33,6 +32,9 @@ library
     , optparse-applicative
     , pretty-simple
     , text
+  if os(windows)
+    build-depends:
+        Win32
   default-language: Haskell2010
 
 executable direct4bi
