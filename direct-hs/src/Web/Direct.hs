@@ -18,6 +18,7 @@ module Web.Direct
     , getTalkRooms
     , getMe
     , getUsers
+    , getAcquaintances
     , getCurrentDomain
     , getTalkUsers
   -- * Message

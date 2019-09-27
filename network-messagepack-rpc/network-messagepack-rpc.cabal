@@ -16,6 +16,7 @@ library
   ghc-options: -Wall
   exposed-modules: Data.MessagePack.RPC
                  , Network.MessagePack.RPC.Client
+                 , Network.MessagePack.RPC.Client.Internal
   build-depends:
       base >= 4.7 && < 5
     , bytestring

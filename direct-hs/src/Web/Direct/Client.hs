@@ -17,6 +17,8 @@ module Web.Direct.Client
     , getMe
     , setAcquaintances
     , getAcquaintances
+    , hasAcquaintancesCached
+    , initialiseAcquaintances
     , modifyAcquaintances
     , getUsers
     , getCurrentDomain
@@ -54,8 +56,11 @@ import           Control.Monad.Except                     (ExceptT (ExceptT),
 import           Control.Monad.IO.Class                   (liftIO)
 import           Data.Foldable                            (for_)
 import qualified Data.IORef                               as I
+import           Data.List                                ((\\))
 import qualified Data.List                                as L
-import           Data.Maybe                               (catMaybes)
+import           Data.Maybe                               (catMaybes, fromMaybe)
+import           Data.Traversable                         (mapAccumL)
+import           Data.Tuple                               (swap)
 import qualified Network.MessagePack.RPC.Client.WebSocket as RPC
 
 import           Web.Direct.Client.Channel
@@ -63,6 +68,7 @@ import           Web.Direct.Client.Status
 import           Web.Direct.DirectRPC                     hiding
                                                            (getAcquaintances,
                                                            getDomains)
+import qualified Web.Direct.DirectRPC                     as DirectRPC
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
 import           Web.Direct.Types
@@ -77,11 +83,13 @@ data Client = Client {
   , clientDomains       :: I.IORef [Domain]
   , clientTalkRooms     :: I.IORef [TalkRoom]
   , clientMe            :: I.IORef User
-  , clientAcquaintances :: I.IORef [User]
+  , clientAcquaintances :: I.IORef (Cached [User])
   , clientChannels      :: ChannelDB
   , clientStatus        :: StatusVar
   , clientCurrentDomain :: Domain
   }
+
+data Cached a = Invalidated | Cached a deriving Show
 
 newClient :: LoginInfo -> RPC.Client -> Domain -> User -> IO Client
 newClient pinfo rpcClient initialDomain me =
@@ -89,7 +97,7 @@ newClient pinfo rpcClient initialDomain me =
         <$> I.newIORef []
         <*> I.newIORef []
         <*> I.newIORef me
-        <*> I.newIORef []
+        <*> I.newIORef Invalidated
         <*> newChannelDB
         <*> S.newTVarIO Active
         <*> pure initialDomain
@@ -118,13 +126,47 @@ getMe :: Client -> IO User
 getMe = I.readIORef . clientMe
 
 setAcquaintances :: Client -> [User] -> IO ()
-setAcquaintances = I.writeIORef . clientAcquaintances
+setAcquaintances client = I.writeIORef (clientAcquaintances client) . Cached
 
 getAcquaintances :: Client -> IO [User]
-getAcquaintances = I.readIORef . clientAcquaintances
+getAcquaintances client = do
+    cached <- I.readIORef $ clientAcquaintances client
+    case cached of
+        Cached users -> return users
+        Invalidated  -> initialiseAcquaintances client
+
+hasAcquaintancesCached :: Client -> IO Bool
+hasAcquaintancesCached client = do
+    cached <- I.readIORef $ clientAcquaintances client
+    case cached of
+        Cached _    -> return True
+        Invalidated -> return False
 
 modifyAcquaintances :: Client -> ([User] -> ([User], r)) -> IO r
-modifyAcquaintances client = I.atomicModifyIORef' (clientAcquaintances client)
+modifyAcquaintances client f = do
+    cached <- I.readIORef $ clientAcquaintances client
+    users  <- case cached of
+        Cached users -> return users
+        Invalidated  -> fetchAcquaintance client
+    let (newUsers, r) = f users
+    setAcquaintances client newUsers
+    return r
+
+initialiseAcquaintances :: Client -> IO [User]
+initialiseAcquaintances client = do
+    acqs <- fetchAcquaintance client
+    setAcquaintances client acqs
+    return acqs
+
+fetchAcquaintance :: Client -> IO [User]
+fetchAcquaintance client = do
+    allAcqs <- DirectRPC.getAcquaintances $ clientRpcClient client
+    return . fromMaybe [] $ lookup (domainId $ clientCurrentDomain client)
+                                   allAcqs
+
+invalidateCachedAcquaintances :: Client -> IO ()
+invalidateCachedAcquaintances =
+    (`I.writeIORef` Invalidated) . clientAcquaintances
 
 --- | Getting acquaintances and me. The head of the list is myself.
 getUsers :: Client -> IO [User]
@@ -250,23 +292,57 @@ shutdown client = shutdown' (clientRpcClient client)
                             (clientStatus client)
 
 onAddTalkers :: Client -> DomainId -> TalkRoom -> IO ()
-onAddTalkers client _did newTalk = modifyTalkRooms client
-    $ \talks -> (map updateTalk talks, ())
+onAddTalkers client _did newTalk = do
+    newUserIds      <- modifyTalkRooms client updateTalks
+    alreadyKnownIds <- map userId <$> getUsers client
+    let hasNewAcqs = any (not . (`elem` alreadyKnownIds)) newUserIds
+    when hasNewAcqs (invalidateCachedAcquaintances client)
   where
-    updateTalk talk = if talkId talk == talkId newTalk then newTalk else talk
+    updateTalks :: [TalkRoom] -> ([TalkRoom], [UserId])
+    updateTalks talks =
+        let (newUsers, newTalks) = mapAccumL updateTalk [] talks
+        in  if null newUsers
+                then
+                    let newTalks' =
+                            if any ((talkId newTalk ==) . talkId) newTalks
+                                then newTalks
+                                else newTalk : newTalks
+                    in  (newTalks', talkUserIds newTalk)
+                else (newTalks, newUsers)
+
+    updateTalk :: [UserId] -> TalkRoom -> ([UserId], TalkRoom)
+    updateTalk foundUserIds oldTalk = if talkId oldTalk == talkId newTalk
+        then if null foundUserIds
+            then (talkUserIds newTalk \\ talkUserIds oldTalk, newTalk)
+            else (foundUserIds, newTalk)
+        else (foundUserIds, oldTalk)
 
 onDeleteTalk :: Client -> TalkId -> IO ()
 onDeleteTalk client tid = do
     -- Remove talk
-    modifyTalkRooms client $ \talks -> (filter ((tid /=) . talkId) talks, ())
+    userIdsInLeftRooms <- modifyTalkRooms client $ \talks ->
+        let left = filter ((tid /=) . talkId) talks
+        in  (left, concatMap talkUserIds left)
+
+    -- Remove acquaintances who don't belong to same rooms with the client user anymore.
+    modifyAcquaintances client
+        $ \acqs -> (filter ((`elem` userIdsInLeftRooms) . userId) acqs, ())
+
     -- Close channels for talk
     let chanDB = clientChannels client
     getChannels chanDB tid >>= mapM_ (haltChannel chanDB)
 
 onDeleteTalker :: Client -> DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
-onDeleteTalker client _ tid uidsAfterDeleted _leftUids = modifyTalkRooms client
-    $ \talks -> (map updateTalkUserIds talks, ())
+onDeleteTalker client _ tid uidsAfterDeleted deletedUids = do
+    someRoomIsUpdated <- modifyTalkRooms client
+        $ \talks -> swap $ mapAccumL updateTalkUserIds False talks
+
+    sharesWithDeletedUsers <- any (any (`elem` deletedUids) . talkUserIds)
+        <$> getTalkRooms client
+    when (someRoomIsUpdated && not sharesWithDeletedUsers)
+        $ modifyAcquaintances client
+        $ \acqs -> (filter ((`notElem` deletedUids) . userId) acqs, ())
   where
-    updateTalkUserIds talk = if talkId talk == tid
-        then talk { talkUserIds = uidsAfterDeleted }
-        else talk
+    updateTalkUserIds hasUpdated talk = if not hasUpdated && talkId talk == tid
+        then (True, talk { talkUserIds = uidsAfterDeleted })
+        else (hasUpdated, talk)
