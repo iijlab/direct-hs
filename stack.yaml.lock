@@ -3,10 +3,115 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    cabal-file:
+      size: 2371
+      sha256: 2016c1fd487efa411bb55f752c44256ee6712c329fb0cf8e0e040287052c369c
+    name: data-msgpack
+    version: 0.0.12
+    git: https://github.com/TokTok/hs-msgpack.git
+    pantry-tree:
+      size: 1110
+      sha256: 64b55f3f2dafa01589f20b7927f4be7783b8d6a66eaee2b5958da637d114a900
+    commit: 9d240fecc2d838d4447a2c86192959a1938b97a8
+  original:
+    git: https://github.com/TokTok/hs-msgpack.git
+    commit: 9d240fecc2d838d4447a2c86192959a1938b97a8
+- completed:
+    cabal-file:
+      size: 1885
+      sha256: 501aa6d937f1c57965e623662b7572c2a5e8af1bbad6623d81b0791e2bb069ff
+    name: data-msgpack-types
+    version: 0.0.2
+    git: https://github.com/TokTok/hs-msgpack-types.git
+    pantry-tree:
+      size: 1283
+      sha256: 3030899031aacc98047d49db4224f2e2ea67792d38a623ceff96dfcc18c4f8a2
+    commit: dfcfaa6ed2ee129d43d416ee1a67bc894e312201
+  original:
+    git: https://github.com/TokTok/hs-msgpack-types.git
+    commit: dfcfaa6ed2ee129d43d416ee1a67bc894e312201
+- completed:
+    hackage: http-client-tls-0.3.5.3@sha256:c97c3d88e6318a3056e42e2cd0913d5c4bff381f83341bb6ff06865fd12c8b52,2066
+    pantry-tree:
+      size: 435
+      sha256: b19e23dc469491661e9d1a40a9ba65ce745d4fd0143d4f9f7be824c8a5e2cee8
+  original:
+    hackage: http-client-tls-0.3.5.3@sha256:c97c3d88e6318a3056e42e2cd0913d5c4bff381f83341bb6ff06865fd12c8b52,2066
+- completed:
+    hackage: websockets-0.12.5.3@sha256:b4900397bb525a29547b7c43e82d7e46fc8654f34146b723e3d16dbc6d654cce,7435
+    pantry-tree:
+      size: 2592
+      sha256: c384b2815ce7e18917c07d8e54179de2b2ebaadf2da2a05765c634e2528b32c4
+  original:
+    hackage: websockets-0.12.5.3@sha256:b4900397bb525a29547b7c43e82d7e46fc8654f34146b723e3d16dbc6d654cce,7435
+- completed:
+    hackage: connection-0.3.1@sha256:65da1c055610095733bcd228d85dff80804b23a5d18fede994a0f9fcd1b0c121,1554
+    pantry-tree:
+      size: 386
+      sha256: 13a2c21049e69068e4c3d725533d94729772f2d3e05f5ef611bef28363b08798
+  original:
+    hackage: connection-0.3.1@sha256:65da1c055610095733bcd228d85dff80804b23a5d18fede994a0f9fcd1b0c121,1554
+- completed:
+    hackage: tls-1.5.1@sha256:a3dd34b10decece313f861247233b1d7c6058c99b32fb128554612fe3394e45a,6753
+    pantry-tree:
+      size: 4687
+      sha256: cf935ccc5b77f43d4e687fad688757554505ed3385dc73e5b4d24c303a3a5e93
+  original:
+    hackage: tls-1.5.1@sha256:a3dd34b10decece313f861247233b1d7c6058c99b32fb128554612fe3394e45a,6753
+- completed:
+    hackage: asn1-encoding-0.9.6@sha256:784e936495b1408a7831ff000bef25993b910ca9f008f69e1590da80a9d40f7b,1988
+    pantry-tree:
+      size: 981
+      sha256: f994a0cf539a0ea95d1084e3536ce99fc18001c9e6e83e76d8912634535cd2ba
+  original:
+    hackage: asn1-encoding-0.9.6
+- completed:
+    hackage: socks-0.6.1@sha256:ac190808eea704672df18f702e8f2ad0b7a4d0af528e95ee55ea6ee0be672e2a,1258
+    pantry-tree:
+      size: 692
+      sha256: 53d29c06c42e737ae99660e077c7c4b286f1272b3394ad7f74163867a5b3b8fa
+  original:
+    hackage: socks-0.6.1
+- completed:
+    hackage: x509-1.7.5@sha256:01185a9a17bee4e89287d9e32bfaa673133cf2b09a39759627bed1f72ea528fd,2305
+    pantry-tree:
+      size: 1072
+      sha256: 42cc162fbe2221555fb4d91e3de6699bc7731887c2c0e01ad79c8bf6ade988d9
+  original:
+    hackage: x509-1.7.5@sha256:01185a9a17bee4e89287d9e32bfaa673133cf2b09a39759627bed1f72ea528fd,2305
+- completed:
+    hackage: x509-store-1.6.7@sha256:a707b2f4ba3c02ebacd7ecd19e9f0c0b211b58270329c2c775a2c1df26820212,1781
+    pantry-tree:
+      size: 398
+      sha256: 583026f9af3752de292e672472de40d4cddde83d6ec2cb72b896c1eea3dc1da3
+  original:
+    hackage: x509-store-1.6.7@sha256:a707b2f4ba3c02ebacd7ecd19e9f0c0b211b58270329c2c775a2c1df26820212,1781
+- completed:
+    hackage: x509-system-1.6.6@sha256:3a1b9cc26715d7cb3cd1a3f8b6153f12c2d42187ac5df305c3973c78a061db05,1418
+    pantry-tree:
+      size: 391
+      sha256: f787ec9fe9d4ae10b1e28821bfc07e711755a043a4fafc74a0c6bedaab40f488
+  original:
+    hackage: x509-system-1.6.6@sha256:3a1b9cc26715d7cb3cd1a3f8b6153f12c2d42187ac5df305c3973c78a061db05,1418
+- completed:
+    hackage: x509-validation-1.6.11@sha256:7798c62717265a395f1092e6ad576f64b7876c289bb84353bddc0bb5a66c6b26,2169
+    pantry-tree:
+      size: 631
+      sha256: 5a2bdfefa3438eff100c556fa55232b2de64badb832c614cade1ca147f215715
+  original:
+    hackage: x509-validation-1.6.11@sha256:7798c62717265a395f1092e6ad576f64b7876c289bb84353bddc0bb5a66c6b26,2169
+- completed:
+    hackage: asn1-parse-0.9.4@sha256:748249e23024dde8fed1d99e85e7e952576ce51b3ce460b9d131b2e91ff9c5a4,958
+    pantry-tree:
+      size: 212
+      sha256: 032ae96320a74e6c43ceafbe02b6c535b44d219ceef91484b25aebc260c817f4
+  original:
+    hackage: asn1-parse-0.9.4@sha256:748249e23024dde8fed1d99e85e7e952576ce51b3ce460b9d131b2e91ff9c5a4,958
 snapshots:
 - completed:
-    size: 499461
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/25.yaml
-    sha256: aed98969628e20615e96b06083c933c7e3354ae56b08b75e607a26569225d6c0
-  original: lts-13.25
+    size: 334850
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2019/9/30.yaml
+    sha256: b43e27043ae66fda85af6ac9e555f43208530a2e6475289e88e74167988eff89
+  original: nightly-2019-09-30

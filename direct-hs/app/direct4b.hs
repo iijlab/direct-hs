@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Applicative    (optional, (<**>), (<|>))
@@ -9,7 +10,9 @@ import           Data.List              (intercalate)
 import           Data.Maybe             (fromMaybe)
 import qualified Data.MessagePack       as M
 import qualified Data.MessagePack.RPC   as Msg
+#if !MIN_VERSION_base(4,13,0)
 import           Data.Monoid            ((<>))
+#endif
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as TE
 import qualified Data.Text.IO           as T
@@ -18,7 +21,8 @@ import qualified Data.Text.Lazy.IO      as TL
 import           Network.Mime           (defaultMimeLookup)
 import qualified Options.Applicative    as Opt
 import qualified System.Directory       as Dir
-import           System.Envy            (FromEnv, decodeEnv, env, fromEnv)
+import           System.Envy            (FromEnv, decodeEnv, env, envMaybe,
+                                         fromEnv, (.!=))
 import           System.Exit            (die)
 import           System.FilePath        ((</>))
 import           System.IO              (BufferMode (NoBuffering), hGetEcho,
@@ -181,8 +185,8 @@ loginInfoOption =
 newtype EndpointUrl = EndpointUrl { getEndpointUrl :: String } deriving Show
 
 instance FromEnv EndpointUrl where
-  fromEnv =
-    EndpointUrl <$> (env "DIRECT_ENDPOINT_URL" <|> pure "wss://api.direct4b.com/albero-app-server/api")
+  fromEnv _ =
+    EndpointUrl <$> (envMaybe "DIRECT_ENDPOINT_URL" .!= "wss://api.direct4b.com/albero-app-server/api")
 
 
 data Env =
@@ -193,11 +197,11 @@ data Env =
     } deriving Show
 
 instance FromEnv Env where
-  fromEnv =
+  fromEnv _ =
     Env
       <$> (env "DIRECT_EMAIL_ADDRESS" <|> getEmailAddress)
       <*> (env "DIRECT_PASSWORD" <|> getPassword)
-      <*> (getEndpointUrl <$> fromEnv)
+      <*> (getEndpointUrl <$> fromEnv Nothing)
     where
       getEmailAddress = liftIO $ do
         putStr "Enter direct email: "

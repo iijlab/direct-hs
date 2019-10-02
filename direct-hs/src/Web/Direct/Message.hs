@@ -1,10 +1,13 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module Web.Direct.Message where
 
 import           Control.Applicative ((<|>))
+#if !MIN_VERSION_base(4,13,0)
 import           Control.Monad       (mapM)
+#endif
 import           Data.List           (elemIndex)
 import           Data.Maybe          (maybeToList)
 import qualified Data.MessagePack    as M

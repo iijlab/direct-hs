@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Backend-free MessagePack RPC Client.
@@ -32,7 +33,9 @@ import qualified Data.ByteString.Lazy                    as BL
 import qualified Data.HashMap.Strict                     as HM
 import qualified Data.IORef                              as IORef
 import qualified Data.MessagePack                        as MsgPack
+#if !MIN_VERSION_base(4,13,0)
 import           Data.Monoid                             ((<>))
+#endif
 import           System.IO                               (hPrint, stderr)
 import           System.Timeout                          (timeout)
 

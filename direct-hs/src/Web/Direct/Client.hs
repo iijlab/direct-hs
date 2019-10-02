@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Web.Direct.Client
@@ -49,7 +50,10 @@ where
 
 import qualified Control.Concurrent.STM                   as S
 import           Control.Error.Util                       (failWith)
-import           Control.Monad                            (mapM_, when)
+#if !MIN_VERSION_base(4,13,0)
+import           Control.Monad                            (mapM_)
+#endif
+import           Control.Monad                            (when)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
                                                            runExceptT,
                                                            throwError)
