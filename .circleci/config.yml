@@ -13,6 +13,8 @@ jobs:
         keys:
         - 'dependencies-{{ checksum "stack.yaml" }}'
         - 'dependencies-'
+    # Build some packages separately to avoid OUT OF MEMORY
+    - run: stack --compiler=ghc-8.6.5 --no-terminal build -j1 aeson
     - run: stack --compiler=ghc-8.6.5 --no-terminal test --pedantic --no-run-tests
     - run: stack --compiler=ghc-8.6.5 --no-terminal test --pedantic direct-hs
 
