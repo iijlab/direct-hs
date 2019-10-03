@@ -57,7 +57,7 @@ executable observe-pretty
   ghc-options: -Wall -threaded
   build-depends:
       pretty-simple
-    , envy
+    , envy >= 2.0.0
   default-language: Haskell2010
   other-modules: Common
 

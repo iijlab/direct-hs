@@ -21,7 +21,10 @@ import           Control.Monad.IO.Class   (liftIO)
 import qualified Data.ByteString.Lazy     as B
 import           Data.Char                (isSpace)
 import           Data.Foldable            (for_)
-import           Data.List                (break, sort)
+import           Data.List                (sort)
+#if !MIN_VERSION_base(4,13,0)
+import           Data.List                (break)
+#endif
 import qualified Data.Text                as T
 import qualified Data.Text.Lazy           as TL
 import qualified Options.Applicative      as Opt

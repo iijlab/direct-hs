@@ -29,14 +29,18 @@ import qualified Network.WebSockets.Skews as Skews
 newtype PortNumber = PortNumber Int deriving (Eq, Show)
 
 instance FromEnv PortNumber where
+#if MIN_VERSION_envy(2, 0, 0)
+  fromEnv _ = do
+#else
   fromEnv = do
+#endif
     mpn <- (readMaybe <$> env "SKEWS_TEST_PORT") <|> pure (Just 8613)
     PortNumber <$> maybe empty pure mpn
 
 
 spec :: Spec
 spec = context "After running Skews.start and starting a client" $ do
-  PortNumber pn <- either fail return =<< runIO decodeEnv
+  PortNumber pn <- runIO $ either fail return =<< decodeEnv
 
   let host = "127.0.0.1"
   server <- runIO $ Skews.start $ Skews.Args host pn

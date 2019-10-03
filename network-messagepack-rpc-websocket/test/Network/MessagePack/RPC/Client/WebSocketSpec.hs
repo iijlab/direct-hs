@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.MessagePack.RPC.Client.WebSocketSpec
@@ -32,14 +33,18 @@ main = hspec spec
 newtype PortNumber = PortNumber Int deriving (Eq, Show)
 
 instance FromEnv PortNumber where
-    fromEnv = do
+#if MIN_VERSION_envy(2, 0, 0)
+  fromEnv _ = do
+#else
+  fromEnv = do
+#endif
         mpn <- (readMaybe <$> env "MESSAGE_PACK_RPC_TEST_SERVER_PORT") <|> pure (Just 8615)
         PortNumber <$> maybe empty pure mpn
 
 
 spec :: Spec
 spec = describe "call" $ do
-    PortNumber pn <- either fail return =<< runIO decodeEnv
+    PortNumber pn <- runIO $ either fail return =<< decodeEnv
 
     let host = "localhost"
     server <- runIO $ Skews.start $ Skews.Args host pn

@@ -11,7 +11,7 @@ import           Common
 newtype EndpointUrl = EndpointUrl String deriving Show
 
 instance FromEnv EndpointUrl where
-  fromEnv =
+  fromEnv _ =
     EndpointUrl <$> (env "DIRECT_ENDPOINT_URL" <|> pure "wss://api.direct4b.com/albero-app-server/api")
 
 
