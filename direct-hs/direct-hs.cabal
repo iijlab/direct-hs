@@ -64,7 +64,7 @@ executable direct4b
     , filepath
     , direct-hs
     , optparse-applicative
-    , envy
+    , envy >= 2.0.0.0
     , text
     , mime-types
     , network-messagepack-rpc
