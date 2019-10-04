@@ -4,7 +4,6 @@ module Web.Direct.Exception
     ( Exception(..)
     , callRpc
     , callRpcThrow
-    , convertOrThrow
     )
 where
 
@@ -54,8 +53,3 @@ callRpcThrow rpcClient methodName args = do
     case eres of
         Left  e   -> E.throwIO e
         Right obj -> return obj
-
-convertOrThrow :: RPC.MethodName -> (M.Object -> Maybe a) -> M.Object -> IO a
-convertOrThrow methodName conv obj = case conv obj of
-    Just x  -> return x
-    Nothing -> E.throwIO $ UnexpectedReponse methodName obj

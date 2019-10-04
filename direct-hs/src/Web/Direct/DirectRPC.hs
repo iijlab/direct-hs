@@ -3,6 +3,7 @@
 module Web.Direct.DirectRPC where
 
 import           Control.Concurrent                       (threadDelay)
+import qualified Control.Exception                        as E
 import           Control.Monad                            (void)
 import qualified Data.MessagePack                         as M
 import qualified Data.MessagePack.RPC                     as R
@@ -63,7 +64,7 @@ createSession rpcclient info = do
     let methodName = "create_session"
         obj = [M.ObjectStr info, M.ObjectStr apiVersion, M.ObjectStr agentName]
     rsp <- callRpcThrow rpcclient methodName obj
-    convertOrThrow methodName fromCreateSession rsp
+    maybe (E.throwIO $ UnexpectedReponse methodName rsp) return $ fromCreateSession rsp
 
 resetNotification :: RPC.Client -> IO ()
 resetNotification rpcclient =
