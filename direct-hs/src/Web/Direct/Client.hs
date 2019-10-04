@@ -20,6 +20,7 @@ module Web.Direct.Client
     , getAcquaintances
     , hasAcquaintancesCached
     , initialiseAcquaintances
+    , invalidateCachedAcquaintances
     , modifyAcquaintances
     , getUsers
     , getCurrentDomain

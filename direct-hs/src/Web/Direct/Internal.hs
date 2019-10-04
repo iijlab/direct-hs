@@ -3,6 +3,7 @@ module Web.Direct.Internal
     -- * 'Web.Direct.Client'
       clientRpcClient
     , findTalkRoom
+    , modifyTalkRooms
     -- ** Exposed for testing
     , onAddTalkers
     , onDeleteTalker
@@ -11,11 +12,11 @@ module Web.Direct.Internal
     , setTalkRooms
     , hasAcquaintancesCached
     , setAcquaintances
+    , invalidateCachedAcquaintances
 
     -- * 'Web.Direct.Exception'
     , callRpc
     , callRpcThrow
-    , convertOrThrow
 
     -- * 'Web.Direct.DirectRPC'
     , decodeTalkRoom
