@@ -85,3 +85,77 @@ data NotificationHandlers = NotificationHandlers
     , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
     , onNotifyDeleteAcquaintance :: DomainId -> UserId -> IO ()
     }
+
+{-
+received: request( 4 ) notify_create_pair_talk
+    [
+        {
+            ( "talk_id"
+            , +886276768485351424
+            )
+        ,
+            ( "domain_id"
+            , +756215615911362560
+            )
+        ,
+            ( "type"
+            , +1
+            )
+        ,
+            ( "user_ids"
+            ,
+                [ +756572353508409344
+                , +847483539283771392
+                ]
+            )
+        ,
+            ( "updated_at"
+            , +1570499601727
+            )
+        }
+    ]
+sent: response( 4 ) True
+
+-}
+
+{-
+testbot3@direct4bi> received: request( 5 ) notify_create_group_talk
+    [
+        {
+            ( "talk_id"
+            , +951078992901840896
+            )
+        ,
+            ( "domain_id"
+            , +756215615911362560
+            )
+        ,
+            ( "type"
+            , +2
+            )
+        ,
+            ( "user_ids"
+            ,
+                [ +753667719861108736
+                , +847483539283771392
+                , +847483592803090432
+                ]
+            )
+        ,
+            ( "settings"
+            ,
+                {
+                    ( "allow_display_past_messages"
+                    , False
+                    )
+                }
+            )
+        ,
+            ( "updated_at"
+            , +1570501702236
+            )
+        }
+    ]
+sent: response( 5 ) True
+
+-}
