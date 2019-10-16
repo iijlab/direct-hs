@@ -13,6 +13,8 @@ type TalkId    = Word64
 type UserId    = Word64
 -- | Mesage ID.
 type MessageId = Word64
+-- | Timestamp
+type Timestamp = Word64
 -- | (Uploaded) File ID.
 type FileId    = Word64
 -- | (Uploaded) File size in bytes.
@@ -36,14 +38,18 @@ data Domain = Domain {
     } deriving (Eq, Show, Read)
 
 -- | Talk room types.
-data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text deriving (Eq, Show, Read)
+data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text !TalkSettings deriving (Eq, Show, Read)
 
 -- | Type for talk rooms.
 data TalkRoom = TalkRoom {
-      talkId      :: !TalkId
-    , talkType    :: !TalkType
-    , talkUserIds :: [UserId]
+      talkId        :: !TalkId
+    , talkType      :: !TalkType
+    , talkUserIds   :: [UserId]
+    , talkUpdatedAt :: !Timestamp
     } deriving (Eq, Show, Read)
+
+newtype TalkSettings =
+    TalkSettings { allowDisplayPastMessages :: Bool } deriving (Eq, Show, Read)
 
 -- | Type for Direct messages.
 data Message =
@@ -84,6 +90,8 @@ data NotificationHandlers = NotificationHandlers
     , onNotifyDeleteTalk :: TalkId -> IO ()
     , onNotifyDeleteTalker :: DomainId -> TalkId -> [UserId] -> [UserId] -> IO ()
     , onNotifyDeleteAcquaintance :: DomainId -> UserId -> IO ()
+    , onNotifyCreatePairTalk :: DomainId -> TalkRoom -> IO ()
+    , onNotifyCreateGroupTalk :: DomainId -> TalkRoom -> IO ()
     }
 
 {-

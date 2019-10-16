@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Web.Direct.Api
     ( Config(..)
     , defaultConfig
@@ -77,6 +79,8 @@ defaultNotificationHandlers = NotificationHandlers
     , onNotifyDeleteTalk         = \_ -> return ()
     , onNotifyDeleteTalker       = \_ _ _ _ -> return ()
     , onNotifyDeleteAcquaintance = \_ _ -> return ()
+    , onNotifyCreatePairTalk     = \_ _ -> return ()
+    , onNotifyCreateGroupTalk    = \_ _ -> return ()
     }
 
 ----------------------------------------------------------------
@@ -179,6 +183,14 @@ withClient config pInfo action = do
                                                                    did
                                                                    uid
                                     onNotifyDeleteAcquaintance userNH did uid
+                            , onNotifyCreatePairTalk =
+                                \did talk -> do
+                                    handleNotifyCreateTalk client did talk
+                                    onNotifyCreatePairTalk userNH did talk
+                            , onNotifyCreateGroupTalk =
+                                \did talk -> do
+                                    handleNotifyCreateTalk client did talk
+                                    onNotifyCreateGroupTalk userNH did talk
                             }
                     handleNotification method objs handlers
         , RPC.logger             = directLogger config
@@ -253,3 +265,7 @@ handleNotifyDeleteAcquaintance :: Client -> DomainId -> UserId -> IO ()
 handleNotifyDeleteAcquaintance client _did uid = modifyAcquaintances
     client
     (\users -> (filter ((/= uid) . userId) users, ()))
+
+handleNotifyCreateTalk :: Client -> DomainId -> TalkRoom -> IO ()
+handleNotifyCreateTalk client _did talk =
+    modifyTalkRooms client (\talks -> (talk : talks, ()))

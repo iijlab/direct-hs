@@ -162,6 +162,14 @@ handleNotification method params handlers = case (method, params) of
         Just (did, tid, uids, leftUids) ->
             onNotifyDeleteTalker handlers did tid uids leftUids
         _ -> return ()
+    ("notify_create_pair_talk", obj : _) -> case decodeTalkRoomWithDomainId obj of
+        Just (did, talk) ->
+            onNotifyCreatePairTalk handlers did talk
+        _ -> return ()
+    ("notify_create_group_talk", obj : _) -> case decodeTalkRoomWithDomainId obj of
+        Just (did, talk) ->
+            onNotifyCreateGroupTalk handlers did talk
+        _ -> return ()
     _ -> return ()
 
 -- | Run this action before executing private or heavily-loaded APIs.

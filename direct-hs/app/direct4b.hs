@@ -402,5 +402,5 @@ showTalkRoom talk talkUsers = intercalate
     , intercalate ", " $ map (T.unpack . D.displayName) talkUsers
     ]
   where
-    showTalkType (D.GroupTalk name) = "GroupTalk \"" ++ T.unpack name ++ "\""
-    showTalkType other              = show other
+    showTalkType (D.GroupTalk name _settings) = "GroupTalk \"" ++ T.unpack name ++ "\""
+    showTalkType other                        = show other
