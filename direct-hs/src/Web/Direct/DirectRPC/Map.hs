@@ -69,14 +69,27 @@ decodeTalkRoom :: M.Object -> Maybe TalkRoom
 decodeTalkRoom (M.ObjectMap m) = do
     M.ObjectWord tid <- look "talk_id" m
     M.ObjectWord tp  <- look "type" m
-    let typ
-            | tp == 1 = PairTalk
-            | tp == 2 = case look "talk_name" m of
-                Just (M.ObjectStr tname) -> GroupTalk tname
-                _                        -> GroupTalk ""
-            | otherwise = UnknownTalk
+    typ <-
+        case tp of
+            1 -> Just PairTalk
+            2 -> do
+                let talkName =
+                        case look "talk_name" m of
+                            Just (M.ObjectStr tname) -> tname
+                            _                        -> ""
+                settings <- decodeTalkSettings =<< look "settings" m
+                Just $ GroupTalk talkName settings
+            _ -> Just UnknownTalk
     userIds <- decodeUserIds =<< look "user_ids" m
-    Just $ TalkRoom tid typ userIds
+    M.ObjectWord tstamp <- look "updated_at" m
+
+    Just $ TalkRoom tid typ userIds tstamp
+  where
+    decodeTalkSettings :: M.Object -> Maybe TalkSettings
+    decodeTalkSettings (M.ObjectMap m') = do
+        M.ObjectBool b <- look "allow_display_past_messages" m'
+        Just $ TalkSettings b
+    decodeTalkSettings _ = Nothing
 decodeTalkRoom _ = Nothing
 
 decodeUploadAuth :: [(M.Object, M.Object)] -> Maybe UploadAuth

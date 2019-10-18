@@ -622,7 +622,11 @@ mkTestUser role uid = User
 
 mkTestRoom :: [User] -> TalkId -> TalkRoom
 mkTestRoom users tid =
-    TalkRoom tid (GroupTalk ("Talk Room " <> tshow tid)) $ map userId users
+    TalkRoom
+        tid
+        (GroupTalk ("Talk Room " <> tshow tid) $ TalkSettings True)
+        (map userId users)
+        1
 
 getSameRoomWithOthers
     :: HasCallStack => Client -> TalkRoom -> IO (TalkRoom, [TalkRoom])
