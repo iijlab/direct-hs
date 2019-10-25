@@ -156,7 +156,6 @@ withClient config backend action = do
   where
     takeAction client wait = do
         returned <- action client
-        -- TODO: Why not run these in `finally`?
         when (waitRequestHandler config) $ MVar.takeMVar wait
         return returned
 
