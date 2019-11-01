@@ -15,6 +15,8 @@ type UserId    = Word64
 type MessageId = Word64
 -- | Timestamp
 type Timestamp = Word64
+-- | Answer number of a 'SelectA'
+type SelectAnswerNumber = Word64
 -- | (Uploaded) File ID.
 type FileId    = Word64
 -- | (Uploaded) File size in bytes.
@@ -59,7 +61,7 @@ data Message =
     | YesNoQ    !T.Text
     | YesNoA    !T.Text Bool
     | SelectQ   !T.Text ![T.Text]
-    | SelectA   !T.Text ![T.Text] T.Text
+    | SelectA   !T.Text ![T.Text] SelectAnswerNumber
     | TaskQ     !T.Text Bool -- False: anyone, True: everyone
     | TaskA     !T.Text Bool Bool -- done
     | Files     ![File] !(Maybe T.Text)

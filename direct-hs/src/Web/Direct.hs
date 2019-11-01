@@ -27,6 +27,7 @@ module Web.Direct
     , TalkId
     , UserId
     , MessageId
+    , SelectAnswerNumber
   -- ** Abstract types
   -- *** Domain
     , Domain
@@ -79,6 +80,7 @@ module Web.Direct
     , defaultNotificationHandlers
   -- * Utility
     , throttleDown
+    , getSelectedAnswer
     )
 where
 
@@ -87,5 +89,6 @@ import           Web.Direct.Client
 import           Web.Direct.DirectRPC (throttleDown)
 import           Web.Direct.Exception
 import           Web.Direct.LoginInfo
+import           Web.Direct.Message
 import           Web.Direct.Types
 import           Web.Direct.Upload

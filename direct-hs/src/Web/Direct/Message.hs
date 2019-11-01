@@ -8,7 +8,6 @@ import           Control.Applicative ((<|>))
 #if !MIN_VERSION_base(4,13,0)
 import           Control.Monad       (mapM)
 #endif
-import           Data.List           (elemIndex)
 import           Data.Maybe          (maybeToList)
 import qualified Data.MessagePack    as M
 import qualified Data.Text           as T
@@ -86,11 +85,10 @@ encodeMessage (SelectA qst opt ans) tid =
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
         , (M.ObjectStr "options" , M.toObject opt)
-        , (M.ObjectStr "response", M.ObjectWord (fromIntegral idx))
+        , (M.ObjectStr "response", M.ObjectWord ans)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-    where Just idx = ans `elemIndex` opt -- fixme
 encodeMessage (TaskQ ttl cls) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 504
@@ -170,8 +168,7 @@ decodeMessage rspinfo = do
                 M.ObjectMap m <- look "content" rspinfo
                 qst           <- look "question" m >>= M.fromObject
                 opt           <- look "options" m >>= M.fromObject
-                idx           <- look "response" m >>= M.fromObject
-                let ans = opt !! fromIntegral (idx :: Word64)
+                ans           <- look "response" m >>= M.fromObject
                 return (SelectA qst opt ans)
             M.ObjectWord 504 -> do
                 M.ObjectMap m <- look "content" rspinfo
@@ -209,3 +206,9 @@ decodeMessage rspinfo = do
         M.ObjectStr  fileUrl         <- look "url" f
         Just File {..}
     decodeFile _ = Nothing
+
+----------------------------------------------------------------
+
+-- | Get the answer as a text from 'Web.Direct.SelectA'
+getSelectedAnswer :: [T.Text] -> SelectAnswerNumber -> T.Text
+getSelectedAnswer choices = (choices !!) . fromIntegral

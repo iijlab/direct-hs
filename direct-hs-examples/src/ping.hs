@@ -60,9 +60,9 @@ handleCreateMessage client (D.Txt "talks", _, room, _) = do
     void $ D.sendMessage client
                          (D.Txt (ans `T.append` "があります。"))
                          (D.talkId room)
-handleCreateMessage client (D.SelectA "好きなクワガタは？" _ ans, _, room, _) =
+handleCreateMessage client (D.SelectA "好きなクワガタは？" opt ans, _, room, _) =
     void $ D.sendMessage client
-                         (D.Txt (ans `T.append` "が好きなんですね。"))
+                         (D.Txt (D.getSelectedAnswer opt ans `T.append` "が好きなんですね。"))
                          (D.talkId room)
 handleCreateMessage client (D.YesNoA "お元気ですか？" True, _, room, _) =
     void $ D.sendMessage client (D.Txt "よかったです。") (D.talkId room)
