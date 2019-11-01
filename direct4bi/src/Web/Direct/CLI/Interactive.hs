@@ -144,11 +144,9 @@ loop :: RunCommand -> State -> Prompt -> D.Client -> Hl.InputT IO ()
 loop runCommand st prompt client = do
     mcmd <- fmap parseCommand <$> Hl.getInputLine prompt
     case mcmd of
-        Just (command, args) -> if command == "quit"
-            then return ()
-            else do
-                newSt <- liftIO $ runCommand st client command args
-                loop runCommand newSt prompt client
+        Just (command, args) | command /= "q" -> do
+            newSt <- liftIO $ runCommand st client command args
+            loop runCommand newSt prompt client
         _ -> return ()
 
 
@@ -166,7 +164,7 @@ defaultHelpLines =
     , "show users: Show the logged-in user and his/her acquaintances."
     , "show rooms: Show the logged-in user's talk rooms and their participants."
     , "sleep <seconds>: Sleep for <seconds> seconds."
-    , "quit: Quit this application."
+    , "q: Quit this application."
     , "help: Print this message."
     ]
 
