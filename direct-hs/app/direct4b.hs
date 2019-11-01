@@ -10,9 +10,6 @@ import           Data.List              (intercalate)
 import           Data.Maybe             (fromMaybe)
 import qualified Data.MessagePack       as M
 import qualified Data.MessagePack.RPC   as Msg
-#if !MIN_VERSION_base(4,13,0)
-import           Data.Monoid            ((<>))
-#endif
 import qualified Data.Text              as T
 import qualified Data.Text.Encoding     as TE
 import qualified Data.Text.IO           as T
