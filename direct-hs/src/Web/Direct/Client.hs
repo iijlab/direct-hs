@@ -51,9 +51,6 @@ where
 
 import qualified Control.Concurrent.STM                   as S
 import           Control.Error.Util                       (failWith)
-#if !MIN_VERSION_base(4,13,0)
-import           Control.Monad                            (mapM_)
-#endif
 import           Control.Monad                            (when)
 import           Control.Monad.Except                     (ExceptT (ExceptT),
                                                            runExceptT,

@@ -40,11 +40,6 @@ import           Control.Exception    (handleJust)
 import qualified Data.ByteString.Lazy as B
 import qualified Data.IORef           as IOR
 
-#if !MIN_VERSION_base(4,13,0)
-import           Control.Monad        (mapM_)
-import           Data.Monoid          (mempty)
-#endif
-
 #if MIN_VERSION_deque(0, 3, 0)
 import qualified Deque.Lazy           as Q
 import           GHC.Exts             (fromList)
