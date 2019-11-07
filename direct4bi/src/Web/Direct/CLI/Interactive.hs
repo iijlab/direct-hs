@@ -12,7 +12,7 @@ module Web.Direct.CLI.Interactive
     )
 where
 
-import           Control.Applicative      ((<**>))
+import           Control.Applicative      (optional, (<**>))
 import           Control.Arrow            (second)
 import           Control.Concurrent       (threadDelay)
 import           Control.Error            (note)
@@ -45,6 +45,7 @@ data Args = Args
     { loginInfoFile :: FilePath
     , logMessage    :: Bool
     , dumpMsgpack   :: Bool
+    , initialTalkId :: State
     } deriving (Eq, Show)
 
 
@@ -90,7 +91,7 @@ mainWith runCommand = do
             }
         pInfo
         ( Hl.runInputT Hl.defaultSettings { Hl.historyFile = Just histFile }
-        . startLoop runCommand prompt
+        . startLoop runCommand (initialTalkId args) prompt
         )
   where
     argsInfo = Opt.info
@@ -117,6 +118,13 @@ mainWith runCommand = do
                     (Opt.long "dump-msgpack" <> Opt.short 'm' <> Opt.help
                         "Dump all received MsgPack RPC messages"
                     )
+            <*> optional
+                (Opt.option
+                    Opt.auto
+                    (Opt.metavar "TALK_ID" <> Opt.long "talk-room" <> Opt.short 't' <> Opt.help
+                        "Initial talk room ID"
+                    )
+                )
 
 
 defaultMain :: IO ()
@@ -128,13 +136,13 @@ consolePrompt :: String -> String
 consolePrompt = (++ "@direct4bi> ")
 
 
-startLoop :: RunCommand -> Prompt -> D.Client -> Hl.InputT IO ()
-startLoop runCommand prompt client = do
+startLoop :: RunCommand -> State -> Prompt -> D.Client -> Hl.InputT IO ()
+startLoop runCommand initial prompt client = do
     hasT <- Hl.haveTerminalUI
     when hasT
         $ Hl.outputStrLn
               "Connected to direct4b.com. Enter \"help\" to see the available commands"
-    loop runCommand Nothing prompt client
+    loop runCommand initial prompt client
 
 
 loop :: RunCommand -> State -> Prompt -> D.Client -> Hl.InputT IO ()
