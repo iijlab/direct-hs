@@ -11,7 +11,7 @@ type DomainId  = Word64
 type TalkId    = Word64
 -- | User ID.
 type UserId    = Word64
--- | Mesage ID.
+-- | Message ID.
 type MessageId = Word64
 -- | Timestamp
 type Timestamp = Word64
