@@ -48,6 +48,10 @@ module Web.Direct
     , canonicalPhoneticDisplayName
   -- ** Message
     , Message(..)
+    , Answer
+    , AnswerFor(..)
+    , SelectQuestion(..)
+    , ClosingType(..)
   -- * Sending
     , sendMessage
   -- ** File Upload

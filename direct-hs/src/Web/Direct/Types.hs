@@ -53,17 +53,29 @@ data TalkRoom = TalkRoom {
 newtype TalkSettings =
     TalkSettings { allowDisplayPastMessages :: Bool } deriving (Eq, Show, Read)
 
+data AnswerFor r q =
+    AnswerFor { response :: !r, question :: !q, inReplyTo :: !MessageId } deriving (Eq, Show, Read)
+
+data ClosingType = OnlyOne | Anyone deriving (Eq, Show, Read)
+
+data Question q = Question !ClosingType !q deriving (Eq, Show, Read)
+
+type Answer r q = AnswerFor r (Question q)
+
+data SelectQuestion =
+    SelectQuestion { selectQuestionText :: !T.Text,  selectQuestionOptions :: ![T.Text] } deriving (Eq, Show, Read)
+
 -- | Type for Direct messages.
 data Message =
       Txt       !T.Text
     | Location  !T.Text !T.Text -- Address, GoogleMap URL
     | Stamp     !Word64 !Word64 !(Maybe T.Text)
-    | YesNoQ    !T.Text
-    | YesNoA    !T.Text Bool
-    | SelectQ   !T.Text ![T.Text]
-    | SelectA   !T.Text ![T.Text] SelectAnswerNumber
-    | TaskQ     !T.Text Bool -- False: anyone, True: everyone
-    | TaskA     !T.Text Bool Bool -- done
+    | YesNoQ    !(Question T.Text)
+    | YesNoA    !(Answer Bool T.Text)
+    | SelectQ   !(Question SelectQuestion)
+    | SelectA   !(Answer SelectAnswerNumber SelectQuestion)
+    | TaskQ     !(Question T.Text)
+    | TaskA     !(Answer Bool T.Text)
     | Files     ![File] !(Maybe T.Text)
     | Other     !T.Text
     deriving (Eq, Show, Read)
