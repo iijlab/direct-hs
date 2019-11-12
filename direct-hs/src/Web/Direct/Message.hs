@@ -5,11 +5,9 @@
 module Web.Direct.Message where
 
 import           Control.Applicative ((<|>))
-import           Data.List           (elemIndex)
 import           Data.Maybe          (maybeToList)
 import qualified Data.MessagePack    as M
 import qualified Data.Text           as T
-import           Data.Word           (Word64)
 
 import           Web.Direct.Types
 import           Web.Direct.Utils
@@ -51,63 +49,76 @@ encodeMessage (Files files mtext) tid =
         : maybeToList
               (fmap (\text -> (M.ObjectStr "text", M.ObjectStr text)) mtext)
     ]
-encodeMessage (YesNoQ qst) tid =
+encodeMessage (YesNoQ (YesNoQuestion qst ct)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 500
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
+        , encodeClosingType ct
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (YesNoA qst ans) tid =
+encodeMessage (YesNoA (YesNoAnswer qst ct ans irl)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 501
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
+        , encodeClosingType ct
         , (M.ObjectStr "response", M.ObjectBool ans)
+        , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (SelectQ qst opt) tid =
+encodeMessage (SelectQ (SelectQuestion qst opt ct)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 502
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
         , (M.ObjectStr "options" , M.toObject opt)
+        , encodeClosingType ct
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-encodeMessage (SelectA qst opt ans) tid =
+encodeMessage (SelectA (SelectAnswer qst opt ct ans irl)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 503
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
         , (M.ObjectStr "options" , M.toObject opt)
-        , (M.ObjectStr "response", M.ObjectWord (fromIntegral idx))
+        , encodeClosingType ct
+        , (M.ObjectStr "response", M.toObject ans)
+        , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
-    where Just idx = ans `elemIndex` opt -- fixme
-encodeMessage (TaskQ ttl cls) tid =
+encodeMessage (TaskQ (TaskQuestion ttl ct)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 504
     , M.ObjectMap
         [ (M.ObjectStr "title"       , M.ObjectStr ttl)
-        , (M.ObjectStr "closing_type", M.ObjectWord (if cls then 1 else 0))
+        , encodeClosingType ct
         ]
     ]
-encodeMessage (TaskA ttl cls don) tid =
+encodeMessage (TaskA (TaskAnswer ttl ct don irl)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 505
     , M.ObjectMap
         [ (M.ObjectStr "title"       , M.ObjectStr ttl)
-        , (M.ObjectStr "closing_type", M.ObjectWord (if cls then 1 else 0))
+        , encodeClosingType ct
         , (M.ObjectStr "done"        , M.ObjectBool don)
+        , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
         ]
     ]
 
 encodeMessage (Other text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
+
+encodeClosingType :: ClosingType -> (M.Object, M.Object)
+encodeClosingType ct = (M.ObjectStr "closing_type", M.ObjectWord w)
+  where
+    w = case ct of
+            OnlyOne -> 0
+            Anyone  -> 1
 
 encodeFile :: File -> M.Object
 encodeFile File {..} = M.ObjectMap
@@ -151,39 +162,60 @@ decodeMessage rspinfo = do
             M.ObjectWord 5   -> decodeFilesMessage
             M.ObjectWord 500 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                qst           <- look "question" m >>= M.fromObject
-                return (YesNoQ qst)
+                YesNoQ <$> decodeYesNoQuestion m
             M.ObjectWord 501 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                qst           <- look "question" m >>= M.fromObject
+                (YesNoQuestion qst ct) <- decodeYesNoQuestion m
                 ans           <- look "response" m >>= M.fromObject
-                return (YesNoA qst ans)
+                irl           <- decodeInReplyTo m
+                return . YesNoA $ YesNoAnswer qst ct ans irl
             M.ObjectWord 502 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                qst           <- look "question" m >>= M.fromObject
-                opt           <- look "options" m >>= M.fromObject
-                return (SelectQ qst opt)
+                SelectQ <$> decodeSelectQuestion m
             M.ObjectWord 503 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                qst           <- look "question" m >>= M.fromObject
-                opt           <- look "options" m >>= M.fromObject
-                idx           <- look "response" m >>= M.fromObject
-                let ans = opt !! fromIntegral (idx :: Word64)
-                return (SelectA qst opt ans)
+                SelectQuestion qst opt ct <- decodeSelectQuestion m
+                ans           <- look "response" m >>= M.fromObject
+                irl           <- decodeInReplyTo m
+                return . SelectA $ SelectAnswer qst opt ct ans irl
             M.ObjectWord 504 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                ttl           <- look "title" m >>= M.fromObject
-                cls'          <- look "closing_type" m >>= M.fromObject
-                let cls = cls' == (1 :: Word64)
-                return (TaskQ ttl cls)
+                TaskQ <$> decodeTaskQuestion m
             M.ObjectWord 505 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                ttl           <- look "title" m >>= M.fromObject
-                cls'          <- look "closing_type" m >>= M.fromObject
+                TaskQuestion ttl ct <- decodeTaskQuestion m
                 don           <- look "done" m >>= M.fromObject
-                let cls = cls' == (1 :: Word64)
-                return (TaskA ttl cls don)
+                irl           <- decodeInReplyTo m
+                return . TaskA $ TaskAnswer ttl ct don irl
             _ -> return (Other $ T.pack $ show rspinfo)
+
+    decodeYesNoQuestion m = do
+        qst <- look "question" m >>= M.fromObject
+        ct  <- decodeClosingType m
+        return $ YesNoQuestion qst ct
+
+    decodeSelectQuestion m = do
+        qst <- look "question" m >>= M.fromObject
+        opt <- look "options" m >>= M.fromObject
+        ct  <- decodeClosingType m
+        return $ SelectQuestion qst opt ct
+
+    decodeTaskQuestion m = do
+        ttl <- look "title" m >>= M.fromObject
+        ct  <- decodeClosingType m
+        return $ TaskQuestion ttl ct
+
+    decodeClosingType m =
+        case look "closing_type" m of
+            Just o -> case o of
+                    M.ObjectWord 1 -> Just Anyone
+                    M.ObjectWord 0 -> Just OnlyOne
+                    _              -> Nothing
+            Nothing -> Just OnlyOne
+
+    decodeInReplyTo m = do
+        M.ObjectWord mid <- look "in_reply_to" m
+        return mid
 
     decodeFilesMessage = do
         obj@(M.ObjectMap m) <- look "content" rspinfo
@@ -206,3 +238,9 @@ decodeMessage rspinfo = do
         M.ObjectStr  fileUrl         <- look "url" f
         Just File {..}
     decodeFile _ = Nothing
+
+----------------------------------------------------------------
+
+-- | Get the answer as a text from 'Web.Direct.SelectA'
+getSelectedAnswer :: SelectAnswer -> T.Text
+getSelectedAnswer (SelectAnswer _qst opt _ct res _irl) = opt !! res

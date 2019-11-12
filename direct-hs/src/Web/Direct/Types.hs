@@ -1,7 +1,11 @@
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Web.Direct.Types where
 
-import qualified Data.Text as T
-import           Data.Word (Word64)
+import qualified Data.Text    as T
+import           Data.Word    (Word64)
+import           GHC.Generics (Generic)
 
 ----------------------------------------------------------------
 
@@ -15,6 +19,10 @@ type UserId    = Word64
 type MessageId = Word64
 -- | Timestamp
 type Timestamp = Word64
+-- | Answer number of a 'SelectA'
+--   Actually values of this type are exchanged as unsigned integers,
+--   but I chose 'Int' for compatibility with '!!'.
+type SelectAnswerNumber = Int
 -- | (Uploaded) File ID.
 type FileId    = Word64
 -- | (Uploaded) File size in bytes.
@@ -29,16 +37,16 @@ data User = User {
     , canonicalDisplayName         :: !T.Text
     , phoneticDisplayName          :: !T.Text
     , canonicalPhoneticDisplayName :: !T.Text
-    } deriving (Eq, Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 
 -- | Type for domains.
 data Domain = Domain {
       domainId   :: !DomainId
     , domainName :: !T.Text
-    } deriving (Eq, Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 
 -- | Talk room types.
-data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text !TalkSettings deriving (Eq, Show, Read)
+data TalkType = UnknownTalk | PairTalk | GroupTalk !T.Text !TalkSettings deriving (Eq, Show, Read, Generic)
 
 -- | Type for talk rooms.
 data TalkRoom = TalkRoom {
@@ -46,25 +54,51 @@ data TalkRoom = TalkRoom {
     , talkType      :: !TalkType
     , talkUserIds   :: [UserId]
     , talkUpdatedAt :: !Timestamp
-    } deriving (Eq, Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 
 newtype TalkSettings =
-    TalkSettings { allowDisplayPastMessages :: Bool } deriving (Eq, Show, Read)
+    TalkSettings { allowDisplayPastMessages :: Bool } deriving (Eq, Show, Read, Generic)
 
 -- | Type for Direct messages.
 data Message =
       Txt       !T.Text
     | Location  !T.Text !T.Text -- Address, GoogleMap URL
     | Stamp     !Word64 !Word64 !(Maybe T.Text)
-    | YesNoQ    !T.Text
-    | YesNoA    !T.Text Bool
-    | SelectQ   !T.Text ![T.Text]
-    | SelectA   !T.Text ![T.Text] T.Text
-    | TaskQ     !T.Text Bool -- False: anyone, True: everyone
-    | TaskA     !T.Text Bool Bool -- done
+    | YesNoQ    !YesNoQuestion
+    | YesNoA    !YesNoAnswer
+    | SelectQ   !SelectQuestion
+    | SelectA   !SelectAnswer
+    | TaskQ     !TaskQuestion
+    | TaskA     !TaskAnswer
     | Files     ![File] !(Maybe T.Text)
     | Other     !T.Text
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Generic)
+
+data YesNoQuestion = YesNoQuestion
+    { question :: !T.Text, closingType :: !ClosingType }
+    deriving (Eq, Show, Read, Generic)
+
+data YesNoAnswer = YesNoAnswer
+    { question :: !T.Text, closingType :: !ClosingType, response :: !Bool, inReplyTo :: !MessageId }
+    deriving (Eq, Show, Read, Generic)
+
+data SelectQuestion = SelectQuestion
+    { question :: !T.Text, options :: ![T.Text], closingType :: !ClosingType }
+    deriving (Eq, Show, Read, Generic)
+
+data SelectAnswer = SelectAnswer
+    { question :: !T.Text, options :: ![T.Text], closingType :: !ClosingType, response :: !SelectAnswerNumber, inReplyTo :: !MessageId }
+    deriving (Eq, Show, Read, Generic)
+
+data TaskQuestion = TaskQuestion
+    { title :: !T.Text, closingType :: !ClosingType }
+    deriving (Eq, Show, Read, Generic)
+
+data TaskAnswer = TaskAnswer
+    { title :: !T.Text, closingType :: !ClosingType, done :: !Bool, inReplyTo :: !MessageId }
+    deriving (Eq, Show, Read, Generic)
+
+data ClosingType = OnlyOne | Anyone deriving (Eq, Show, Read, Generic)
 
 data File = File
     { fileUrl         :: !T.Text
@@ -72,7 +106,7 @@ data File = File
     , fileContentSize :: !Word64
     , fileName        :: !T.Text
     , fileId          :: !FileId
-    } deriving (Eq, Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 
 -- | Created from the response of direct's RPC function @create_upload_auth@.
 --   Contains information to upload/download a file to/from direct.
@@ -81,7 +115,7 @@ data UploadAuth = UploadAuth
     , uploadAuthPutUrl             :: !T.Text
     , uploadAuthFileId             :: !FileId
     , uploadAuthContentDisposition :: !T.Text
-    } deriving (Eq, Show, Read)
+    } deriving (Eq, Show, Read, Generic)
 
 data NotificationHandlers = NotificationHandlers
     { onNotifyCreateMessage :: Message -> MessageId -> TalkId -> UserId -> IO ()

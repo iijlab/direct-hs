@@ -13,6 +13,7 @@ module Web.Direct.Internal
     , hasAcquaintancesCached
     , setAcquaintances
     , invalidateCachedAcquaintances
+    , decodeMessage
 
     -- * 'Web.Direct.Exception'
     , callRpc
@@ -29,4 +30,5 @@ where
 import           Web.Direct.Client
 import           Web.Direct.DirectRPC.Map
 import           Web.Direct.Exception
+import           Web.Direct.Message
 import           Web.Direct.Types
