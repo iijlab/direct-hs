@@ -82,6 +82,7 @@ test-suite direct-hs-test
     , text
     , mtl
     , network-messagepack-rpc
+    , data-msgpack-types
   build-tool-depends:
       hspec-discover:hspec-discover
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
