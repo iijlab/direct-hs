@@ -10,23 +10,23 @@ import           GHC.Generics (Generic)
 ----------------------------------------------------------------
 
 -- | Domain ID.
-type DomainId  = Word64
+type DomainId           = Word64
 -- | Talk room ID.
-type TalkId    = Word64
+type TalkId             = Word64
 -- | User ID.
-type UserId    = Word64
+type UserId             = Word64
 -- | Message ID.
-type MessageId = Word64
+type MessageId          = Word64
 -- | Timestamp
-type Timestamp = Word64
+type Timestamp          = Word64
 -- | Answer number of a 'SelectA'
 --   Actually values of this type are exchanged as unsigned integers,
 --   but I chose 'Int' for compatibility with '!!'.
 type SelectAnswerNumber = Int
 -- | (Uploaded) File ID.
-type FileId    = Word64
+type FileId             = Word64
 -- | (Uploaded) File size in bytes.
-type FileSize  = Word64
+type FileSize           = Word64
 
 ----------------------------------------------------------------
 
