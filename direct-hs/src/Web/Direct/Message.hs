@@ -54,7 +54,7 @@ encodeMessage (YesNoQ (YesNoQuestion qst ct)) tid =
     , M.ObjectWord 500
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
-        , encodeClosingType ct
+        , (M.ObjectStr "closing_type", M.toObject ct)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
@@ -63,7 +63,7 @@ encodeMessage (YesNoA (YesNoAnswer qst ct ans irl)) tid =
     , M.ObjectWord 501
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
-        , encodeClosingType ct
+        , (M.ObjectStr "closing_type", M.toObject ct)
         , (M.ObjectStr "response", M.ObjectBool ans)
         , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
         , (M.ObjectStr "listing" , M.ObjectBool False)
@@ -75,7 +75,7 @@ encodeMessage (SelectQ (SelectQuestion qst opt ct)) tid =
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
         , (M.ObjectStr "options" , M.toObject opt)
-        , encodeClosingType ct
+        , (M.ObjectStr "closing_type", M.toObject ct)
         , (M.ObjectStr "listing" , M.ObjectBool False)
         ]
     ]
@@ -85,7 +85,7 @@ encodeMessage (SelectA (SelectAnswer qst opt ct ans irl)) tid =
     , M.ObjectMap
         [ (M.ObjectStr "question", M.ObjectStr qst)
         , (M.ObjectStr "options" , M.toObject opt)
-        , encodeClosingType ct
+        , (M.ObjectStr "closing_type", M.toObject ct)
         , (M.ObjectStr "response", M.toObject ans)
         , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
         , (M.ObjectStr "listing" , M.ObjectBool False)
@@ -96,7 +96,7 @@ encodeMessage (TaskQ (TaskQuestion ttl ct)) tid =
     , M.ObjectWord 504
     , M.ObjectMap
         [ (M.ObjectStr "title"       , M.ObjectStr ttl)
-        , encodeClosingType ct
+        , (M.ObjectStr "closing_type", M.toObject ct)
         ]
     ]
 encodeMessage (TaskA (TaskAnswer ttl ct don irl)) tid =
@@ -104,7 +104,7 @@ encodeMessage (TaskA (TaskAnswer ttl ct don irl)) tid =
     , M.ObjectWord 505
     , M.ObjectMap
         [ (M.ObjectStr "title"       , M.ObjectStr ttl)
-        , encodeClosingType ct
+        , (M.ObjectStr "closing_type", M.toObject ct)
         , (M.ObjectStr "done"        , M.ObjectBool don)
         , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
         ]
@@ -112,13 +112,6 @@ encodeMessage (TaskA (TaskAnswer ttl ct don irl)) tid =
 
 encodeMessage (Other text) tid =
     [M.ObjectWord tid, M.ObjectWord 1, M.ObjectStr text]
-
-encodeClosingType :: ClosingType -> (M.Object, M.Object)
-encodeClosingType ct = (M.ObjectStr "closing_type", M.ObjectWord w)
-  where
-    w = case ct of
-            OnlyOne -> 0
-            Anyone  -> 1
 
 encodeFile :: File -> M.Object
 encodeFile File {..} = M.ObjectMap
@@ -206,12 +199,7 @@ decodeMessage rspinfo = do
         return $ TaskQuestion ttl ct
 
     decodeClosingType m =
-        case look "closing_type" m of
-            Just o -> case o of
-                    M.ObjectWord 1 -> Just Anyone
-                    M.ObjectWord 0 -> Just OnlyOne
-                    _              -> Nothing
-            Nothing -> Just OnlyOne
+        maybe (Just OnlyOne) M.fromObject $ look "closing_type" m
 
     decodeInReplyTo m = do
         M.ObjectWord mid <- look "in_reply_to" m

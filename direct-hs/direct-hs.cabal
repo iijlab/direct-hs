@@ -36,6 +36,7 @@ library
     , bytestring
     , containers
     , data-msgpack
+    , data-msgpack-types
     , errors
     , filepath
     , http-client

@@ -3,9 +3,10 @@
 
 module Web.Direct.Types where
 
-import qualified Data.Text    as T
-import           Data.Word    (Word64)
-import           GHC.Generics (Generic)
+import qualified Data.MessagePack.Types as M
+import qualified Data.Text              as T
+import           Data.Word              (Word64)
+import           GHC.Generics           (Generic)
 
 ----------------------------------------------------------------
 
@@ -99,6 +100,17 @@ data TaskAnswer = TaskAnswer
     deriving (Eq, Show, Read, Generic)
 
 data ClosingType = OnlyOne | Anyone deriving (Eq, Show, Read, Generic)
+
+instance M.MessagePack ClosingType where
+    toObject OnlyOne = M.ObjectWord 0
+    toObject Anyone  = M.ObjectWord 1
+
+    fromObject m = do
+        i <- M.fromObject m
+        case i :: Int of
+            0 -> return OnlyOne
+            1 -> return Anyone
+            _ -> fail $ "Unknown ClosingType: " ++ show i
 
 data File = File
     { fileUrl         :: !T.Text
