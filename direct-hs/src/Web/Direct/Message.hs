@@ -165,7 +165,7 @@ decodeMessage rspinfo = do
                 YesNoQ <$> decodeYesNoQuestion m
             M.ObjectWord 501 -> do
                 M.ObjectMap m <- look "content" rspinfo
-                (YesNoQuestion qst ct) <- decodeYesNoQuestion m
+                YesNoQuestion qst ct <- decodeYesNoQuestion m
                 ans           <- look "response" m >>= M.fromObject
                 irl           <- decodeInReplyTo m
                 return . YesNoA $ YesNoAnswer qst ct ans irl
