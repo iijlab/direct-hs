@@ -53,42 +53,42 @@ encodeMessage (YesNoQ (YesNoQuestion qst ct)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 500
     , M.ObjectMap
-        [ (M.ObjectStr "question", M.ObjectStr qst)
+        [ (M.ObjectStr "question"    , M.ObjectStr qst)
         , (M.ObjectStr "closing_type", M.toObject ct)
-        , (M.ObjectStr "listing" , M.ObjectBool False)
+        , (M.ObjectStr "listing"     , M.ObjectBool False)
         ]
     ]
 encodeMessage (YesNoA (YesNoAnswer qst ct ans irl)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 501
     , M.ObjectMap
-        [ (M.ObjectStr "question", M.ObjectStr qst)
+        [ (M.ObjectStr "question"    , M.ObjectStr qst)
         , (M.ObjectStr "closing_type", M.toObject ct)
-        , (M.ObjectStr "response", M.ObjectBool ans)
-        , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
-        , (M.ObjectStr "listing" , M.ObjectBool False)
+        , (M.ObjectStr "response"    , M.ObjectBool ans)
+        , (M.ObjectStr "in_reply_to" , M.ObjectWord irl)
+        , (M.ObjectStr "listing"     , M.ObjectBool False)
         ]
     ]
 encodeMessage (SelectQ (SelectQuestion qst opt ct)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 502
     , M.ObjectMap
-        [ (M.ObjectStr "question", M.ObjectStr qst)
-        , (M.ObjectStr "options" , M.toObject opt)
+        [ (M.ObjectStr "question"    , M.ObjectStr qst)
+        , (M.ObjectStr "options"     , M.toObject opt)
         , (M.ObjectStr "closing_type", M.toObject ct)
-        , (M.ObjectStr "listing" , M.ObjectBool False)
+        , (M.ObjectStr "listing"     , M.ObjectBool False)
         ]
     ]
 encodeMessage (SelectA (SelectAnswer qst opt ct ans irl)) tid =
     [ M.ObjectWord tid
     , M.ObjectWord 503
     , M.ObjectMap
-        [ (M.ObjectStr "question", M.ObjectStr qst)
-        , (M.ObjectStr "options" , M.toObject opt)
+        [ (M.ObjectStr "question"    , M.ObjectStr qst)
+        , (M.ObjectStr "options"     , M.toObject opt)
         , (M.ObjectStr "closing_type", M.toObject ct)
-        , (M.ObjectStr "response", M.toObject ans)
-        , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
-        , (M.ObjectStr "listing" , M.ObjectBool False)
+        , (M.ObjectStr "response"    , M.toObject ans)
+        , (M.ObjectStr "in_reply_to" , M.ObjectWord irl)
+        , (M.ObjectStr "listing"     , M.ObjectBool False)
         ]
     ]
 encodeMessage (TaskQ (TaskQuestion ttl ct)) tid =
@@ -106,7 +106,7 @@ encodeMessage (TaskA (TaskAnswer ttl ct don irl)) tid =
         [ (M.ObjectStr "title"       , M.ObjectStr ttl)
         , (M.ObjectStr "closing_type", M.toObject ct)
         , (M.ObjectStr "done"        , M.ObjectBool don)
-        , (M.ObjectStr "in_reply_to", M.ObjectWord irl)
+        , (M.ObjectStr "in_reply_to" , M.ObjectWord irl)
         ]
     ]
 
