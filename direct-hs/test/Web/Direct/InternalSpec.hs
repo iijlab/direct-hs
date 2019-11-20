@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 module Web.Direct.InternalSpec
     ( spec
@@ -13,6 +14,7 @@ import           Control.Monad.State.Strict              (State, evalState, get,
 import           Data.Function                           (on)
 import           Data.IORef                              (newIORef)
 import           Data.List                               (deleteBy, partition)
+import           Data.MessagePack.Types.Object           (Object (ObjectBool, ObjectMap, ObjectStr, ObjectWord))
 import qualified Data.Text                               as T
 import           Data.Word                               (Word64)
 import qualified Network.MessagePack.RPC.Client.Internal as RPC
@@ -587,6 +589,31 @@ spec = do
         -- As long as I experimented, on_delete_talk notification is sent only when a client calls `leaveTalkRoom`.
         -- So this onDeleteTalk should not be called in this context.
         -- context "when client has NO talk room with the same ID with the updated talk room's"
+
+    describe "decodeMessage" $
+        it "decodes YesNoA" $ do
+            -- Copied and modified an actual message from direct4bi.com
+            let input =
+                    [ (ObjectStr "message_id", ObjectWord 123)
+                    , (ObjectStr "talk_id", ObjectWord 234)
+                    , (ObjectStr "user_id", ObjectWord 345)
+                    , (ObjectStr "type", ObjectWord 501)
+                    , (ObjectStr "content", ObjectMap
+                        [ (ObjectStr "in_reply_to", ObjectWord 456)
+                        , (ObjectStr "response", ObjectBool False)
+                        , (ObjectStr "question", ObjectStr "test")
+                        , (ObjectStr "listing", ObjectBool False)
+                        , (ObjectStr "closing_type", ObjectWord 1)
+                        ])
+                    , (ObjectStr "created_at",ObjectWord 1573540257904)
+                    ]
+                expectedMessage = YesNoA YesNoAnswer
+                    { question = "test"
+                    , closingType = Anyone
+                    , response = False
+                    , inReplyTo = 456
+                    }
+            decodeMessage input `shouldBe` Just (expectedMessage, 123, 234, 345)
 
 
 newTestClient :: User -> [User] -> [TalkRoom] -> IO Client

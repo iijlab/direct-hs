@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 module Main
     ( main
@@ -31,13 +32,13 @@ handleCreateMessage client (D.Txt "stamp", _, room, _) = void $ D.sendMessage
     (D.Stamp 3 1152921507291204297 (Just "スタンプ！"))
     (D.talkId room)
 handleCreateMessage client (D.Txt "yesno", _, room, _) =
-    void $ D.sendMessage client (D.YesNoQ "お元気ですか？") (D.talkId room)
+    void $ D.sendMessage client (D.YesNoQ $ D.YesNoQuestion "お元気ですか？" D.Anyone) (D.talkId room)
 handleCreateMessage client (D.Txt "select", _, room, _) = void $ D.sendMessage
     client
-    (D.SelectQ "好きなクワガタは？" ["ヒラタ", "ミヤマ", "オオ"])
+    (D.SelectQ $ D.SelectQuestion "好きなクワガタは？" ["ヒラタ", "ミヤマ", "オオ"] D.Anyone)
     (D.talkId room)
 handleCreateMessage client (D.Txt "task", _, room, _) =
-    void $ D.sendMessage client (D.TaskQ "高速化できる？" False) (D.talkId room)
+    void $ D.sendMessage client (D.TaskQ $ D.TaskQuestion "高速化できる？" D.Anyone) (D.talkId room)
 handleCreateMessage client (D.Txt "whoareyou", _, room, _) = do
     me <- D.getMe client
     void $ D.sendMessage
@@ -60,17 +61,17 @@ handleCreateMessage client (D.Txt "talks", _, room, _) = do
     void $ D.sendMessage client
                          (D.Txt (ans `T.append` "があります。"))
                          (D.talkId room)
-handleCreateMessage client (D.SelectA "好きなクワガタは？" _ ans, _, room, _) =
+handleCreateMessage client (D.SelectA sa@D.SelectAnswer { D.question = "好きなクワガタは？" }, _, room, _) =
     void $ D.sendMessage client
-                         (D.Txt (ans `T.append` "が好きなんですね。"))
+                         (D.Txt (D.getSelectedAnswer sa `T.append` "が好きなんですね。"))
                          (D.talkId room)
-handleCreateMessage client (D.YesNoA "お元気ですか？" True, _, room, _) =
+handleCreateMessage client (D.YesNoA D.YesNoAnswer { D.question = "お元気ですか？", D.response = True }, _, room, _) =
     void $ D.sendMessage client (D.Txt "よかったです。") (D.talkId room)
-handleCreateMessage client (D.YesNoA "お元気ですか？" False, _, room, _) =
+handleCreateMessage client (D.YesNoA D.YesNoAnswer { D.question = "お元気ですか？", D.response = False }, _, room, _) =
     void $ D.sendMessage client (D.Txt "元気出してね。") (D.talkId room)
-handleCreateMessage client (D.TaskA "高速化できる？" _ True, _, room, _) =
+handleCreateMessage client (D.TaskA D.TaskAnswer { D.title = "高速化できる？", D.done = True }, _, room, _) =
     void $ D.sendMessage client (D.Txt "よくできました。") (D.talkId room)
-handleCreateMessage client (D.TaskA "高速化できる？" _ False, _, room, _) =
+handleCreateMessage client (D.TaskA D.TaskAnswer { D.title = "高速化できる？", D.done = False }, _, room, _) =
     void $ D.sendMessage client (D.Txt "できないんだ。") (D.talkId room)
 handleCreateMessage client (D.Location addr _url, _, room, _) =
     void $ D.sendMessage client

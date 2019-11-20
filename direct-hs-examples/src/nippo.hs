@@ -59,13 +59,13 @@ nippo peer chan = do
     askEvaluation = do
         void $ D.send
             chan
-            (D.SelectQ "達成度はどれくらいですか？" ["100", "75", "50", "25", "0"])
+            (D.SelectQ $ D.SelectQuestion "達成度はどれくらいですか？" ["100", "75", "50", "25", "0"] D.OnlyOne)
         recvLoop
       where
         recvLoop = do
             (msg, _msgid, _room, _user) <- D.recv chan
             case msg of
-                D.SelectA _ _ ans -> return ans
+                D.SelectA sa -> return $ D.getSelectedAnswer sa
                 _                 -> do
                     void $ D.send chan (D.Txt "数値を選んでください。")
                     recvLoop
