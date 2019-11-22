@@ -25,6 +25,7 @@ library
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , direct-hs
     , errors
     , filepath
@@ -32,6 +33,7 @@ library
     , optparse-applicative
     , pretty-simple
     , text
+    , transformers
   if os(windows)
     build-depends:
         Win32
