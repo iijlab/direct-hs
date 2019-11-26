@@ -37,7 +37,7 @@ module Network.WebSockets.Client
   , WS.ConnectionException (..)
 
     -- ** Utilities
-  , WS.forkPingThread
+  , WS.withPingThread
   ) where
 
 
