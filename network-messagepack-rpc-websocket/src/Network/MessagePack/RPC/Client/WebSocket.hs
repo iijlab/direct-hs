@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports    #-}
 
 -- | MessagePack RPC Client based on WebSocket.
 module Network.MessagePack.RPC.Client.WebSocket
@@ -24,11 +25,11 @@ module Network.MessagePack.RPC.Client.WebSocket
     )
 where
 
-import qualified Data.Text                      as T
-import qualified Network.WebSockets.Client      as Ws
+import qualified Data.Text                              as T
+import qualified "wss-client" Network.WebSockets.Client as Ws
 
-import           Network.MessagePack.RPC.Client hiding (withClient)
-import qualified Network.MessagePack.RPC.Client as RPC (withClient)
+import           Network.MessagePack.RPC.Client         hiding (withClient)
+import qualified Network.MessagePack.RPC.Client         as RPC (withClient)
 
 -- | URL for websocket end points.
 type URL = String
@@ -39,9 +40,9 @@ withClient
     -> Config -- ^ Configuration
     -> (Client -> IO a) -- ^ Action
     -> IO a
-withClient url config action = Ws.withConnection url $ \conn -> do
-    Ws.forkPingThread conn 30
-    let backend = Backend (Ws.sendBinaryData conn)
-                          (Ws.receiveData conn)
-                          (Ws.sendClose conn ("Bye!" :: T.Text))
-    RPC.withClient config backend action
+withClient url config action = Ws.withConnection url $ \conn ->
+    Ws.withPingThread conn 30 (return ()) $ do
+        let backend = Backend (Ws.sendBinaryData conn)
+                              (Ws.receiveData conn)
+                              (Ws.sendClose conn ("Bye!" :: T.Text))
+        RPC.withClient config backend action
