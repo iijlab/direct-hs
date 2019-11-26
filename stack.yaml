@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: nightly-2019-09-30
+resolver: nightly-2019-11-25
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -50,17 +50,6 @@ extra-deps:
   commit: 9d240fecc2d838d4447a2c86192959a1938b97a8
 - git: https://github.com/TokTok/hs-msgpack-types.git
   commit: dfcfaa6ed2ee129d43d416ee1a67bc894e312201
-- http-client-tls-0.3.5.3@sha256:c97c3d88e6318a3056e42e2cd0913d5c4bff381f83341bb6ff06865fd12c8b52,2066
-- websockets-0.12.5.3@sha256:b4900397bb525a29547b7c43e82d7e46fc8654f34146b723e3d16dbc6d654cce,7435
-- connection-0.3.1@sha256:65da1c055610095733bcd228d85dff80804b23a5d18fede994a0f9fcd1b0c121,1554
-- tls-1.5.1@sha256:a3dd34b10decece313f861247233b1d7c6058c99b32fb128554612fe3394e45a,6753
-- asn1-encoding-0.9.6
-- socks-0.6.1
-- x509-1.7.5@sha256:01185a9a17bee4e89287d9e32bfaa673133cf2b09a39759627bed1f72ea528fd,2305
-- x509-store-1.6.7@sha256:a707b2f4ba3c02ebacd7ecd19e9f0c0b211b58270329c2c775a2c1df26820212,1781
-- x509-system-1.6.6@sha256:3a1b9cc26715d7cb3cd1a3f8b6153f12c2d42187ac5df305c3973c78a061db05,1418
-- x509-validation-1.6.11@sha256:7798c62717265a395f1092e6ad576f64b7876c289bb84353bddc0bb5a66c6b26,2169
-- asn1-parse-0.9.4@sha256:748249e23024dde8fed1d99e85e7e952576ce51b3ce460b9d131b2e91ff9c5a4,958
 
 allow-newer: true
 
