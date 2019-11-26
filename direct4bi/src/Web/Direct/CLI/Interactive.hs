@@ -312,20 +312,20 @@ defaultRunCommand _hs st client "show" "rooms" = do
 
     return st
 
-defaultRunCommand _hs st client "show" "yesnos"  = do
+defaultRunCommand _hs st _client "show" "yesnos"  = do
     ryns <- IOR.readIORef $ receivedYesNos st
     for_ (IM.toAscList ryns) $ \(qid, D.YesNoQuestion { D.question }) ->
         putStrLn $ show qid ++ ": " ++ "\"" ++ T.unpack question ++ "\""
     return st
 
-defaultRunCommand _hs st client "show" "selects" = do
+defaultRunCommand _hs st _client "show" "selects" = do
     ss <- IOR.readIORef $ receivedSelects st
     for_ (IM.toAscList ss) $ \(qid, D.SelectQuestion { D.question, D.options }) -> do
         putStrLn $ show qid ++ ": " ++ "\"" ++ T.unpack question ++ "\""
         for_ (zip [baseSelectAnswerNumber..] options) $ \(n, option) ->
             putStrLn $ "  " ++ show n ++ ": " ++ "\"" ++ T.unpack option ++ "\""
     return st
-defaultRunCommand _hs st client "show" "tasks"   = do
+defaultRunCommand _hs st _client "show" "tasks"   = do
     rts <- IOR.readIORef $ receivedTasks st
     for_ (IM.toAscList rts) $ \(qid, D.TaskQuestion { D.title }) ->
         putStrLn $ show qid ++ ": " ++ "\"" ++ T.unpack title ++ "\""
