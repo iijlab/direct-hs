@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: nightly-2019-11-25
+resolver: lts-15.1
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -46,12 +46,10 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-- git: https://github.com/TokTok/hs-msgpack.git
-  commit: 9d240fecc2d838d4447a2c86192959a1938b97a8
-- git: https://github.com/TokTok/hs-msgpack-types.git
-  commit: dfcfaa6ed2ee129d43d416ee1a67bc894e312201
+- data-msgpack-0.0.13@sha256:464c07ca8b7377d437ea929bd448d8014fe6311a750de66f29bb70884cfcefc9,2371
+- data-msgpack-types-0.0.3@sha256:03cf8fb27ab781aaf3f8c1a922d26fd237712b814ce6a2a5de7576f58b1d2bcb,1885
 
-allow-newer: true
+#allow-newer: true
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
